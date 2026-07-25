@@ -8,9 +8,9 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddSingleton<DapperContext>();
 
-builder.Services.AddTransient<IClientesService, ClientesService>();
-builder.Services.AddTransient<IClientesRepository, ClientesRepository>();
 
+builder.Services.AddScoped<ITicketsService, TicketsService>();
+builder.Services.AddScoped<ITicketsRepository, TicketsRepository>();
 
 var app = builder.Build();
 

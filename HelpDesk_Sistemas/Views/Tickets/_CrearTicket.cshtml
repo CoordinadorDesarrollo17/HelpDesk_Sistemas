@@ -1,0 +1,97 @@
+﻿@using HelpDesk_Sistemas.Models
+@model HelpDesk_Sistemas.Models.CrearTicketModel
+
+<form id="formCrearTicket" asp-controller="Tickets" asp-action="CrearTicket" method="post" enctype="multipart/form-data">
+
+    <!-- TIPO DE REQUERIMIENTO -->
+    <div class="mb-3">
+        <label class="form-label">Tipo de requerimiento</label>
+        <select id="cboTipoRequerimiento" name="IdTipoRequerimiento" class="form-select">
+            <option value="">Selecciona...</option>
+            @foreach (var tipo in (List<TipoRequerimientoModel>)ViewBag.Tipos)
+            {
+                <option value="@tipo.Id"
+                        data-requiere-categoria="@tipo.RequiereCategoria.ToString().ToLower()"
+                        selected="@(Model?.IdTipoRequerimiento == tipo.Id)">
+                    @tipo.Nombre
+                </option>
+            }
+        </select>
+        <span asp-validation-for="IdTipoRequerimiento" class="text-danger small"></span>
+    </div>
+
+    <!-- ÁREA -->
+    <div class="mb-3">
+        <label class="form-label">Área</label>
+        <select id="cboArea" name="IdArea" class="form-select" data-categoria-seleccionada="@Model?.IdCategoria">
+            <option value="">Selecciona...</option>
+            @foreach (var area in (List<CatalogoModel>)ViewBag.Areas)
+            {
+                <option value="@area.Id" selected="@(Model?.IdArea == area.Id)">@area.Nombre</option>
+            }
+        </select>
+        <span asp-validation-for="IdArea" class="text-danger small"></span>
+    </div>
+
+    <div id="grupoCategoria" class="mb-3">
+        <label class="form-label">Categoría</label>
+        <select id="cboCategoria" name="IdCategoria" class="form-select">
+            <option value="">Selecciona un área primero...</option>
+        </select>
+    </div>
+
+    <!-- DETALLE DEL REQUERIMIENTO -->
+    <div class="mb-3">
+        <label class="form-label">Detalle del requerimiento</label>
+        <textarea name="Detalle" class="form-control" rows="4">@Model?.Detalle</textarea>
+        <span asp-validation-for="Detalle" class="text-danger small"></span>
+    </div>
+
+    <!-- ARCHIVOS ADJUNTOS -->
+    <div class="mb-3">
+        <label class="form-label">Archivos adjuntos</label>
+        <input type="file" name="Archivos" class="form-control" multiple accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx,.mp4"/>
+        <span asp-validation-for="Archivos" class="text-danger small d-block"></span>
+        <small class="text-muted">Máximo 10 MB por archivo. Formatos permitidos: jpg, png, pdf, xlsx, docx, mp4.</small>
+    </div>
+
+    <!--PREGUNTA PARA DEFINIR PRIORIDAD DEL TICKET
+    <div class="mb-3">
+        <label class="form-label d-block">¿Este inconveniente detiene o dificulta tus funciones o procesos normales?</label>
+
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="AfectaFuncionamiento" id="afectaSi" value="true">
+            <label class="form-check-label" for="afectaSi">Sí</label>
+        </div>
+
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="AfectaFuncionamiento" id="afectaNo" value="false">
+            <label class="form-check-label" for="afectaNo">No</label>
+        </div>
+
+        <span asp-validation-for="AfectaFuncionamiento" class="text-danger small d-block"></span>
+	</div>-->
+
+    
+    
+
+    <div id="grupoAfectaFuncionamiento" class="mb-3">
+        <label class="form-label d-block">¿Este inconveniente detiene o dificulta tus funciones o procesos normales?</label>
+
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="AfectaFuncionamiento" id="afectaSi" value="true">
+            <label class="form-check-label" for="afectaSi">Sí</label>
+        </div>
+
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="AfectaFuncionamiento" id="afectaNo" value="false">
+            <label class="form-check-label" for="afectaNo">No</label>
+        </div>
+
+        <span asp-validation-for="AfectaFuncionamiento" class="text-danger small d-block"></span>
+    </div>
+
+    <!-- BOTÓN CREAR TICKET -->
+    <button type="submit" class="btn btn-primary">Crear ticket</button>
+</form>
+

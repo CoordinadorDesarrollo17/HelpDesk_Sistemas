@@ -1,0 +1,216 @@
+﻿@using HelpDesk_Sistemas.Models
+@using X.PagedList
+@using X.PagedList.Mvc.Core
+@model IPagedList<TicketsModel>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle text-nowrap">
+        <thead class="table-header">
+            <tr>
+                <th>Código Ticket</th>
+                <th>Tipo Requerimiento</th>
+                <th>Área</th>
+                <th>Categoría</th>
+                <th>Estado</th>
+                <th>Prioridad</th>
+                <th>Orden</th>
+                <th>Solicitante</th>
+                <th>Personal Asignado</th>
+                <th>Fecha Creación</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var u in Model)
+            {
+                <tr>
+					<td data-label="Código Ticket">@u?.CodigoTicket</td>
+                    <td data-label="Tipo Requerimiento">@u?.TipoRequerimiento</td>
+					<td data-label="Área">@u?.Area</td>
+					<td data-label="Categoría">@u?.Categoria</td>
+					<td data-label="Estado">@u?.Estado</td>
+                    <td data-label="Prioridad">
+                        @{
+                            var prioridadBloqueada = (u.TipoRequerimiento == "Consulta" || u.TipoRequerimiento == "Soporte") && u.AfectaFuncionamiento == true;
+                        }
+                        @if (u.Estado == "Pendiente" && !prioridadBloqueada)
+                        {
+                            <select class="form-select form-select-sm" onchange="asignarPrioridad(@u.IdTicket, this.value)">
+                                <option value="">Sin definir</option>
+                                @foreach (var prioridad in (List<CatalogoModel>)ViewBag.Prioridades)
+                                {
+                                    <option value="@prioridad.Id" selected="@(u.Prioridad == prioridad.Nombre)">@prioridad.Nombre</option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            @(u.Prioridad ?? "-")
+                        }
+                    </td>
+
+                    <td data-label="Orden">
+                        @{
+                            var estadosNoEditablesOrden = new[] { "En atención", "Desarrollo", "Pruebas", "Pase a producción", "Cierre", "Cerrado", "Anulado" };
+                        }
+                        @if (!estadosNoEditablesOrden.Contains(u.Estado) && u.CantidadMismaAsignadoPrioridad > 1)
+                        {
+                            <input type="number"
+                                   min="1"
+                                   class="form-control form-control-sm"
+                                   style="width: 70px;"
+                                   value="@u.OrdenAtencion"
+                                   onchange="asignarOrdenAtencion(@u.IdTicket, this.value)" />
+                        }
+                        else
+                        {
+                            @(u.OrdenAtencion?.ToString() ?? "-")
+                        }
+                    </td>
+                    <td data-label="Solicitante">@u?.Solicitante</td>
+					<td data-label="Personal Asignado">@u?.Asignado</td>
+					<td data-label="Fecha Creación">@u?.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                    <td data-label="Acciones" class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" title="Ver detalle" onclick="verDetalle(@u.IdTicket)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+
+                        @if (u.Estado == "Pendiente" && (u.TipoRequerimiento == "Consulta" || u.TipoRequerimiento == "Soporte"))
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-primary" title="Tomar ticket" onclick="tomarTicket(@u.IdTicket)">
+                                <i class="bi bi-hand-index"></i>
+                            </button>
+                        }
+
+                        @if (u.Estado == "En revisión")
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-info" title="Atender Ticket" onclick="atenderTicket(@u.IdTicket)">
+                                <i class="bi bi-person-workspace"></i>
+                            </button>
+                        }
+
+                        @if (u.Estado == "En atención")
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-warning" title="Pausar ticket" onclick="abrirPausarTicket(@u.IdTicket)">
+                                <i class="bi bi-pause-circle"></i>
+                            </button>
+                        }
+                        else if (u.Estado == "En pausa")
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-success" title="Reanudar ticket" onclick="reanudarTicket(@u.IdTicket)">
+                                <i class="bi bi-play-circle"></i>
+                            </button>
+                        }
+
+                        @if (u.Estado == "En atención")
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-primary" title="Validar / registrar solución" onclick="abrirValidarTicket(@u.IdTicket)">
+                                <i class="bi bi-check2-square"></i>
+                            </button>
+                        }
+
+                        @if (u.Estado == "En validación")
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-success" title="Confirmar solución" onclick="confirmarSolucion(@u.IdTicket)">
+                                <i class="bi bi-check-circle"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-warning" title="Devolver ticket" onclick="abrirDevolverTicket(@u.IdTicket)">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        }
+
+                        
+                        <!--IMPLEMENTACION Y MEJORA-->
+                        @if (u.Estado == "Pendiente" && u.TipoRequerimiento != "Consulta" && u.TipoRequerimiento != "Soporte")
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-primary" title="Tomar para levantamiento" onclick="tomarLevantamiento(@u.IdTicket)">
+                                <i class="bi bi-clipboard-check"></i>
+                            </button>
+                        }
+
+                        @if (u.Estado == "Levantamiento")
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-primary" title="Iniciar desarrollo" onclick="iniciarDesarrollo(@u.IdTicket)">
+                                <i class="bi bi-code-slash"></i>
+                            </button>
+                        }
+
+                        @if (u.Estado == "Desarrollo")
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-primary" title="Enviar a pruebas" onclick="enviarAPruebas(@u.IdTicket)">
+                                <i class="bi bi-clipboard-data"></i>
+                            </button>
+                        }
+
+                        @if (u.Estado == "Pruebas")
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-success" title="Confirmar pruebas OK" onclick="confirmarPruebas(@u.IdTicket)">
+                                <i class="bi bi-check2-all"></i>
+                            </button>
+                        }
+
+                        @if (u.Estado == "Pase a producción")
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-success" title="Cerrar ticket" onclick="cerrarImplementacion(@u.IdTicket)">
+                                <i class="bi bi-flag"></i>
+                            </button>
+                        }
+
+                        <!--BOTON REASINGAR USUARIO-->
+                        @{
+                            var estadosNoReasignables = new[] { "Cerrado", "Anulado", "Cierre" };
+                        }
+                        @if (u.Asignado != "Sin asignar" && u.Asignado != null && !estadosNoReasignables.Contains(u.Estado))
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary" title="Reasignar" onclick="abrirReasignarTicket(@u.IdTicket, @u.IdArea)">
+                                <i class="bi bi-people"></i>
+                            </button>
+                        }
+
+                        <!--botonANULAR-->
+                        @{
+                            var estadosAnulables = new[] {
+                                        "Pendiente", "En revisión", "En atención", "En pausa", "En validación",
+                                        "Levantamiento", "Desarrollo", "Pruebas", "Pase a producción"
+                                        };
+                        }
+                        @if (estadosAnulables.Contains(u.Estado))
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-danger" title="Anular ticket" onclick="abrirAnularTicket(@u.IdTicket)">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        }
+                    </td>
+
+
+                    <td class="text-center">
+                        <!-- Aquí puedes agregar botones de Editar, Eliminar, etc. -->
+
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-2 gap-2">
+
+    <small class="text-muted text-center text-md-start text-md-nowrap flex-shrink-0">
+        Mostrando @Model.FirstItemOnPage a @Model.LastItemOnPage de @Model.TotalItemCount registros
+    </small>
+
+    <div class="w-100 w-md-auto paginacion">
+        @Html.PagedListPager(Model, page => "javascript:cargarTabla(" + page + ")",
+        new PagedListRenderOptions
+        {
+            LiElementClasses = new[] { "page-item" },
+            PageClasses = new[] { "page-link" },
+            UlElementClasses = new[] { "pagination", "mb-0" },
+            DisplayLinkToFirstPage = PagedListDisplayMode.Always,
+            DisplayLinkToLastPage = PagedListDisplayMode.Always,
+            DisplayLinkToPreviousPage = PagedListDisplayMode.Always,
+            DisplayLinkToNextPage = PagedListDisplayMode.Always,
+            MaximumPageNumbersToDisplay = 5
+        })
+    </div>
+</div>
