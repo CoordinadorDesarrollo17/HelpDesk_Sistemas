@@ -2,17 +2,9 @@
 @using X.PagedList
 @model IPagedList<TicketsModel>
 
-
 @{
 	ViewData["Title"] = "Listado Tickets";
 }
-
-@section Styles {
-	<style>
-		
-	</style>
-}
-
 
 <div class="card shadow-sm mb-4">
 	<div class="card-header header-gradient text-black d-flex justify-content-between align-items-center">
@@ -51,7 +43,7 @@
 						   id="txtBuscar"
 						   class="form-control form-control-sm w-100 w-md-auto"
 						   style="max-width: 300px;"
-						   placeholder="Buscar:" autocomplete="off" />
+						   placeholder="Buscar por código, tipo, área, estado..." autocomplete="off" />
 
 					<button id="btnExportarExcel" class="btn btn-success btn-sm">
 						<i class="bi bi-file-earmark-excel"></i>
@@ -139,7 +131,7 @@
 						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 					</div>
 					<div class="modal-body">
-						<input type="hidden" id="idTicketAnular"/>
+						<input type="hidden" id="idTicketAnular" />
 						<label class="form-label">Motivo de Anulación</label>
 						<textarea id="motivoAnulacion" class="form-control" rows="3"></textarea>
 						<span id="errorMotivoAnulacion" class="text-danger small"></span>
@@ -283,6 +275,35 @@
 		const cboPageSize = document.getElementById("pageSize");
 		const tablaTickets = document.getElementById("tablaTickets");
 
+		// ============================================================
+		// HELPER: fetch con manejo de fallos de conexión
+		// ============================================================
+
+		function fetchConManejo(url, opciones) {
+			return fetch(url, opciones).catch(error => {
+				console.error(error);
+				mostrarToast("No se pudo conectar con el servidor. Revisa tu conexión.", "danger");
+				return null;
+			});
+		}
+
+		function mostrarToast(mensaje, tipo = "danger") {
+			const toastEl = document.getElementById("toastGenerico");
+			const toastMensaje = document.getElementById("toastMensaje");
+
+			toastEl.classList.remove("text-bg-success", "text-bg-danger", "text-bg-warning");
+			toastEl.classList.add(`text-bg-${tipo}`);
+
+			toastMensaje.textContent = mensaje;
+
+			const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+			toast.show();
+		}
+
+		// ============================================================
+		// LISTADO, FILTROS Y BÚSQUEDA
+		// ============================================================
+
 		function cargarTabla(page = 1) {
 			const params = new URLSearchParams({
 				"Buscar": txtBuscar.value,
@@ -296,11 +317,15 @@
 
 			let url = `@Url.Action("ListadoTickets", "Tickets")?${params.toString()}`;
 
-			fetch(url, {
+			fetchConManejo(url, {
 				headers: { "X-Requested-With": "XMLHttpRequest" }
 			})
-			.then(r => r.text())
+			.then(r => {
+				if (!r) return;
+				return r.text();
+			})
 			.then(html => {
+				if (!html) return;
 				tablaTickets.innerHTML = html;
 			});
 		}
@@ -309,17 +334,13 @@
 			document.getElementById(id).addEventListener("change", () => cargarTabla(1));
 		});
 
-		//lanzamos eventos de los <select>
 		cboPageSize.addEventListener("change", () => cargarTabla(1));
 
-		//Agregamos evento para que el usuario de enter
 		agregarEventosBusqueda(txtBuscar);
 
-		  //funcion para agregar evento enter
 		function agregarEventosBusqueda(input) {
 			if (!input) return;
 
-			// Cuando presiona Enter
 			input.addEventListener("keydown", function (e) {
 				if (e.key === "Enter") {
 					e.preventDefault();
@@ -327,7 +348,6 @@
 				}
 			});
 
-			// Cuando borra todo el contenido
 			input.addEventListener("input", function () {
 				if (input.value.trim() === "") {
 					cargarTabla(1);
@@ -341,6 +361,10 @@
 			window.location.href = url;
 		});
 
+		// ============================================================
+		// VER DETALLE
+		// ============================================================
+
 		function verDetalle(idTicket) {
 			const modalEl = document.getElementById("modalDetalleTicket");
 			const modal = new bootstrap.Modal(modalEl);
@@ -349,12 +373,20 @@
 			contenido.innerHTML = "Cargando...";
 			modal.show();
 
-			fetch(`@Url.Action("VerDetalle")?id=${idTicket}`)
-				.then(r => r.text())
+			fetchConManejo(`@Url.Action("VerDetalle")?id=${idTicket}`)
+				.then(r => {
+					if (!r) return;
+					return r.text();
+				})
 				.then(html => {
+					if (!html) return;
 					contenido.innerHTML = html;
 				});
 		}
+
+		// ============================================================
+		// CREAR TICKET
+		// ============================================================
 
 		function abrirCrearTicket() {
 			const modalEl = document.getElementById("modalCrearTicket");
@@ -364,9 +396,13 @@
 			contenido.innerHTML = "Cargando...";
 			modal.show();
 
-			fetch(`@Url.Action("CrearTicket")`)
-				.then(r => r.text())
+			fetchConManejo(`@Url.Action("CrearTicket")`)
+				.then(r => {
+					if (!r) return;
+					return r.text();
+				})
 				.then(html => {
+					if (!html) return;
 					contenido.innerHTML = html;
 					inicializarValidacionArchivos();
 					inicializarComboCategoria();
@@ -383,13 +419,16 @@
 
 				const formData = new FormData(form);
 
-				fetch(form.action, {
+				fetchConManejo(form.action, {
 					method: "POST",
 					body: formData
 				})
 				.then(r => {
+					if (!r) return;
+
 					if (r.ok) {
 						bootstrap.Modal.getInstance(document.getElementById("modalCrearTicket")).hide();
+						mostrarToast("Ticket creado correctamente", "success");
 						cargarTabla(1);
 					} else {
 						return r.text().then(html => {
@@ -426,9 +465,13 @@
 
 			cboCategoria.innerHTML = '<option value="">Cargando...</option>';
 
-			fetch(`@Url.Action("CategoriasPorArea")?idArea=${idArea}`)
-				.then(r => r.json())
+			fetchConManejo(`@Url.Action("CategoriasPorArea")?idArea=${idArea}`)
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
 				.then(data => {
+					if (!data) return;
 					cboCategoria.innerHTML = '<option value="">Selecciona...</option>';
 					data.forEach(cat => {
 						const opt = document.createElement("option");
@@ -444,101 +487,102 @@
 				});
 		}
 
+		function inicializarComboTipoRequerimiento() {
+			const cboTipo = document.getElementById("cboTipoRequerimiento");
+
+			cboTipo.addEventListener("change", function () {
+				actualizarVisibilidadPorTipo();
+			});
+
+			actualizarVisibilidadPorTipo();
+		}
+
+		function actualizarVisibilidadPorTipo() {
+			const cboTipo = document.getElementById("cboTipoRequerimiento");
+			const opcionSeleccionada = cboTipo.options[cboTipo.selectedIndex];
+			const requiereCategoria = opcionSeleccionada.dataset.requiereCategoria === "true";
+
+			const grupoCategoria = document.getElementById("grupoCategoria");
+			const grupoAfecta = document.getElementById("grupoAfectaFuncionamiento");
+
+			grupoCategoria.style.display = requiereCategoria ? "block" : "none";
+			grupoAfecta.style.display = requiereCategoria ? "block" : "none";
+
+			if (!requiereCategoria) {
+				document.getElementById("cboCategoria").value = "";
+				document.querySelectorAll('input[name="AfectaFuncionamiento"]').forEach(r => r.checked = false);
+			}
+		}
+
+		function inicializarValidacionArchivos() {
+			const inputArchivos = document.querySelector('input[name="Archivos"]');
+			const extensionesPermitidas = ['.jpg', '.jpeg', '.png', '.pdf', '.xlsx', '.docx', '.ppt', '.pptx', '.mp4'];
+			const tamanoMaximoBytes = 10 * 1024 * 1024;
+			const btnSubmit = document.querySelector('#formCrearTicket button[type="submit"]');
+
+			inputArchivos.addEventListener("change", function () {
+				const errores = [];
+
+				for (const archivo of this.files) {
+					const extension = "." + archivo.name.split(".").pop().toLowerCase();
+
+					if (!extensionesPermitidas.includes(extension)) {
+						errores.push(`"${archivo.name}" tiene un formato no permitido.`);
+					}
+
+					if (archivo.size > tamanoMaximoBytes) {
+						errores.push(`"${archivo.name}" supera el tamaño máximo de 10 MB.`);
+					}
+				}
+
+				const spanError = document.querySelector('span[data-valmsg-for="Archivos"]');
+
+				if (errores.length > 0) {
+					spanError.textContent = errores.join(" ") + " Vuelve a seleccionar los archivos para continuar.";
+					btnSubmit.disabled = true;
+				} else {
+					spanError.textContent = "";
+					btnSubmit.disabled = false;
+				}
+			});
+		}
+
+		// ============================================================
+		// FLUJO CONSULTA / SOPORTE
+		// ============================================================
+
 		function tomarTicket(idTicket) {
-			fetch(`@Url.Action("TomarTicket")?id=${idTicket}`, { method: "POST" })
-				.then(r => r.json())
+			fetchConManejo(`@Url.Action("TomarTicket")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
 				.then(data => {
+					if (!data) return;
 					if (!data.exito) {
 						mostrarToast(data.mensaje, "danger");
-					}
-					else{
+					} else {
 						mostrarToast("Ticket tomado correctamente", "success");
 					}
 					cargarTabla(1);
 				});
 		}
 
-		function abrirAnularTicket(idTicket) {
-			document.getElementById("idTicketAnular").value = idTicket;
-			document.getElementById("motivoAnulacion").value = "";
-			document.getElementById("errorMotivoAnulacion").textContent = "";
-
-			const modal = new bootstrap.Modal(document.getElementById("modalAnularTicket"));
-			modal.show();
-		}
-
-		function confirmarAnularTicket(){
-			const idTicket = document.getElementById("idTicketAnular").value;
-			const motivo = document.getElementById("motivoAnulacion").value;
-
-			if (!motivo.trim()) {
-				document.getElementById("errorMotivoAnulacion").textContent = "Debes indicar un motivo de anulación.";
-				return;
-			}
-
-			const params = new URLSearchParams({ id: idTicket, motivo: motivo });
-
-			fetch(`@Url.Action("AnularTicket")?${params.toString()}`, {method: "POST"})
-			.then(r => r.json())
-			.then(data => {
-				if (data.exito) {
-					bootstrap.Modal.getInstance(document.getElementById("modalAnularTicket")).hide();
-					cargarTabla(1);
-				} else {
-					document.getElementById("errorMotivoAnulacion").textContent = data.mensaje;
-				}
-			});
-		}
-
-		function asignarPrioridad(idTicket, idPrioridad) {
-			if (!idPrioridad) return;
-
-			const params = new URLSearchParams({ id: idTicket, idPrioridad: idPrioridad });
-
-			fetch(`@Url.Action("AsignarPrioridad")?${params.toString()}`, {
-				method: "POST"
-			})
-			.then(r => r.json())
-			.then(data => {
-				if (!data.exito) {
-					mostrarToast("No se pudo asignar la prioridad. Puede que el ticket ya haya cambiado de estado.", "danger");
-				}else{
-					mostrarToast("Ticket asignado correctamente", "success");
-				}
-				cargarTabla(1);
-			});
-		}
-
-		function asignarOrdenAtencion(idTicket, orden) {
-			if (!orden) return;
-
-			const params = new URLSearchParams({ id: idTicket, orden: orden });
-
-			fetch(`@Url.Action("AsignarOrdenAtencion")?${params.toString()}`, { method: "POST" })
-				.then(r => r.json())
+		function atenderTicket(idTicket) {
+			fetchConManejo(`@Url.Action("AtenderTicket")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
 				.then(data => {
+					if (!data) return;
 					if (!data.exito) {
-						mostrarToast("No se pudo asignar el orden de atención.", "danger");
-					}else{
-						mostrarToast("Orden de atención asignado correctamente.", "success");
+						mostrarToast("El ticket ya no está disponible para atender.", "danger");
+					} else {
+						mostrarToast("El ticket se atendió correctamente.", "success");
 					}
 					cargarTabla(1);
 				});
-		}
-
-		function atenderTicket(idTicket) {
-				fetch(`@Url.Action("AtenderTicket")?id=${idTicket}`, {
-			method: "POST"
-		})
-		.then(r => r.json())
-		.then(data => {
-			if (!data.exito){
-				mostrarToast("El ticket ya no está disponible para atender.", "danger");
-			}else{
-				mostrarToast("El ticket se atendió correctamente.", "success");
-			}
-			cargarTabla(1);
-		});
 		}
 
 		function abrirPausarTicket(idTicket) {
@@ -570,9 +614,13 @@
 
 			cboTicketRelacionado.innerHTML = '<option value="">Cargando...</option>';
 
-			fetch(`@Url.Action("MisTicketsPropios")?idTicketActual=${idTicketActual}`)
-				.then(r => r.json())
+			fetchConManejo(`@Url.Action("MisTicketsPropios")?idTicketActual=${idTicketActual}`)
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
 				.then(data => {
+					if (!data) return;
 					cboTicketRelacionado.innerHTML = '<option value="">Selecciona...</option>';
 					data.forEach(t => {
 						const opt = document.createElement("option");
@@ -598,33 +646,38 @@
 				params.append("idTicketRelacionado", idTicketRelacionado);
 			}
 
-			fetch(`@Url.Action("PausarTicket")?${params.toString()}`, {
-				method: "POST"
-			})
-			.then(r => r.json())
-			.then(data => {
-				if (data.exito) {
-					bootstrap.Modal.getInstance(document.getElementById("modalPausarTicket")).hide();
-					cargarTabla(1);
-				} else {
-					document.getElementById("errorPausarTicket").textContent = data.mensaje || "No se pudo pausar el ticket.";
-				}
-			});
+			fetchConManejo(`@Url.Action("PausarTicket")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (data.exito) {
+						bootstrap.Modal.getInstance(document.getElementById("modalPausarTicket")).hide();
+						mostrarToast("Ticket pausado correctamente", "success");
+						cargarTabla(1);
+					} else {
+						document.getElementById("errorPausarTicket").textContent = data.mensaje || "No se pudo pausar el ticket.";
+					}
+				});
 		}
 
 		function reanudarTicket(idTicket) {
-			fetch(`@Url.Action("ReanudarTicket")?id=${idTicket}`, {
-				method: "POST"
-			})
-			.then(r => r.json())
-			.then(data => {
-				if (!data.exito) {
-					mostrarToast("No se pudo reanudar el ticket.", "danger");
-				}else {
-					mostrarToast("El ticket se reanudó satisfactoriamente.", "success");
-				}
-				cargarTabla(1);
-			});
+			fetchConManejo(`@Url.Action("ReanudarTicket")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo reanudar el ticket.", "danger");
+					} else {
+						mostrarToast("El ticket se reanudó satisfactoriamente.", "success");
+					}
+					cargarTabla(1);
+				});
 		}
 
 		function abrirValidarTicket(idTicket) {
@@ -647,11 +700,16 @@
 
 			const params = new URLSearchParams({ id: idTicket, solucion: solucion });
 
-			fetch(`@Url.Action("ValidarTicket")?${params.toString()}`, { method: "POST" })
-				.then(r => r.json())
+			fetchConManejo(`@Url.Action("ValidarTicket")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
 				.then(data => {
+					if (!data) return;
 					if (data.exito) {
 						bootstrap.Modal.getInstance(document.getElementById("modalValidarTicket")).hide();
+						mostrarToast("Solución registrada correctamente", "success");
 						cargarTabla(1);
 					} else {
 						document.getElementById("errorValidarTicket").textContent = data.mensaje;
@@ -660,13 +718,17 @@
 		}
 
 		function confirmarSolucion(idTicket) {
-			fetch(`@Url.Action("ConfirmarSolucion")?id=${idTicket}`, { method: "POST" })
-				.then(r => r.json())
+			fetchConManejo(`@Url.Action("ConfirmarSolucion")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
 				.then(data => {
+					if (!data) return;
 					if (!data.exito) {
 						mostrarToast("No se pudo confirmar la solución del ticket.", "danger");
-					}else{
-						mostrarToast("Se registró la solución correctamente.", "success");
+					} else {
+						mostrarToast("Se confirmó la solución correctamente.", "success");
 					}
 					cargarTabla(1);
 				});
@@ -692,11 +754,16 @@
 
 			const params = new URLSearchParams({ id: idTicket, motivo: motivo });
 
-			fetch(`@Url.Action("DevolverTicket")?${params.toString()}`, { method: "POST" })
-				.then(r => r.json())
+			fetchConManejo(`@Url.Action("DevolverTicket")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
 				.then(data => {
+					if (!data) return;
 					if (data.exito) {
 						bootstrap.Modal.getInstance(document.getElementById("modalDevolverTicket")).hide();
+						mostrarToast("Ticket devuelto correctamente", "success");
 						cargarTabla(1);
 					} else {
 						document.getElementById("errorDevolverTicket").textContent = data.mensaje;
@@ -704,145 +771,182 @@
 				});
 		}
 
-		function inicializarComboTipoRequerimiento(){
-			const cboTipo = document.getElementById("cboTipoRequerimiento");
+		function abrirAnularTicket(idTicket) {
+			document.getElementById("idTicketAnular").value = idTicket;
+			document.getElementById("motivoAnulacion").value = "";
+			document.getElementById("errorMotivoAnulacion").textContent = "";
 
-			cboTipo.addEventListener("change", function(){
-				actualizarVisibilidadPorTipo();
-			});
-
-			actualizarVisibilidadPorTipo();
+			const modal = new bootstrap.Modal(document.getElementById("modalAnularTicket"));
+			modal.show();
 		}
 
-		function actualizarVisibilidadPorTipo(){
-			const cboTipo = document.getElementById("cboTipoRequerimiento");
-			const opcionSeleccionada = cboTipo.options[cboTipo.selectedIndex];
-			const requiereCategoria = opcionSeleccionada.dataset.requiereCategoria === "true";
+		function confirmarAnularTicket() {
+			const idTicket = document.getElementById("idTicketAnular").value;
+			const motivo = document.getElementById("motivoAnulacion").value;
 
-			const grupoCategoria = document.getElementById("grupoCategoria");
-			const grupoAfecta = document.getElementById("grupoAfectaFuncionamiento");
-
-			grupoCategoria.style.display = requiereCategoria ? "block" : "none";
-			grupoAfecta.style.display = requiereCategoria ? "block" : "none";
-
-			if (!requiereCategoria){
-				document.getElementById("cboCategoria").value = "";
-				document.querySelectorAll('input[name="AfectaFuncionamiento"]').forEach(r => r.checked = false);
+			if (!motivo.trim()) {
+				document.getElementById("errorMotivoAnulacion").textContent = "Debes indicar un motivo de anulación.";
+				return;
 			}
-		}
 
-		function tomarLevantamiento(idTicket){
-			fetch(`@Url.Action("TomarLevantamiento")?id=${idTicket}`, { method: "POST" })
-			.then(r => r.json())
-			.then(data => {
-				if (!data.exito) {
-					mostrarToast("Este ticket necesita una prioridad asignada antes de poder tomarlo, o ya fue tomado por otro usuario.", "danger");
-				}else{
-					mostrarToast("El inició el levantamiento correctamente.", "success");
-				}
-				cargarTabla(1);
-			});
-		}
+			const params = new URLSearchParams({ id: idTicket, motivo: motivo });
 
-		function iniciarDesarrollo(idTicket){
-			fetch(`@Url.Action("IniciarDesarrollo")?id=${idTicket}`, { method: "POST" })
-			.then(r => r.json())
-			.then(data => {
-				if (!data.exito) {
-					mostrarToast("No se pudo iniciar el desarrollo.", "danger");
-				}else{
-					mostrarToast("Se inició el desarrollo satisfactoriamente", "success");
-				}
-				cargarTabla(1);
-			});
-		}
-
-		function enviarAPruebas(idTicket){
-			fetch(`@Url.Action("EnviarAPruebas")?id=${idTicket}`, { method: "POST" })
-			.then(r => r.json())
-			.then(data => {
-				if (!data.exito) {
-					mostrarToast("No se pudo enviar a pruebas.", "danger");
-				}else{
-					mostrarToast("El ticket pasó a etapa de pruebas", "success");
-				}
-				cargarTabla(1);
-			});
-		}
-
-		function confirmarPruebas(idTicket){
-			fetch(`@Url.Action("ConfirmarPruebas")?id=${idTicket}`, { method: "POST" })
-			.then(r => r.json())
-			.then(data => {
-				if (!data.exito) {
-					mostrarToast("No se pudo confirmar.", "danger");
-				}else{
-					mostrarToast("Se completó la etapa de pruebas satisfactoriamente.", "success");
-				}
-				cargarTabla(1);
-			});
-		}
-
-		function cerrarImplementacion(idTicket){
-			fetch(`@Url.Action("CerrarImplementacion")?id=${idTicket}`, { method: "POST" })
-			.then(r => r.json())
-			.then(data => {
-				if (!data.exito) {
-					mostrarToast("No se pudo cerrar el ticket.", "danger");
-				}else{
-					mostrarToast("El ticket se cerró correctamente.", "success");
-				}
-				cargarTabla(1);
-			});
-		}
-
-		function mostrarToast(mensaje, tipo = "danger"){
-			const toastEl = document.getElementById("toastGenerico");
-			const toastMensaje = document.getElementById("toastMensaje");
-
-			toastEl.classList.remove("text-bg-success", "text-bg-danger", "text-bg-warning");
-			toastEl.classList.add(`text-bg-${tipo}`);
-
-			toastMensaje.textContent = mensaje;
-
-			const toast = new bootstrap.Toast(toastEl, {delay: 4000});
-			toast.show();
-		}
-
-		function inicializarValidacionArchivos() {
-			const inputArchivos = document.querySelector('input[name="Archivos"]');
-			const extensionesPermitidas = ['.jpg', '.jpeg', '.png', '.pdf', '.xlsx', '.docx', '.mp4'];
-			const tamanoMaximoBytes = 10 * 1024 * 1024;
-			const btnSubmit = document.querySelector('#formCrearTicket button[type="submit"]');
-
-			inputArchivos.addEventListener("change", function () {
-				const errores = [];
-
-				for (const archivo of this.files) {
-					const extension = "." + archivo.name.split(".").pop().toLowerCase();
-
-					if (!extensionesPermitidas.includes(extension)) {
-						errores.push(`"${archivo.name}" tiene un formato no permitido.`);
+			fetchConManejo(`@Url.Action("AnularTicket")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (data.exito) {
+						bootstrap.Modal.getInstance(document.getElementById("modalAnularTicket")).hide();
+						mostrarToast("Ticket anulado correctamente", "success");
+						cargarTabla(1);
+					} else {
+						document.getElementById("errorMotivoAnulacion").textContent = data.mensaje;
 					}
-
-					if (archivo.size > tamanoMaximoBytes) {
-						errores.push(`"${archivo.name}" supera el tamaño máximo de 10 MB.`);
-					}
-				}
-
-				const spanError = document.querySelector('span[data-valmsg-for="Archivos"]');
-
-				if (errores.length > 0) {
-					spanError.textContent = errores.join(" ") + " Vuelve a seleccionar los archivos para continuar.";
-					btnSubmit.disabled = true;
-				} else {
-					spanError.textContent = "";
-					btnSubmit.disabled = false;
-				}
-			});
+				});
 		}
 
-		//REASIGNARUSUARIO
+		// ============================================================
+		// PRIORIDAD Y ORDEN DE ATENCIÓN
+		// ============================================================
+
+		function asignarPrioridad(idTicket, idPrioridad) {
+			if (!idPrioridad) return;
+
+			const params = new URLSearchParams({ id: idTicket, idPrioridad: idPrioridad });
+
+			fetchConManejo(`@Url.Action("AsignarPrioridad")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo asignar la prioridad. Puede que el ticket ya haya cambiado de estado.", "danger");
+					} else {
+						mostrarToast("Prioridad asignada correctamente", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function asignarOrdenAtencion(idTicket, orden) {
+			if (!orden) return;
+
+			const params = new URLSearchParams({ id: idTicket, orden: orden });
+
+			fetchConManejo(`@Url.Action("AsignarOrdenAtencion")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast(data.mensaje || "No se pudo asignar el orden de atención.", "danger");
+					} else {
+						mostrarToast("Orden de atención asignado correctamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		// ============================================================
+		// FLUJO IMPLEMENTACIÓN Y MEJORA
+		// ============================================================
+
+		function tomarLevantamiento(idTicket) {
+			fetchConManejo(`@Url.Action("TomarLevantamiento")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("Este ticket necesita una prioridad asignada antes de poder tomarlo, o ya fue tomado por otro usuario.", "danger");
+					} else {
+						mostrarToast("Se inició el levantamiento correctamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function iniciarDesarrollo(idTicket) {
+			fetchConManejo(`@Url.Action("IniciarDesarrollo")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo iniciar el desarrollo.", "danger");
+					} else {
+						mostrarToast("Se inició el desarrollo satisfactoriamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function enviarAPruebas(idTicket) {
+			fetchConManejo(`@Url.Action("EnviarAPruebas")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo enviar a pruebas.", "danger");
+					} else {
+						mostrarToast("El ticket pasó a etapa de pruebas.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function confirmarPruebas(idTicket) {
+			fetchConManejo(`@Url.Action("ConfirmarPruebas")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo confirmar.", "danger");
+					} else {
+						mostrarToast("Se completó la etapa de pruebas satisfactoriamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function cerrarImplementacion(idTicket) {
+			fetchConManejo(`@Url.Action("CerrarImplementacion")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo cerrar el ticket.", "danger");
+					} else {
+						mostrarToast("El ticket se cerró correctamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		// ============================================================
+		// REASIGNACIÓN
+		// ============================================================
+
 		function abrirReasignarTicket(idTicket, idArea) {
 			document.getElementById("idTicketReasignar").value = idTicket;
 			document.getElementById("idAreaReasignar").value = idArea;
@@ -854,9 +958,13 @@
 			const modal = new bootstrap.Modal(document.getElementById("modalReasignarTicket"));
 			modal.show();
 
-			fetch(`@Url.Action("UsuariosSoportePorArea")?idArea=${idArea}`)
-				.then(r => r.json())
+			fetchConManejo(`@Url.Action("UsuariosSoportePorArea")?idArea=${idArea}`)
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
 				.then(data => {
+					if (!data) return;
 					cboNuevoUsuario.innerHTML = '<option value="">Selecciona...</option>';
 					data.forEach(u => {
 						const opt = document.createElement("option");
@@ -878,9 +986,13 @@
 
 			const params = new URLSearchParams({ id: idTicket, idNuevoUsuario: idNuevoUsuario });
 
-			fetch(`@Url.Action("ReasignarTicket")?${params.toString()}`, { method: "POST" })
-				.then(r => r.json())
+			fetchConManejo(`@Url.Action("ReasignarTicket")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
 				.then(data => {
+					if (!data) return;
 					if (data.exito) {
 						bootstrap.Modal.getInstance(document.getElementById("modalReasignarTicket")).hide();
 						mostrarToast("Ticket reasignado correctamente", "success");
