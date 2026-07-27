@@ -10,36 +10,36 @@ namespace HelpDesk_Sistemas.Services
     {
         private readonly ITicketsRepository ticketsRepository;
         private readonly IWebHostEnvironment webHostEnvironment;
+
         private const long TamanoMaximoBytes = 10 * 1024 * 1024; // 10 MB por archivo
-        private static readonly string[] ExtensionesPermitidas = { ".jpg", ".jpeg", ".png", ".pdf", ".docx", ".xlsx", ".mp4" };
+        private static readonly string[] ExtensionesPermitidas = { ".jpg", ".jpeg", ".png", ".pdf", ".docx", ".xlsx", ".ppt", ".pptx", ".mp4" };
 
         public TicketsService(ITicketsRepository ticketsRepository, IWebHostEnvironment webHostEnvironment)
         {
             this.ticketsRepository = ticketsRepository;
             this.webHostEnvironment = webHostEnvironment;
         }
-        public TicketsService(ITicketsRepository ticketsRepository)
-        {
-            this.ticketsRepository = ticketsRepository;
-        }
 
-        //esta es una capa preparada para crecer si mas adelante se necesita logica para el listado de tickets, por ahora solo hace un llamado al repositorio
+        // ============================================================
+        // LISTADO Y FILTROS
+        // ============================================================
+
+        /// <summary>
+        /// Capa preparada para crecer: hoy solo reenvía al Repository, pero aquí
+        /// iría la lógica de negocio futura (ej. restringir bandeja según el rol
+        /// del usuario logueado).
+        /// </summary>
         public async Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual)
         {
             return await ticketsRepository.ListadoTickets(model, idUsuarioActual);
         }
 
-        public async Task<List<CatalogoModel>> ObtenerEstados()
-        {
-            return await ticketsRepository.ObtenerEstados();
-        }
-
         public async Task<(byte[] Content, string ContentType, string FileName)> ExportarExcelAsync(FiltrosTicketsModel model, int idUsuarioActual)
         {
-            var lista = await ticketsRepository.ListadoTicketsExcel(model, idUsuarioActual); //pide la lista completa al repositorio, sin paginacion
+            var lista = await ticketsRepository.ListadoTicketsExcel(model, idUsuarioActual);
 
-            using var workbook = new XLWorkbook(); //crea un libro de excel en memoria, para luego liberar los recursos con using
-            var ws = workbook.Worksheets.Add("Tickets"); //agrega una hoja de excel al libro
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("Tickets");
 
             ws.Cell(1, 1).Value = "Código Ticket";
             ws.Cell(1, 2).Value = "Tipo Requerimiento";
@@ -51,9 +51,9 @@ namespace HelpDesk_Sistemas.Services
             ws.Cell(1, 8).Value = "Asignado";
             ws.Cell(1, 9).Value = "Fecha Creación";
 
-            ws.Range("A1:I1").Style.Font.Bold = true; //pone en negrita la primera fila
+            ws.Range("A1:I1").Style.Font.Bold = true;
 
-            int row = 2; //comienza en la segunda fila porque la primera es el encabezado
+            int row = 2;
             foreach (var ticket in lista)
             {
                 ws.Cell(row, 1).Value = ticket.CodigoTicket;
@@ -68,25 +68,29 @@ namespace HelpDesk_Sistemas.Services
                 row++;
             }
 
-            ws.Columns().AdjustToContents(); //ajusta el ancho de las columnas al contenido
-            ws.SheetView.FreezeRows(1); //congela la primera fila para que siempre se vea el encabezado
-            ws.Cells().Style.Border.OutsideBorder = XLBorderStyleValues.None; //quita borde a todas las celdas
-            ws.Cells().Style.Border.InsideBorder = XLBorderStyleValues.None; //quita borde a todas las celdas
-            ws.ShowGridLines = false; //quita las lineas de la grilla
+            ws.Columns().AdjustToContents();
+            ws.SheetView.FreezeRows(1);
+            ws.Cells().Style.Border.OutsideBorder = XLBorderStyleValues.None;
+            ws.Cells().Style.Border.InsideBorder = XLBorderStyleValues.None;
+            ws.ShowGridLines = false;
 
-            using var stream = new MemoryStream(); //crea un stream en memoria para guardar el archivo
-            workbook.SaveAs(stream); //guarda el libro de excel en el stream
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
 
-            var content = stream.ToArray(); //convierte el stream a un arreglo de bytes
-            var fileName = $"Tickets_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"; //nombre del archivo con fecha y hora
-            var contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"; //tipo de contenido para excel
+            var content = stream.ToArray();
+            var fileName = $"Tickets_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-            return (content, contentType, fileName); //retorna el contenido, tipo y nombre del archivo
+            return (content, contentType, fileName);
         }
 
-        public async Task<TicketDetalleModel?> ObtenerDetalleTicket(int idTicket)
+        // ============================================================
+        // CATÁLOGOS
+        // ============================================================
+
+        public async Task<List<CatalogoModel>> ObtenerEstados()
         {
-            return await ticketsRepository.ObtenerDetalleTicket(idTicket);
+            return await ticketsRepository.ObtenerEstados();
         }
 
         public async Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimiento()
@@ -104,6 +108,35 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.ObtenerCategoriasPorArea(idArea);
         }
 
+        public async Task<List<CatalogoModel>> ObtenerPrioridades()
+        {
+            return await ticketsRepository.ObtenerPrioridades();
+        }
+
+        public async Task<bool> TipoRequiereCategoria(int idTipoRequerimiento)
+        {
+            return await ticketsRepository.TipoRequiereCategoria(idTipoRequerimiento);
+        }
+
+        // ============================================================
+        // DETALLE
+        // ============================================================
+
+        public async Task<TicketDetalleModel?> ObtenerDetalleTicket(int idTicket)
+        {
+            return await ticketsRepository.ObtenerDetalleTicket(idTicket);
+        }
+
+        // ============================================================
+        // CREACIÓN
+        // ============================================================
+
+        /// <summary>
+        /// Valida tamaño y extensión de cada archivo antes de crear nada (si algo
+        /// falla, no se crea el ticket ni se guarda ningún archivo). Si todo está
+        /// bien, crea el ticket y luego guarda cada adjunto en wwwroot/uploads con
+        /// un nombre único para evitar colisiones entre archivos del mismo nombre.
+        /// </summary>
         public async Task<(int IdTicket, List<string> Errores)> CrearTicket(CrearTicketModel model, int idUsuarioSolicita, bool requiereCategoria)
         {
             var errores = new List<string>();
@@ -165,44 +198,18 @@ namespace HelpDesk_Sistemas.Services
             return (idTicket, errores);
         }
 
-        public async Task<bool> TipoRequiereCategoria(int idTipoRequerimiento)
-        {
-            return await ticketsRepository.TipoRequiereCategoria(idTipoRequerimiento);
-        }
+        // ============================================================
+        // FLUJO CONSULTA / SOPORTE
+        // ============================================================
 
         public async Task<bool> TomarTicket(int idTicket, int idUsuarioAsignado)
         {
             return await ticketsRepository.TomarTicket(idTicket, idUsuarioAsignado);
         }
 
-        public async Task<bool> AnularTicket(int idTicket, int idUsuarioAccion, string motivo)
-        {
-            return await ticketsRepository.AnularTicket(idTicket, idUsuarioAccion, motivo);
-        }
-
-        public async Task<List<CatalogoModel>> ObtenerPrioridades()
-        {
-            return await ticketsRepository.ObtenerPrioridades();
-        }
-
-        public async Task<bool> AsignarPrioridad(int idTicket, int idPrioridad)
-        {
-            return await ticketsRepository.AsignarPrioridad(idTicket, idPrioridad);
-        }
-
-        public async Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden)
-        {
-            return await ticketsRepository.AsignarOrdenAtencion(idTicket, orden);
-        }
-
         public async Task<bool> AtenderTicket(int idTicket, int idUsuarioAccion)
         {
             return await ticketsRepository.AtenderTicket(idTicket, idUsuarioAccion);
-        }
-
-        public async Task<List<CatalogoModel>> ObtenerMisTicketsPropios(int idUsuario, int idTicketActual)
-        {
-            return await ticketsRepository.ObtenerMisTicketsPropios(idUsuario, idTicketActual);
         }
 
         public async Task<bool> PausarTicket(int idTicket, int idUsuarioAccion, string tipoMotivo, int? idTicketRelacionado)
@@ -230,29 +237,63 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.DevolverTicket(idTicket, idUsuarioAccion, motivo);
         }
 
-        //LEVANTAMIENTO Y MEJORA
+        public async Task<bool> AnularTicket(int idTicket, int idUsuarioAccion, string motivo)
+        {
+            return await ticketsRepository.AnularTicket(idTicket, idUsuarioAccion, motivo);
+        }
+
+        // ============================================================
+        // PRIORIDAD Y ORDEN DE ATENCIÓN (ambos flujos)
+        // ============================================================
+
+        public async Task<bool> AsignarPrioridad(int idTicket, int idPrioridad)
+        {
+            return await ticketsRepository.AsignarPrioridad(idTicket, idPrioridad);
+        }
+
+        public async Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden)
+        {
+            return await ticketsRepository.AsignarOrdenAtencion(idTicket, orden);
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerMisTicketsPropios(int idUsuario, int idTicketActual)
+        {
+            return await ticketsRepository.ObtenerMisTicketsPropios(idUsuario, idTicketActual);
+        }
+
+        // ============================================================
+        // FLUJO IMPLEMENTACIÓN Y MEJORA
+        // ============================================================
+
         public async Task<bool> TomarLevantamiento(int idTicket, int idUsuarioAsignado)
         {
             return await ticketsRepository.TomarLevantamiento(idTicket, idUsuarioAsignado);
         }
+
         public async Task<bool> IniciarDesarrollo(int idTicket, int idUsuarioAccion)
         {
             return await ticketsRepository.IniciarDesarrollo(idTicket, idUsuarioAccion);
         }
+
         public async Task<bool> EnviarAPruebas(int idTicket, int idUsuarioAccion)
         {
             return await ticketsRepository.EnviarAPruebas(idTicket, idUsuarioAccion);
         }
+
         public async Task<bool> ConfirmarPruebas(int idTicket, int idUsuarioAccion)
         {
             return await ticketsRepository.ConfirmarPruebas(idTicket, idUsuarioAccion);
         }
+
         public async Task<bool> CerrarImplementacion(int idTicket, int idUsuarioAccion)
         {
             return await ticketsRepository.CerrarImplementacion(idTicket, idUsuarioAccion);
         }
 
-        //REASIGNAR USUARIO A UN NUEVO TICKET
+        // ============================================================
+        // REASIGNACIÓN (ambos flujos)
+        // ============================================================
+
         public async Task<List<CatalogoModel>> ObtenerUsuariosSoportePorArea(int idArea)
         {
             return await ticketsRepository.ObtenerUsuariosSoportePorArea(idArea);
