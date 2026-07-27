@@ -36,7 +36,6 @@
 <hr />
 
 <h6 class="fw-bold">Archivos adjuntos</h6>
-
 @if (Model.Adjuntos.Count == 0)
 {
     <p class="text-muted">Este ticket no tiene archivos adjuntos.</p>
@@ -47,7 +46,7 @@ else
         @foreach (var adj in Model.Adjuntos)
         {
             <li class="list-group-item d-flex justify-content-between align-items-center">
-                <a href="@adj.RutaArchivo" target="_blank">@adj.NombreArchivo</a>
+                <a href="@adj.RutaArchivo" target="_blank" rel="noopener">@adj.NombreArchivo</a>
                 @if (adj.PesoKB.HasValue)
                 {
                     <small class="text-muted">@adj.PesoKB KB</small>
@@ -57,7 +56,7 @@ else
     </ul>
 }
 
-    <hr />
+<hr />
 
 <h6 class="fw-bold">Bitácora</h6>
 <ul class="list-group">

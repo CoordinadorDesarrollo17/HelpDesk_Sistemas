@@ -7,14 +7,20 @@ namespace HelpDesk_Sistemas.Controllers
     public class TicketsController : Controller
     {
         private readonly ITicketsService ticketsService;
+        private readonly ILogger<TicketsController> logger;
 
-        //aqui se elije el id del usuario que esta logueado, por ahora es temporal
-        private const int UsuarioActualTemporal = 3; // TODO: reemplazar cuando exista login/autenticación
+        // TODO: reemplazar por el Id del usuario autenticado cuando exista login.
+        private const int UsuarioActualTemporal = 3;
 
-        public TicketsController(ITicketsService ticketsService)
+        public TicketsController(ITicketsService ticketsService, ILogger<TicketsController> logger)
         {
             this.ticketsService = ticketsService;
+            this.logger = logger;
         }
+
+        // ============================================================
+        // LISTADO Y FILTROS
+        // ============================================================
 
         public async Task<IActionResult> ListadoTickets(FiltrosTicketsModel model)
         {
@@ -40,6 +46,10 @@ namespace HelpDesk_Sistemas.Controllers
             return File(file.Content, file.ContentType, file.FileName);
         }
 
+        // ============================================================
+        // DETALLE
+        // ============================================================
+
         [HttpGet]
         public async Task<IActionResult> VerDetalle(int id)
         {
@@ -52,6 +62,10 @@ namespace HelpDesk_Sistemas.Controllers
 
             return PartialView("_DetalleTicket", detalle);
         }
+
+        // ============================================================
+        // CREACIÓN
+        // ============================================================
 
         [HttpGet]
         public async Task<IActionResult> CrearTicket()
@@ -123,40 +137,16 @@ namespace HelpDesk_Sistemas.Controllers
             return Content("OK");
         }
 
+        // ============================================================
+        // FLUJO CONSULTA / SOPORTE
+        // ============================================================
+
         [HttpPost]
         public async Task<IActionResult> TomarTicket(int id)
         {
             var exito = await ticketsService.TomarTicket(id, UsuarioActualTemporal);
             var mensaje = exito ? null : "Este ticket necesita una prioridad asignada antes de poder tomarlo, o ya fue tomado por otro usuario.";
 
-            return Json(new { exito, mensaje });
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> AnularTicket(int id, string motivo)
-        {
-            if (string.IsNullOrWhiteSpace(motivo))
-            {
-                return Json(new { exito = false, mensaje = "Debes indicar un motivo de anulación." });
-            }
-
-            var exito = await ticketsService.AnularTicket(id, UsuarioActualTemporal, motivo);
-            var mensaje = exito ? null : "El ticket ya no estaba disponible para anular.";
-
-            return Json(new { exito, mensaje });
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> AsignarPrioridad(int id, int idPrioridad)
-        {
-            var exito = await ticketsService.AsignarPrioridad(id, idPrioridad);
-            return Json(new { exito });
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> AsignarOrdenAtencion(int id, int orden)
-        {
-            var (exito, mensaje) = await ticketsService.AsignarOrdenAtencion(id, orden);
             return Json(new { exito, mensaje });
         }
 
@@ -177,12 +167,12 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpPost]
         public async Task<IActionResult> PausarTicket(int id, string tipoMotivo, int? idTicketRelacionado)
         {
-            if(tipoMotivo != "Reunion" && tipoMotivo != "AtencionOtroTicket")
+            if (tipoMotivo != "Reunion" && tipoMotivo != "AtencionOtroTicket")
             {
                 return Json(new { exito = false, mensaje = "Motivo inválido." });
             }
 
-            if(tipoMotivo == "AtenciónOtroTicket" && idTicketRelacionado is null)
+            if (tipoMotivo == "AtencionOtroTicket" && idTicketRelacionado is null)
             {
                 return Json(new { exito = false, mensaje = "Selecciona el ticket que vas a atender." });
             }
@@ -205,15 +195,15 @@ namespace HelpDesk_Sistemas.Controllers
             {
                 return Json(new { exito = false, mensaje = "Debes registrar la solución del ticket." });
             }
-            ///CONTINUAR AQUI
+
             var exito = await ticketsService.ValidarTicket(id, UsuarioActualTemporal, solucion);
             var mensaje = exito ? null : "El ticket ya no está disponible para validar.";
 
-            return Json(new {exito, mensaje });
+            return Json(new { exito, mensaje });
         }
 
         [HttpPost]
-        public async Task<IActionResult> ConfirmarSolucion (int id)
+        public async Task<IActionResult> ConfirmarSolucion(int id)
         {
             var exito = await ticketsService.ConfirmarSolucion(id, UsuarioActualTemporal);
             return Json(new { exito });
@@ -228,12 +218,47 @@ namespace HelpDesk_Sistemas.Controllers
             }
 
             var exito = await ticketsService.DevolverTicket(id, UsuarioActualTemporal, motivo);
-            var mensaje = exito ? null : "El ticket ya no está disponible apra devolver.";
+            var mensaje = exito ? null : "El ticket ya no está disponible para devolver.";
 
             return Json(new { exito, mensaje });
         }
 
-        //IMPLEMENTACION Y MEJORA
+        [HttpPost]
+        public async Task<IActionResult> AnularTicket(int id, string motivo)
+        {
+            if (string.IsNullOrWhiteSpace(motivo))
+            {
+                return Json(new { exito = false, mensaje = "Debes indicar un motivo de anulación." });
+            }
+
+            var exito = await ticketsService.AnularTicket(id, UsuarioActualTemporal, motivo);
+            var mensaje = exito ? null : "El ticket ya no estaba disponible para anular.";
+
+            return Json(new { exito, mensaje });
+        }
+
+        // ============================================================
+        // PRIORIDAD Y ORDEN DE ATENCIÓN (ambos flujos)
+        // ============================================================
+
+        [HttpPost]
+        public async Task<IActionResult> AsignarPrioridad(int id, int idPrioridad)
+        {
+            var exito = await ticketsService.AsignarPrioridad(id, idPrioridad);
+            return Json(new { exito });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AsignarOrdenAtencion(int id, int orden)
+        {
+            var (exito, mensaje) = await ticketsService.AsignarOrdenAtencion(id, orden);
+            return Json(new { exito, mensaje });
+        }
+
+        // ============================================================
+        // FLUJO IMPLEMENTACIÓN Y MEJORA
+        // ============================================================
+
         [HttpPost]
         public async Task<IActionResult> TomarLevantamiento(int id)
         {
@@ -269,7 +294,10 @@ namespace HelpDesk_Sistemas.Controllers
             return Json(new { exito });
         }
 
-        //REASGINAR USUARIO TICKET
+        // ============================================================
+        // REASIGNACIÓN (ambos flujos)
+        // ============================================================
+
         [HttpGet]
         public async Task<IActionResult> UsuariosSoportePorArea(int idArea)
         {
@@ -280,7 +308,7 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpPost]
         public async Task<IActionResult> ReasignarTicket(int id, int idNuevoUsuario)
         {
-            if(idNuevoUsuario <= 0)
+            if (idNuevoUsuario <= 0)
             {
                 return Json(new { exito = false, mensaje = "Selecciona a quién reasignar el ticket." });
             }
