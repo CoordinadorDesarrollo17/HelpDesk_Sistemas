@@ -66,6 +66,7 @@ namespace HelpDesk_Sistemas.Repositories
                     t.Afecta_Funcionamiento               AS AfectaFuncionamiento,
                     t.Orden_Atencion                      AS OrdenAtencion,
                     t.Id_Area                             AS IdArea,
+                    soc.Nombre                            AS Sociedad,
                     (
                         CASE WHEN t.Id_Usuario_Asignado IS NULL THEN 0
                         ELSE (
@@ -86,6 +87,7 @@ namespace HelpDesk_Sistemas.Repositories
                 LEFT  JOIN Prioridad p           ON p.Id  = t.Id_Prioridad
                 INNER JOIN Usuarios us           ON us.Id = t.Id_Usuario_Solicita
                 LEFT  JOIN Usuarios ua           ON ua.Id = t.Id_Usuario_Asignado
+                LEFT JOIN Sociedad soc           ON soc.Id = t.Id_Sociedad
                 WHERE {whereClause}
                 ORDER BY CASE WHEN e.Nombre = 'Pendiente' THEN 0 ELSE 1 END, t.Fecha_Creacion DESC
             ";
@@ -170,6 +172,25 @@ namespace HelpDesk_Sistemas.Repositories
             return await xCon.ExecuteScalarAsync<bool>(sql, new { Id = idTipoRequerimiento });
         }
 
+        /// <summary>Sociedades a las que pertenece un usuario — usado para llenar el
+        /// combo de "Sociedad" al crear un ticket.</summary>
+        public async Task<List<CatalogoModel>> ObtenerSociedadesPorUsuario(int idUsuario)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sql = @"
+        SELECT s.Id AS Id, s.Nombre AS Nombre
+        FROM Sociedad s
+        INNER JOIN Usuario_Sociedad us ON us.Id_Sociedad = s.Id
+        WHERE us.Id_Usuario = @IdUsuario
+          AND s.Activo = 1
+        ORDER BY s.Nombre;
+    ";
+
+            var result = await xCon.QueryAsync<CatalogoModel>(sql, new { IdUsuario = idUsuario });
+            return result.ToList();
+        }
+
         // ============================================================
         // DETALLE DE TICKET
         // ============================================================
@@ -191,12 +212,14 @@ namespace HelpDesk_Sistemas.Repositories
                     c.Nombre                              AS Categoria,
                     t.Detalle                             AS Detalle,
                     p.Nombre                              AS Prioridad,
-                    t.Afecta_Funcionamiento               AS AfectaFuncionamiento
+                    t.Afecta_Funcionamiento               AS AfectaFuncionamiento,
+                    soc.Nombre                            AS Sociedad
                 FROM Tickets t
                 INNER JOIN Tipo_Requerimiento tr ON tr.Id = t.Id_Tipo_Req
                 INNER JOIN Area a                ON a.Id  = t.Id_Area
                 LEFT  JOIN Categoria c           ON c.Id  = t.Id_Categoria
                 LEFT  JOIN Prioridad p           ON p.Id  = t.Id_Prioridad
+                LEFT JOIN Sociedad soc           ON soc.Id = t.Id_Sociedad
                 WHERE t.Id = @IdTicket
             ";
 
@@ -273,8 +296,8 @@ namespace HelpDesk_Sistemas.Repositories
                 );
                 DECLARE @IdTicketNuevo INT;
 
-                INSERT INTO Tickets (Codigo_Ticket, Id_Tipo_Req, Id_Categoria, Id_Area, Id_Usuario_Solicita, Detalle, Id_Estado, Afecta_Funcionamiento, Id_Prioridad)
-                VALUES (@Codigo, @IdTipoReq, @IdCategoria, @IdArea, @IdUsuarioSolicita, @Detalle, @IdEstadoPendiente, @Afecta, @IdPrioridad);
+                INSERT INTO Tickets (Codigo_Ticket, Id_Tipo_Req, Id_Categoria, Id_Area, Id_Usuario_Solicita, Detalle, Id_Estado, Afecta_Funcionamiento, Id_Prioridad, Id_Sociedad)
+                VALUES (@Codigo, @IdTipoReq, @IdCategoria, @IdArea, @IdUsuarioSolicita, @Detalle, @IdEstadoPendiente, @Afecta, @IdPrioridad, @IdSociedad);
 
                 SET @IdTicketNuevo = SCOPE_IDENTITY();
 
@@ -292,7 +315,8 @@ namespace HelpDesk_Sistemas.Repositories
                 IdUsuarioSolicita = idUsuarioSolicita,
                 Detalle = model.Detalle,
                 Afecta = model.AfectaFuncionamiento,
-                RequiereCategoria = requiereCategoria
+                RequiereCategoria = requiereCategoria,
+                IdSociedad = model.IdSociedad
             });
 
             return idTicket;
@@ -766,6 +790,22 @@ namespace HelpDesk_Sistemas.Repositories
             });
 
             return filas > 0;
+        }
+
+        /// <summary>Protección de servidor: confirma que la sociedad elegida realmente
+        /// pertenece al usuario, sin confiar únicamente en lo que envía el formulario.</summary>
+        public async Task<bool> UsuarioPerteneceSociedad(int idUsuario, int idSociedad)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sql = @"
+        SELECT COUNT(*)
+        FROM Usuario_Sociedad
+        WHERE Id_Usuario = @IdUsuario AND Id_Sociedad = @IdSociedad;
+    ";
+
+            var count = await xCon.ExecuteScalarAsync<int>(sql, new { IdUsuario = idUsuario, IdSociedad = idSociedad });
+            return count > 0;
         }
     }
 }

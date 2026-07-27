@@ -22,6 +22,7 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<List<CatalogoModel>> ObtenerCategoriasPorArea(int idArea);
         Task<List<CatalogoModel>> ObtenerPrioridades();
         Task<bool> TipoRequiereCategoria(int idTipoRequerimiento);
+        Task<List<CatalogoModel>> ObtenerSociedadesPorUsuario(int idUsuario);
 
         // ============================================================
         // DETALLE
@@ -65,6 +66,7 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<bool> EnviarAPruebas(int idTicket, int idUsuarioAccion);
         Task<bool> ConfirmarPruebas(int idTicket, int idUsuarioAccion);
         Task<bool> CerrarImplementacion(int idTicket, int idUsuarioAccion);
+        Task<bool> UsuarioPerteneceSociedad(int idUsuario, int idSociedad);
 
         // ============================================================
         // REASIGNACIÓN (ambos flujos)

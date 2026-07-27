@@ -23,5 +23,8 @@ namespace HelpDesk_Sistemas.Models
         public bool? AfectaFuncionamiento { get; set; }
 
         public List<IFormFile>? Archivos { get; set; }
+
+        [Required(ErrorMessage = "Selecciona la sociedad para este ticket.")]
+        public int? IdSociedad { get; set; }
     }
 }

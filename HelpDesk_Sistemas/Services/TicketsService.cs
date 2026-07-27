@@ -118,6 +118,11 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.TipoRequiereCategoria(idTipoRequerimiento);
         }
 
+        public async Task<List<CatalogoModel>> ObtenerSociedadesPorUsuario(int idUsuario)
+        {
+            return await ticketsRepository.ObtenerSociedadesPorUsuario(idUsuario);
+        }
+
         // ============================================================
         // DETALLE
         // ============================================================
@@ -240,6 +245,11 @@ namespace HelpDesk_Sistemas.Services
         public async Task<bool> AnularTicket(int idTicket, int idUsuarioAccion, string motivo)
         {
             return await ticketsRepository.AnularTicket(idTicket, idUsuarioAccion, motivo);
+        }
+
+        public async Task<bool> UsuarioPerteneceSociedad(int idUsuario, int idSociedad)
+        {
+            return await ticketsRepository.UsuarioPerteneceSociedad(idUsuario, idSociedad);
         }
 
         // ============================================================

@@ -73,6 +73,32 @@
         <span asp-validation-for="AfectaFuncionamiento" class="text-danger small d-block"></span>
     </div>
 
+    @{
+        var sociedades = (List<CatalogoModel>)ViewBag.Sociedades;
+    }
+
+    <div class="mb-3">
+        <label class="form-label">Sociedad</label>
+
+        @if (sociedades.Count == 1)
+        {
+            <input type="text" class="form-control" value="@sociedades[0].Nombre" disabled />
+            <input type="hidden" name="IdSociedad" value="@sociedades[0].Id" />
+        }
+        else
+        {
+            <select name="IdSociedad" class="form-select">
+                <option value="">Selecciona...</option>
+                @foreach (var soc in sociedades)
+                {
+                    <option value="@soc.Id" selected="@(Model?.IdSociedad == soc.Id)">@soc.Nombre</option>
+                }
+            </select>
+        }
+
+        <span asp-validation-for="IdSociedad" class="text-danger small"></span>
+    </div>
+
     <!-- BOTÓN CREAR TICKET -->
     <button type="submit" class="btn btn-primary">Crear ticket</button>
 </form>
