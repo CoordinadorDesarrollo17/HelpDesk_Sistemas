@@ -8,6 +8,7 @@
         <thead class="table-header">
             <tr>
                 <th>Código Ticket</th>
+                <th>Sociedad</th>
                 <th>Tipo Requerimiento</th>
                 <th>Área</th>
                 <th>Categoría</th>
@@ -26,6 +27,7 @@
             {
                 <tr>
                     <td data-label="Código Ticket">@u?.CodigoTicket</td>
+                    <td data-label="Sociedad">@(u?.Sociedad ?? "-")</td>
                     <td data-label="Tipo Requerimiento">@u?.TipoRequerimiento</td>
                     <td data-label="Área">@u?.Area</td>
                     <td data-label="Categoría">@u?.Categoria</td>

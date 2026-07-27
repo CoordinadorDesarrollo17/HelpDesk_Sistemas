@@ -13,5 +13,6 @@
         public bool? AfectaFuncionamiento { get; set; }
         public List<TicketAdjuntoModel> Adjuntos { get; set; } = new();
         public List<TicketHistorialModel> Historial { get; set; } = new();
+        public string? Sociedad { get; set; }
     }
 }
