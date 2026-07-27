@@ -16,5 +16,6 @@
         public bool? AfectaFuncionamiento { get; set; }
         public int CantidadMismaAsignadoPrioridad { get; set; }
         public int IdArea { get; set; }
+        public string? Sociedad { get; set; }
     }
 }

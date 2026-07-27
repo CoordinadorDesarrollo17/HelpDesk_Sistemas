@@ -72,6 +72,7 @@ namespace HelpDesk_Sistemas.Controllers
         {
             ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
             ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
+            ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(UsuarioActualTemporal);
 
             return PartialView("_CrearTicket");
         }
@@ -109,10 +110,16 @@ namespace HelpDesk_Sistemas.Controllers
                 }
             }
 
+            if (model.IdSociedad.HasValue && !await ticketsService.UsuarioPerteneceSociedad(UsuarioActualTemporal, model.IdSociedad.Value))
+            {
+                ModelState.AddModelError(nameof(model.IdSociedad), "La sociedad seleccionada no es válida para tu usuario.");
+            }
+
             if (!ModelState.IsValid)
             {
                 ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
                 ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
+                ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(UsuarioActualTemporal);
 
                 Response.StatusCode = 400;
                 return PartialView("_CrearTicket", model);
