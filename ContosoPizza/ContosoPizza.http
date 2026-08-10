@@ -1,0 +1,25 @@
+@ContosoPizza_HostAddress = http://localhost:5128
+
+###
+POST {{ContosoPizza_HostAddress}}/pizza/
+Content-Type: application/json
+
+{
+    "id": 3
+}
+
+###
+GET {{ContosoPizza_HostAddress}}/pizza/
+Accept: application/json
+
+###
+DELETE {{ContosoPizza_HostAddress}}/pizza/3
+Accept: application/json
+
+###
+POST {{ContosoPizza_HostAddress}}/pizza/
+Content-Type: application/json
+
+{
+    "id": 3
+}

@@ -84,6 +84,11 @@ namespace HelpDesk_Sistemas.Services
             return (content, contentType, fileName);
         }
 
+        public async Task<TicketsModel?> ObtenerTicketPorId(int id)
+        {
+            return await ticketsRepository.ObtenerTicketPorId(id);
+        }
+
         // ============================================================
         // CATÁLOGOS
         // ============================================================

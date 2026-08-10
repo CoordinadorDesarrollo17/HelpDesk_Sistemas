@@ -11,6 +11,7 @@ namespace HelpDesk_Sistemas.Interfaces
 
         Task<IEnumerable<TicketsModel>> ObtenerTickets(FiltrosTicketsModel model, int idUsuarioActual);
         Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual);
+        Task<TicketsModel?> ObtenerTicketPorId(int id); //PARA EL ENDPOINT GET /api/tickets/{id}
 
         /// <summary>Listado completo sin paginar, usado para exportar a Excel.</summary>
         Task<List<TicketsModel>> ListadoTicketsExcel(FiltrosTicketsModel model, int idUsuarioActual);

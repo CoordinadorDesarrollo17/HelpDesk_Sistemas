@@ -1,4 +1,5 @@
-﻿using HelpDesk_Sistemas.Interfaces;
+﻿using HelpDesk_Sistemas.Common;
+using HelpDesk_Sistemas.Interfaces;
 using HelpDesk_Sistemas.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,9 +9,6 @@ namespace HelpDesk_Sistemas.Controllers
     {
         private readonly ITicketsService ticketsService;
         private readonly ILogger<TicketsController> logger;
-
-        // TODO: reemplazar por el Id del usuario autenticado cuando exista login.
-        private const int UsuarioActualTemporal = 3;
 
         public TicketsController(ITicketsService ticketsService, ILogger<TicketsController> logger)
         {
@@ -24,7 +22,7 @@ namespace HelpDesk_Sistemas.Controllers
 
         public async Task<IActionResult> ListadoTickets(FiltrosTicketsModel model)
         {
-            var listaTickets = await ticketsService.ListadoTickets(model, UsuarioActualTemporal);
+            var listaTickets = await ticketsService.ListadoTickets(model, SesionTemporal.UsuarioActualTemporal);
 
             ViewBag.Prioridades = await ticketsService.ObtenerPrioridades();
             ViewBag.Estados = await ticketsService.ObtenerEstados();
@@ -42,7 +40,7 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpGet]
         public async Task<IActionResult> ExportarExcel(FiltrosTicketsModel model)
         {
-            var file = await ticketsService.ExportarExcelAsync(model, UsuarioActualTemporal);
+            var file = await ticketsService.ExportarExcelAsync(model, SesionTemporal.UsuarioActualTemporal);
             return File(file.Content, file.ContentType, file.FileName);
         }
 
@@ -72,7 +70,7 @@ namespace HelpDesk_Sistemas.Controllers
         {
             ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
             ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
-            ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(UsuarioActualTemporal);
+            ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(SesionTemporal.UsuarioActualTemporal);
 
             return PartialView("_CrearTicket");
         }
@@ -110,7 +108,7 @@ namespace HelpDesk_Sistemas.Controllers
                 }
             }
 
-            if (model.IdSociedad.HasValue && !await ticketsService.UsuarioPerteneceSociedad(UsuarioActualTemporal, model.IdSociedad.Value))
+            if (model.IdSociedad.HasValue && !await ticketsService.UsuarioPerteneceSociedad(SesionTemporal.UsuarioActualTemporal, model.IdSociedad.Value))
             {
                 ModelState.AddModelError(nameof(model.IdSociedad), "La sociedad seleccionada no es válida para tu usuario.");
             }
@@ -119,13 +117,13 @@ namespace HelpDesk_Sistemas.Controllers
             {
                 ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
                 ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
-                ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(UsuarioActualTemporal);
+                ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(SesionTemporal.UsuarioActualTemporal);
 
                 Response.StatusCode = 400;
                 return PartialView("_CrearTicket", model);
             }
 
-            var (idTicket, errores) = await ticketsService.CrearTicket(model, UsuarioActualTemporal, requiereCategoria);
+            var (idTicket, errores) = await ticketsService.CrearTicket(model, SesionTemporal.UsuarioActualTemporal, requiereCategoria);
 
             if (errores.Count > 0)
             {
@@ -151,7 +149,7 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpPost]
         public async Task<IActionResult> TomarTicket(int id)
         {
-            var exito = await ticketsService.TomarTicket(id, UsuarioActualTemporal);
+            var exito = await ticketsService.TomarTicket(id, SesionTemporal.UsuarioActualTemporal);
             var mensaje = exito ? null : "Este ticket necesita una prioridad asignada antes de poder tomarlo, o ya fue tomado por otro usuario.";
 
             return Json(new { exito, mensaje });
@@ -160,14 +158,14 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpPost]
         public async Task<IActionResult> AtenderTicket(int id)
         {
-            var exito = await ticketsService.AtenderTicket(id, UsuarioActualTemporal);
+            var exito = await ticketsService.AtenderTicket(id, SesionTemporal.UsuarioActualTemporal);
             return Json(new { exito });
         }
 
         [HttpGet]
         public async Task<IActionResult> MisTicketsPropios(int idTicketActual)
         {
-            var tickets = await ticketsService.ObtenerMisTicketsPropios(UsuarioActualTemporal, idTicketActual);
+            var tickets = await ticketsService.ObtenerMisTicketsPropios(SesionTemporal.UsuarioActualTemporal, idTicketActual);
             return Json(tickets);
         }
 
@@ -184,14 +182,14 @@ namespace HelpDesk_Sistemas.Controllers
                 return Json(new { exito = false, mensaje = "Selecciona el ticket que vas a atender." });
             }
 
-            var exito = await ticketsService.PausarTicket(id, UsuarioActualTemporal, tipoMotivo, idTicketRelacionado);
+            var exito = await ticketsService.PausarTicket(id, SesionTemporal.UsuarioActualTemporal, tipoMotivo, idTicketRelacionado);
             return Json(new { exito });
         }
 
         [HttpPost]
         public async Task<IActionResult> ReanudarTicket(int id)
         {
-            var exito = await ticketsService.ReanudarTicket(id, UsuarioActualTemporal);
+            var exito = await ticketsService.ReanudarTicket(id, SesionTemporal.UsuarioActualTemporal);
             return Json(new { exito });
         }
 
@@ -203,7 +201,7 @@ namespace HelpDesk_Sistemas.Controllers
                 return Json(new { exito = false, mensaje = "Debes registrar la solución del ticket." });
             }
 
-            var exito = await ticketsService.ValidarTicket(id, UsuarioActualTemporal, solucion);
+            var exito = await ticketsService.ValidarTicket(id, SesionTemporal.UsuarioActualTemporal, solucion);
             var mensaje = exito ? null : "El ticket ya no está disponible para validar.";
 
             return Json(new { exito, mensaje });
@@ -212,7 +210,7 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpPost]
         public async Task<IActionResult> ConfirmarSolucion(int id)
         {
-            var exito = await ticketsService.ConfirmarSolucion(id, UsuarioActualTemporal);
+            var exito = await ticketsService.ConfirmarSolucion(id, SesionTemporal.UsuarioActualTemporal);
             return Json(new { exito });
         }
 
@@ -224,7 +222,7 @@ namespace HelpDesk_Sistemas.Controllers
                 return Json(new { exito = false, mensaje = "Debes indicar el motivo por el cual devuelves el ticket." });
             }
 
-            var exito = await ticketsService.DevolverTicket(id, UsuarioActualTemporal, motivo);
+            var exito = await ticketsService.DevolverTicket(id, SesionTemporal.UsuarioActualTemporal, motivo);
             var mensaje = exito ? null : "El ticket ya no está disponible para devolver.";
 
             return Json(new { exito, mensaje });
@@ -238,7 +236,7 @@ namespace HelpDesk_Sistemas.Controllers
                 return Json(new { exito = false, mensaje = "Debes indicar un motivo de anulación." });
             }
 
-            var exito = await ticketsService.AnularTicket(id, UsuarioActualTemporal, motivo);
+            var exito = await ticketsService.AnularTicket(id, SesionTemporal.UsuarioActualTemporal, motivo);
             var mensaje = exito ? null : "El ticket ya no estaba disponible para anular.";
 
             return Json(new { exito, mensaje });
@@ -269,35 +267,35 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpPost]
         public async Task<IActionResult> TomarLevantamiento(int id)
         {
-            var exito = await ticketsService.TomarLevantamiento(id, UsuarioActualTemporal);
+            var exito = await ticketsService.TomarLevantamiento(id, SesionTemporal.UsuarioActualTemporal);
             return Json(new { exito });
         }
 
         [HttpPost]
         public async Task<IActionResult> IniciarDesarrollo(int id)
         {
-            var exito = await ticketsService.IniciarDesarrollo(id, UsuarioActualTemporal);
+            var exito = await ticketsService.IniciarDesarrollo(id, SesionTemporal.UsuarioActualTemporal);
             return Json(new { exito });
         }
 
         [HttpPost]
         public async Task<IActionResult> EnviarAPruebas(int id)
         {
-            var exito = await ticketsService.EnviarAPruebas(id, UsuarioActualTemporal);
+            var exito = await ticketsService.EnviarAPruebas(id, SesionTemporal.UsuarioActualTemporal);
             return Json(new { exito });
         }
 
         [HttpPost]
         public async Task<IActionResult> ConfirmarPruebas(int id)
         {
-            var exito = await ticketsService.ConfirmarPruebas(id, UsuarioActualTemporal);
+            var exito = await ticketsService.ConfirmarPruebas(id, SesionTemporal.UsuarioActualTemporal);
             return Json(new { exito });
         }
 
         [HttpPost]
         public async Task<IActionResult> CerrarImplementacion(int id)
         {
-            var exito = await ticketsService.CerrarImplementacion(id, UsuarioActualTemporal);
+            var exito = await ticketsService.CerrarImplementacion(id, SesionTemporal.UsuarioActualTemporal);
             return Json(new { exito });
         }
 
@@ -320,7 +318,7 @@ namespace HelpDesk_Sistemas.Controllers
                 return Json(new { exito = false, mensaje = "Selecciona a quién reasignar el ticket." });
             }
 
-            var exito = await ticketsService.ReasignarTicket(id, idNuevoUsuario, UsuarioActualTemporal);
+            var exito = await ticketsService.ReasignarTicket(id, idNuevoUsuario, SesionTemporal.UsuarioActualTemporal);
             var mensaje = exito ? null : "El ticket no está disponible para reasignar.";
 
             return Json(new { exito, mensaje });
