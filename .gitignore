@@ -17,3 +17,6 @@ obj/
 
 # VS Code (si lo usas)
 .vscode/
+
+# Archivos subidos por usuarios (contenido generado en tiempo de ejecución)
+wwwroot/uploads/
