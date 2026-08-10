@@ -119,6 +119,38 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
+        public async Task<TicketsModel?> ObtenerTicketPorId(int id)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sql = @"
+                SELECT
+            t.Id                                 AS IdTicket,
+            t.Codigo_Ticket                       AS CodigoTicket,
+            tr.Nombre                             AS TipoRequerimiento,
+            a.Nombre                              AS Area,
+            c.Nombre                              AS Categoria,
+            e.Nombre                              AS Estado,
+            p.Nombre                              AS Prioridad,
+            CONCAT(us.Nombre, ' ', us.Apellido)   AS Solicitante,
+            CONCAT(ua.Nombre, ' ', ua.Apellido)   AS Asignado,
+            t.Fecha_Creacion                      AS FechaCreacion
+        FROM Tickets t
+        INNER JOIN Tipo_Requerimiento tr ON tr.Id = t.Id_Tipo_Req
+        INNER JOIN Area a                ON a.Id  = t.Id_Area
+        LEFT  JOIN Categoria c           ON c.Id  = t.Id_Categoria
+        INNER JOIN Estado e              ON e.Id  = t.Id_Estado
+        LEFT  JOIN Prioridad p           ON p.Id  = t.Id_Prioridad
+        INNER JOIN Usuarios us           ON us.Id = t.Id_Usuario_Solicita
+        LEFT  JOIN Usuarios ua           ON ua.Id = t.Id_Usuario_Asignado
+        WHERE t.Id = @Id
+            ";
+
+            var result = await xCon.QueryFirstOrDefaultAsync<TicketsModel>(sql, new { Id = id });
+
+            return result;
+        }
+
         // ============================================================
         // CATÁLOGOS (combos de filtros y formularios)
         // ============================================================
@@ -279,13 +311,13 @@ namespace HelpDesk_Sistemas.Repositories
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
             var sql = @"
-                DECLARE @Anio INT = YEAR(GETDATE());
+                DECLARE @Anio VARCHAR(2) = RIGHT(CAST(YEAR(GETDATE()) AS VARCHAR), 2);
                 DECLARE @Siguiente INT = (
                     SELECT ISNULL(MAX(CAST(RIGHT(Codigo_Ticket, 6) AS INT)), 0) + 1
                     FROM Tickets
-                    WHERE Codigo_Ticket LIKE 'TCK-' + CAST(@Anio AS VARCHAR) + '-%'
-                );
-                DECLARE @Codigo VARCHAR(20) = 'TCK-' + CAST(@Anio AS VARCHAR) + '-' + RIGHT('000000' + CAST(@Siguiente AS VARCHAR), 6);
+                    WHERE Codigo_Ticket LIKE 'TK' + @Anio + '%'
+                    );
+                DECLARE @Codigo VARCHAR(20) = 'TK' + @Anio + RIGHT('000000' + CAST(@Siguiente AS VARCHAR), 6);
                 DECLARE @IdEstadoPendiente INT = (SELECT Id FROM Estado WHERE Nombre = 'Pendiente');
                 DECLARE @IdPrioridad INT = (
                     CASE

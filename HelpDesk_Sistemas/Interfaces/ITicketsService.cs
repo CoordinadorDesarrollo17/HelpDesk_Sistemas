@@ -11,6 +11,8 @@ namespace HelpDesk_Sistemas.Interfaces
 
         Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual);
         Task<(byte[] Content, string ContentType, string FileName)> ExportarExcelAsync(FiltrosTicketsModel model, int idUsuarioActual);
+        Task<TicketsModel?> ObtenerTicketPorId(int id);   // NUEVO: para el endpoint GET /api/tickets/{id}
+
 
         // ============================================================
         // CATÁLOGOS
