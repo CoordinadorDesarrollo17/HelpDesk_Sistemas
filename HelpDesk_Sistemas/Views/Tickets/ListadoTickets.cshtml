@@ -1,0 +1,1006 @@
+﻿@using HelpDesk_Sistemas.Models
+@using X.PagedList
+@model IPagedList<TicketsModel>
+
+@{
+	ViewData["Title"] = "Listado Tickets";
+}
+
+<div class="card shadow-sm mb-4">
+	<div class="card-header header-gradient text-black d-flex justify-content-between align-items-center">
+		<h5 class="mb-0 fw-bold">LISTADO DE TICKETS</h5>
+
+		<!--BOTON CREAR TICKET-->
+		<button type="button" class="btn btn-primary btn-sm" onclick="abrirCrearTicket()">
+			<i class="bi bi-plus-lg"></i> Nuevo ticket
+		</button>
+	</div>
+
+	<div class="card-body">
+
+		<div class="row mb-3 gy-2">
+
+			<!--PAGINACION-->
+			<div class="col-12 col-md-6">
+				<div class="d-flex align-items-center gap-2 flex-wrap">
+					<label class="mb-0 fw-semibold">Mostrar</label>
+
+					<select id="pageSize" class="form-select form-select-sm w-auto">
+						@foreach (var size in new[] { 1, 5, 10, 20, 40, 60, 80, 100 })
+						{
+							<option value="@size" selected="@(size == 10)">@size</option>
+						}
+					</select>
+
+					<span class="text-nowrap">registros por página</span>
+				</div>
+			</div>
+
+			<!--BUSCADOR Y GENERAR EXCEL-->
+			<div class="col-12 col-md-6">
+				<div class="d-flex justify-content-start justify-content-md-end gap-2">
+					<input type="text"
+						   id="txtBuscar"
+						   class="form-control form-control-sm w-100 w-md-auto"
+						   style="max-width: 300px;"
+						   placeholder="Buscar por código, tipo, área, estado..." autocomplete="off" />
+
+					<button id="btnExportarExcel" class="btn btn-success btn-sm">
+						<i class="bi bi-file-earmark-excel"></i>
+					</button>
+				</div>
+			</div>
+
+		</div>
+
+		<!--FILTROS PARA ESTADOS, AREAS, TIPO REQUERIMIENTO, PRIORIDADES-->
+		<div class="col-12">
+			<div class="d-flex flex-wrap gap-2">
+				<select id="filtroEstado" class="form-select form-select-sm w-auto">
+					<option value="">Todos los estados</option>
+					@foreach (var estado in (List<CatalogoModel>)ViewBag.Estados)
+					{
+						<option value="@estado.Id">@estado.Nombre</option>
+					}
+				</select>
+
+				<select id="filtroArea" class="form-select form-select-sm w-auto">
+					<option value="">Todas las áreas</option>
+					@foreach (var area in (List<CatalogoModel>)ViewBag.Areas)
+					{
+						<option value="@area.Id">@area.Nombre</option>
+					}
+				</select>
+
+				<select id="filtroTipo" class="form-select form-select-sm w-auto">
+					<option value="">Todos los tipos</option>
+					@foreach (var tipo in (List<TipoRequerimientoModel>)ViewBag.Tipos)
+					{
+						<option value="@tipo.Id">@tipo.Nombre</option>
+					}
+				</select>
+
+				<select id="filtroPrioridad" class="form-select form-select-sm w-auto">
+					<option value="">Todas las prioridades</option>
+					@foreach (var prioridad in (List<CatalogoModel>)ViewBag.Prioridades)
+					{
+						<option value="@prioridad.Id">@prioridad.Nombre</option>
+					}
+				</select>
+			</div>
+		</div>
+
+		<div id="tablaTickets">
+			<partial name="_TablaListaTickets" model="Model" />
+		</div>
+
+		<!--MODAL VER DETALLES DEL TICKET-->
+		<div class="modal fade" id="modalDetalleTicket" tabindex="-1">
+			<div class="modal-dialog modal-dialog-scrollable modal-lg">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">Detalle del ticket</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+					</div>
+					<div class="modal-body" id="contenidoDetalleTicket">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!--MODAL CREAR TICKET-->
+		<div class="modal fade" id="modalCrearTicket" tabindex="-1">
+			<div class="modal-dialog modal-lg">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">Nuevo ticket</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+					</div>
+					<div class="modal-body" id="contenidoCrearTicket">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!--MODAL ANULAR TICKET-->
+		<div class="modal fade" id="modalAnularTicket" tabindex="-1">
+			<div class="modal-dialog modal-lg">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">Anular Ticket</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+					</div>
+					<div class="modal-body">
+						<input type="hidden" id="idTicketAnular" />
+						<label class="form-label">Motivo de Anulación</label>
+						<textarea id="motivoAnulacion" class="form-control" rows="3"></textarea>
+						<span id="errorMotivoAnulacion" class="text-danger small"></span>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+						<button type="button" class="btn btn-danger" onclick="confirmarAnularTicket()">Anular ticket</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!--MODAL PAUSAR TICKET-->
+		<div class="modal fade" id="modalPausarTicket" tabindex="-1">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">Pausar ticket</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+					</div>
+					<div class="modal-body">
+						<input type="hidden" id="idTicketPausar" />
+
+						<div class="mb-3">
+							<label class="form-label d-block">Motivo de la pausa</label>
+
+							<div class="form-check">
+								<input class="form-check-input" type="radio" name="tipoMotivoPausa" id="motivoReunion" value="Reunion" checked>
+								<label class="form-check-label" for="motivoReunion">Por reunión</label>
+							</div>
+
+							<div class="form-check">
+								<input class="form-check-input" type="radio" name="tipoMotivoPausa" id="motivoOtroTicket" value="AtencionOtroTicket">
+								<label class="form-check-label" for="motivoOtroTicket">Por atención de otro ticket</label>
+							</div>
+						</div>
+
+						<div class="mb-3" id="contenedorOtroTicket" style="display: none;">
+							<label class="form-label">¿Qué ticket vas a atender?</label>
+							<select id="cboTicketRelacionado" class="form-select">
+								<option value="">Selecciona...</option>
+							</select>
+						</div>
+
+						<span id="errorPausarTicket" class="text-danger small"></span>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+						<button type="button" class="btn btn-warning" onclick="confirmarPausarTicket()">Pausar ticket</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- MODAL VALIDAR TICKET-->
+		<div class="modal fade" id="modalValidarTicket" tabindex="-1">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">Registrar solución</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+					</div>
+					<div class="modal-body">
+						<input type="hidden" id="idTicketValidar" />
+						<label class="form-label">Solución / explicación</label>
+						<textarea id="solucionTicket" class="form-control" rows="4"></textarea>
+						<span id="errorValidarTicket" class="text-danger small"></span>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+						<button type="button" class="btn btn-primary" onclick="confirmarValidarTicket()">Enviar a validación</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!--MODAL DEVOLVER TICKET -->
+		<div class="modal fade" id="modalDevolverTicket" tabindex="-1">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">Devolver ticket</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+					</div>
+					<div class="modal-body">
+						<input type="hidden" id="idTicketDevolver" />
+						<label class="form-label">¿Por qué devuelves este ticket?</label>
+						<textarea id="motivoDevolucion" class="form-control" rows="4"></textarea>
+						<span id="errorDevolverTicket" class="text-danger small"></span>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+						<button type="button" class="btn btn-danger" onclick="confirmarDevolverTicket()">Devolver</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!--MODAL PARA REASIGNAR TICKET-->
+		<div class="modal fade" id="modalReasignarTicket" tabindex="-1">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">Reasignar ticket</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+					</div>
+					<div class="modal-body">
+						<input type="hidden" id="idTicketReasignar" />
+						<input type="hidden" id="idAreaReasignar" />
+
+						<label class="form-label">Nuevo responsable</label>
+						<select id="cboNuevoUsuario" class="form-select">
+							<option value="">Cargando...</option>
+						</select>
+						<span id="errorReasignarTicket" class="text-danger small"></span>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+						<button type="button" class="btn btn-primary" onclick="confirmarReasignarTicket()">Reasignar</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!--TOAST PARA REEMPLAZAR LOS ALERT DEL NAVEGADOR-->
+		<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+			<div id="toastGenerico" class="toast align-items-center border-0" role="alert">
+				<div class="d-flex">
+					<div class="toast-body" id="toastMensaje"></div>
+					<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+@section Scripts {
+	<script>
+		const txtBuscar = document.getElementById("txtBuscar");
+		const cboPageSize = document.getElementById("pageSize");
+		const tablaTickets = document.getElementById("tablaTickets");
+
+		// ============================================================
+		// HELPER: fetch con manejo de fallos de conexión
+		// ============================================================
+
+		function fetchConManejo(url, opciones) {
+			return fetch(url, opciones).catch(error => {
+				console.error(error);
+				mostrarToast("No se pudo conectar con el servidor. Revisa tu conexión.", "danger");
+				return null;
+			});
+		}
+
+		function mostrarToast(mensaje, tipo = "danger") {
+			const toastEl = document.getElementById("toastGenerico");
+			const toastMensaje = document.getElementById("toastMensaje");
+
+			toastEl.classList.remove("text-bg-success", "text-bg-danger", "text-bg-warning");
+			toastEl.classList.add(`text-bg-${tipo}`);
+
+			toastMensaje.textContent = mensaje;
+
+			const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+			toast.show();
+		}
+
+		// ============================================================
+		// LISTADO, FILTROS Y BÚSQUEDA
+		// ============================================================
+
+		function cargarTabla(page = 1) {
+			const params = new URLSearchParams({
+				"Buscar": txtBuscar.value,
+				"IdEstado": document.getElementById("filtroEstado").value,
+				"IdArea": document.getElementById("filtroArea").value,
+				"IdTipoRequerimiento": document.getElementById("filtroTipo").value,
+				"IdPrioridad": document.getElementById("filtroPrioridad").value,
+				"Paginacion.Page": page,
+				"Paginacion.PageSize": cboPageSize.value
+			});
+
+			let url = `@Url.Action("ListadoTickets", "Tickets")?${params.toString()}`;
+
+			fetchConManejo(url, {
+				headers: { "X-Requested-With": "XMLHttpRequest" }
+			})
+			.then(r => {
+				if (!r) return;
+				return r.text();
+			})
+			.then(html => {
+				if (!html) return;
+				tablaTickets.innerHTML = html;
+			});
+		}
+
+		["filtroEstado", "filtroArea", "filtroTipo", "filtroPrioridad"].forEach(id => {
+			document.getElementById(id).addEventListener("change", () => cargarTabla(1));
+		});
+
+		cboPageSize.addEventListener("change", () => cargarTabla(1));
+
+		agregarEventosBusqueda(txtBuscar);
+
+		function agregarEventosBusqueda(input) {
+			if (!input) return;
+
+			input.addEventListener("keydown", function (e) {
+				if (e.key === "Enter") {
+					e.preventDefault();
+					cargarTabla(1);
+				}
+			});
+
+			input.addEventListener("input", function () {
+				if (input.value.trim() === "") {
+					cargarTabla(1);
+				}
+			});
+		}
+
+		document.getElementById("btnExportarExcel").addEventListener("click", function () {
+			const query = txtBuscar.value;
+			const url = `@Url.Action("ExportarExcel", "Tickets")?Buscar=${encodeURIComponent(query)}`;
+			window.location.href = url;
+		});
+
+		// ============================================================
+		// VER DETALLE
+		// ============================================================
+
+		function verDetalle(idTicket) {
+			const modalEl = document.getElementById("modalDetalleTicket");
+			const modal = new bootstrap.Modal(modalEl);
+			const contenido = document.getElementById("contenidoDetalleTicket");
+
+			contenido.innerHTML = "Cargando...";
+			modal.show();
+
+			fetchConManejo(`@Url.Action("VerDetalle")?id=${idTicket}`)
+				.then(r => {
+					if (!r) return;
+					return r.text();
+				})
+				.then(html => {
+					if (!html) return;
+					contenido.innerHTML = html;
+				});
+		}
+
+		// ============================================================
+		// CREAR TICKET
+		// ============================================================
+
+		function abrirCrearTicket() {
+			const modalEl = document.getElementById("modalCrearTicket");
+			const modal = new bootstrap.Modal(modalEl);
+			const contenido = document.getElementById("contenidoCrearTicket");
+
+			contenido.innerHTML = "Cargando...";
+			modal.show();
+
+			fetchConManejo(`@Url.Action("CrearTicket")`)
+				.then(r => {
+					if (!r) return;
+					return r.text();
+				})
+				.then(html => {
+					if (!html) return;
+					contenido.innerHTML = html;
+					inicializarValidacionArchivos();
+					inicializarComboCategoria();
+					inicializarComboTipoRequerimiento();
+					inicializarFormularioCrearTicket();
+				});
+		}
+
+		function inicializarFormularioCrearTicket() {
+			const form = document.getElementById("formCrearTicket");
+
+			form.addEventListener("submit", function (e) {
+				e.preventDefault();
+
+				const formData = new FormData(form);
+
+				fetchConManejo(form.action, {
+					method: "POST",
+					body: formData
+				})
+				.then(r => {
+					if (!r) return;
+
+					if (r.ok) {
+						bootstrap.Modal.getInstance(document.getElementById("modalCrearTicket")).hide();
+						mostrarToast("Ticket creado correctamente", "success");
+						cargarTabla(1);
+					} else {
+						return r.text().then(html => {
+							document.getElementById("contenidoCrearTicket").innerHTML = html;
+							inicializarValidacionArchivos();
+							inicializarComboCategoria();
+							inicializarComboTipoRequerimiento();
+							inicializarFormularioCrearTicket();
+						});
+					}
+				});
+			});
+		}
+
+		function inicializarComboCategoria() {
+			const cboArea = document.getElementById("cboArea");
+
+			cboArea.addEventListener("change", function () {
+				cargarCategorias(this.value, null);
+			});
+
+			if (cboArea.value) {
+				cargarCategorias(cboArea.value, cboArea.dataset.categoriaSeleccionada);
+			}
+		}
+
+		function cargarCategorias(idArea, idCategoriaSeleccionada) {
+			const cboCategoria = document.getElementById("cboCategoria");
+
+			if (!idArea) {
+				cboCategoria.innerHTML = '<option value="">Selecciona un área primero...</option>';
+				return;
+			}
+
+			cboCategoria.innerHTML = '<option value="">Cargando...</option>';
+
+			fetchConManejo(`@Url.Action("CategoriasPorArea")?idArea=${idArea}`)
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					cboCategoria.innerHTML = '<option value="">Selecciona...</option>';
+					data.forEach(cat => {
+						const opt = document.createElement("option");
+						opt.value = cat.id;
+						opt.textContent = cat.nombre;
+
+						if (idCategoriaSeleccionada && cat.id == idCategoriaSeleccionada) {
+							opt.selected = true;
+						}
+
+						cboCategoria.appendChild(opt);
+					});
+				});
+		}
+
+		function inicializarComboTipoRequerimiento() {
+			const cboTipo = document.getElementById("cboTipoRequerimiento");
+
+			cboTipo.addEventListener("change", function () {
+				actualizarVisibilidadPorTipo();
+			});
+
+			actualizarVisibilidadPorTipo();
+		}
+
+		function actualizarVisibilidadPorTipo() {
+			const cboTipo = document.getElementById("cboTipoRequerimiento");
+			const opcionSeleccionada = cboTipo.options[cboTipo.selectedIndex];
+			const requiereCategoria = opcionSeleccionada.dataset.requiereCategoria === "true";
+
+			const grupoCategoria = document.getElementById("grupoCategoria");
+			const grupoAfecta = document.getElementById("grupoAfectaFuncionamiento");
+
+			grupoCategoria.style.display = requiereCategoria ? "block" : "none";
+			grupoAfecta.style.display = requiereCategoria ? "block" : "none";
+
+			if (!requiereCategoria) {
+				document.getElementById("cboCategoria").value = "";
+				document.querySelectorAll('input[name="AfectaFuncionamiento"]').forEach(r => r.checked = false);
+			}
+		}
+
+		function inicializarValidacionArchivos() {
+			const inputArchivos = document.querySelector('input[name="Archivos"]');
+			const extensionesPermitidas = ['.jpg', '.jpeg', '.png', '.pdf', '.xlsx', '.docx', '.ppt', '.pptx', '.mp4'];
+			const tamanoMaximoBytes = 10 * 1024 * 1024;
+			const btnSubmit = document.querySelector('#formCrearTicket button[type="submit"]');
+
+			inputArchivos.addEventListener("change", function () {
+				const errores = [];
+
+				for (const archivo of this.files) {
+					const extension = "." + archivo.name.split(".").pop().toLowerCase();
+
+					if (!extensionesPermitidas.includes(extension)) {
+						errores.push(`"${archivo.name}" tiene un formato no permitido.`);
+					}
+
+					if (archivo.size > tamanoMaximoBytes) {
+						errores.push(`"${archivo.name}" supera el tamaño máximo de 10 MB.`);
+					}
+				}
+
+				const spanError = document.querySelector('span[data-valmsg-for="Archivos"]');
+
+				if (errores.length > 0) {
+					spanError.textContent = errores.join(" ") + " Vuelve a seleccionar los archivos para continuar.";
+					btnSubmit.disabled = true;
+				} else {
+					spanError.textContent = "";
+					btnSubmit.disabled = false;
+				}
+			});
+		}
+
+		// ============================================================
+		// FLUJO CONSULTA / SOPORTE
+		// ============================================================
+
+		function tomarTicket(idTicket) {
+			fetchConManejo(`@Url.Action("TomarTicket")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast(data.mensaje, "danger");
+					} else {
+						mostrarToast("Ticket tomado correctamente", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function atenderTicket(idTicket) {
+			fetchConManejo(`@Url.Action("AtenderTicket")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("El ticket ya no está disponible para atender.", "danger");
+					} else {
+						mostrarToast("El ticket se atendió correctamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function abrirPausarTicket(idTicket) {
+			document.getElementById("idTicketPausar").value = idTicket;
+			document.getElementById("motivoReunion").checked = true;
+			document.getElementById("contenedorOtroTicket").style.display = "none";
+			document.getElementById("errorPausarTicket").textContent = "";
+
+			const modal = new bootstrap.Modal(document.getElementById("modalPausarTicket"));
+			modal.show();
+		}
+
+		document.querySelectorAll('input[name="tipoMotivoPausa"]').forEach(radio => {
+			radio.addEventListener("change", function () {
+				const contenedor = document.getElementById("contenedorOtroTicket");
+
+				if (this.value === "AtencionOtroTicket") {
+					contenedor.style.display = "block";
+					cargarMisTicketsPropios();
+				} else {
+					contenedor.style.display = "none";
+				}
+			});
+		});
+
+		function cargarMisTicketsPropios() {
+			const idTicketActual = document.getElementById("idTicketPausar").value;
+			const cboTicketRelacionado = document.getElementById("cboTicketRelacionado");
+
+			cboTicketRelacionado.innerHTML = '<option value="">Cargando...</option>';
+
+			fetchConManejo(`@Url.Action("MisTicketsPropios")?idTicketActual=${idTicketActual}`)
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					cboTicketRelacionado.innerHTML = '<option value="">Selecciona...</option>';
+					data.forEach(t => {
+						const opt = document.createElement("option");
+						opt.value = t.id;
+						opt.textContent = t.nombre;
+						cboTicketRelacionado.appendChild(opt);
+					});
+				});
+		}
+
+		function confirmarPausarTicket() {
+			const idTicket = document.getElementById("idTicketPausar").value;
+			const tipoMotivo = document.querySelector('input[name="tipoMotivoPausa"]:checked').value;
+			const idTicketRelacionado = document.getElementById("cboTicketRelacionado").value;
+
+			if (tipoMotivo === "AtencionOtroTicket" && !idTicketRelacionado) {
+				document.getElementById("errorPausarTicket").textContent = "Selecciona el ticket que vas a atender.";
+				return;
+			}
+
+			const params = new URLSearchParams({ id: idTicket, tipoMotivo: tipoMotivo });
+			if (idTicketRelacionado) {
+				params.append("idTicketRelacionado", idTicketRelacionado);
+			}
+
+			fetchConManejo(`@Url.Action("PausarTicket")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (data.exito) {
+						bootstrap.Modal.getInstance(document.getElementById("modalPausarTicket")).hide();
+						mostrarToast("Ticket pausado correctamente", "success");
+						cargarTabla(1);
+					} else {
+						document.getElementById("errorPausarTicket").textContent = data.mensaje || "No se pudo pausar el ticket.";
+					}
+				});
+		}
+
+		function reanudarTicket(idTicket) {
+			fetchConManejo(`@Url.Action("ReanudarTicket")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo reanudar el ticket.", "danger");
+					} else {
+						mostrarToast("El ticket se reanudó satisfactoriamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function abrirValidarTicket(idTicket) {
+			document.getElementById("idTicketValidar").value = idTicket;
+			document.getElementById("solucionTicket").value = "";
+			document.getElementById("errorValidarTicket").textContent = "";
+
+			const modal = new bootstrap.Modal(document.getElementById("modalValidarTicket"));
+			modal.show();
+		}
+
+		function confirmarValidarTicket() {
+			const idTicket = document.getElementById("idTicketValidar").value;
+			const solucion = document.getElementById("solucionTicket").value;
+
+			if (!solucion.trim()) {
+				document.getElementById("errorValidarTicket").textContent = "Debes registrar la solución del ticket.";
+				return;
+			}
+
+			const params = new URLSearchParams({ id: idTicket, solucion: solucion });
+
+			fetchConManejo(`@Url.Action("ValidarTicket")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (data.exito) {
+						bootstrap.Modal.getInstance(document.getElementById("modalValidarTicket")).hide();
+						mostrarToast("Solución registrada correctamente", "success");
+						cargarTabla(1);
+					} else {
+						document.getElementById("errorValidarTicket").textContent = data.mensaje;
+					}
+				});
+		}
+
+		function confirmarSolucion(idTicket) {
+			fetchConManejo(`@Url.Action("ConfirmarSolucion")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo confirmar la solución del ticket.", "danger");
+					} else {
+						mostrarToast("Se confirmó la solución correctamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function abrirDevolverTicket(idTicket) {
+			document.getElementById("idTicketDevolver").value = idTicket;
+			document.getElementById("motivoDevolucion").value = "";
+			document.getElementById("errorDevolverTicket").textContent = "";
+
+			const modal = new bootstrap.Modal(document.getElementById("modalDevolverTicket"));
+			modal.show();
+		}
+
+		function confirmarDevolverTicket() {
+			const idTicket = document.getElementById("idTicketDevolver").value;
+			const motivo = document.getElementById("motivoDevolucion").value;
+
+			if (!motivo.trim()) {
+				document.getElementById("errorDevolverTicket").textContent = "Debes indicar el motivo.";
+				return;
+			}
+
+			const params = new URLSearchParams({ id: idTicket, motivo: motivo });
+
+			fetchConManejo(`@Url.Action("DevolverTicket")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (data.exito) {
+						bootstrap.Modal.getInstance(document.getElementById("modalDevolverTicket")).hide();
+						mostrarToast("Ticket devuelto correctamente", "success");
+						cargarTabla(1);
+					} else {
+						document.getElementById("errorDevolverTicket").textContent = data.mensaje;
+					}
+				});
+		}
+
+		function abrirAnularTicket(idTicket) {
+			document.getElementById("idTicketAnular").value = idTicket;
+			document.getElementById("motivoAnulacion").value = "";
+			document.getElementById("errorMotivoAnulacion").textContent = "";
+
+			const modal = new bootstrap.Modal(document.getElementById("modalAnularTicket"));
+			modal.show();
+		}
+
+		function confirmarAnularTicket() {
+			const idTicket = document.getElementById("idTicketAnular").value;
+			const motivo = document.getElementById("motivoAnulacion").value;
+
+			if (!motivo.trim()) {
+				document.getElementById("errorMotivoAnulacion").textContent = "Debes indicar un motivo de anulación.";
+				return;
+			}
+
+			const params = new URLSearchParams({ id: idTicket, motivo: motivo });
+
+			fetchConManejo(`@Url.Action("AnularTicket")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (data.exito) {
+						bootstrap.Modal.getInstance(document.getElementById("modalAnularTicket")).hide();
+						mostrarToast("Ticket anulado correctamente", "success");
+						cargarTabla(1);
+					} else {
+						document.getElementById("errorMotivoAnulacion").textContent = data.mensaje;
+					}
+				});
+		}
+
+		// ============================================================
+		// PRIORIDAD Y ORDEN DE ATENCIÓN
+		// ============================================================
+
+		function asignarPrioridad(idTicket, idPrioridad) {
+			if (!idPrioridad) return;
+
+			const params = new URLSearchParams({ id: idTicket, idPrioridad: idPrioridad });
+
+			fetchConManejo(`@Url.Action("AsignarPrioridad")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo asignar la prioridad. Puede que el ticket ya haya cambiado de estado.", "danger");
+					} else {
+						mostrarToast("Prioridad asignada correctamente", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function asignarOrdenAtencion(idTicket, orden) {
+			if (!orden) return;
+
+			const params = new URLSearchParams({ id: idTicket, orden: orden });
+
+			fetchConManejo(`@Url.Action("AsignarOrdenAtencion")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast(data.mensaje || "No se pudo asignar el orden de atención.", "danger");
+					} else {
+						mostrarToast("Orden de atención asignado correctamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		// ============================================================
+		// FLUJO IMPLEMENTACIÓN Y MEJORA
+		// ============================================================
+
+		function tomarLevantamiento(idTicket) {
+			fetchConManejo(`@Url.Action("TomarLevantamiento")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("Este ticket necesita una prioridad asignada antes de poder tomarlo, o ya fue tomado por otro usuario.", "danger");
+					} else {
+						mostrarToast("Se inició el levantamiento correctamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function iniciarDesarrollo(idTicket) {
+			fetchConManejo(`@Url.Action("IniciarDesarrollo")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo iniciar el desarrollo.", "danger");
+					} else {
+						mostrarToast("Se inició el desarrollo satisfactoriamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function enviarAPruebas(idTicket) {
+			fetchConManejo(`@Url.Action("EnviarAPruebas")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo enviar a pruebas.", "danger");
+					} else {
+						mostrarToast("El ticket pasó a etapa de pruebas.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function confirmarPruebas(idTicket) {
+			fetchConManejo(`@Url.Action("ConfirmarPruebas")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo confirmar.", "danger");
+					} else {
+						mostrarToast("Se completó la etapa de pruebas satisfactoriamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		function cerrarImplementacion(idTicket) {
+			fetchConManejo(`@Url.Action("CerrarImplementacion")?id=${idTicket}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo cerrar el ticket.", "danger");
+					} else {
+						mostrarToast("El ticket se cerró correctamente.", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
+		// ============================================================
+		// REASIGNACIÓN
+		// ============================================================
+
+		function abrirReasignarTicket(idTicket, idArea) {
+			document.getElementById("idTicketReasignar").value = idTicket;
+			document.getElementById("idAreaReasignar").value = idArea;
+			document.getElementById("errorReasignarTicket").textContent = "";
+
+			const cboNuevoUsuario = document.getElementById("cboNuevoUsuario");
+			cboNuevoUsuario.innerHTML = '<option value="">Cargando...</option>';
+
+			const modal = new bootstrap.Modal(document.getElementById("modalReasignarTicket"));
+			modal.show();
+
+			fetchConManejo(`@Url.Action("UsuariosSoportePorArea")?idArea=${idArea}`)
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					cboNuevoUsuario.innerHTML = '<option value="">Selecciona...</option>';
+					data.forEach(u => {
+						const opt = document.createElement("option");
+						opt.value = u.id;
+						opt.textContent = u.nombre;
+						cboNuevoUsuario.appendChild(opt);
+					});
+				});
+		}
+
+		function confirmarReasignarTicket() {
+			const idTicket = document.getElementById("idTicketReasignar").value;
+			const idNuevoUsuario = document.getElementById("cboNuevoUsuario").value;
+
+			if (!idNuevoUsuario) {
+				document.getElementById("errorReasignarTicket").textContent = "Selecciona a quién reasignar el ticket.";
+				return;
+			}
+
+			const params = new URLSearchParams({ id: idTicket, idNuevoUsuario: idNuevoUsuario });
+
+			fetchConManejo(`@Url.Action("ReasignarTicket")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (data.exito) {
+						bootstrap.Modal.getInstance(document.getElementById("modalReasignarTicket")).hide();
+						mostrarToast("Ticket reasignado correctamente", "success");
+						cargarTabla(1);
+					} else {
+						document.getElementById("errorReasignarTicket").textContent = data.mensaje;
+					}
+				});
+		}
+	</script>
+}

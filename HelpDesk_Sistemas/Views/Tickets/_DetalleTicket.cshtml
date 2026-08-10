@@ -1,0 +1,93 @@
+﻿@using HelpDesk_Sistemas.Models
+@model TicketDetalleModel
+
+<div class="mb-3">
+    <h5 class="fw-bold">@Model.CodigoTicket</h5>
+</div>
+
+<dl class="row">
+    <dt class="col-sm-4">Sociedad</dt>
+    <dd class="col-sm-8">@(Model.Sociedad ?? "-")</dd>
+
+    <dt class="col-sm-4">Tipo de requerimiento</dt>
+    <dd class="col-sm-8">@Model.TipoRequerimiento</dd>
+
+    <dt class="col-sm-4">Área</dt>
+    <dd class="col-sm-8">@Model.Area</dd>
+
+    <dt class="col-sm-4">Categoría</dt>
+    <dd class="col-sm-8">@(Model.Categoria ?? "-")</dd>
+
+    @if (Model.AfectaFuncionamiento.HasValue)
+    {
+        <dt class="col-sm-4">¿Detiene procesos?</dt>
+        <dd class="col-sm-8">@(Model.AfectaFuncionamiento.Value ? "Sí" : "No")</dd>
+    }
+
+    @if (Model.Prioridad != null)
+    {
+        <dt class="col-sm-4">Prioridad</dt>
+        <dd class="col-sm-8">@Model.Prioridad</dd>
+    }
+</dl>
+
+<hr />
+
+<h6 class="fw-bold">Detalle del requerimiento</h6>
+<p>@Model.Detalle</p>
+
+<hr />
+
+<h6 class="fw-bold">Archivos adjuntos</h6>
+@if (Model.Adjuntos.Count == 0)
+{
+    <p class="text-muted">Este ticket no tiene archivos adjuntos.</p>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var adj in Model.Adjuntos)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <a href="@adj.RutaArchivo" target="_blank" rel="noopener">@adj.NombreArchivo</a>
+                @if (adj.PesoKB.HasValue)
+                {
+                    <small class="text-muted">@adj.PesoKB KB</small>
+                }
+            </li>
+        }
+    </ul>
+}
+
+<hr />
+
+<h6 class="fw-bold">Bitácora</h6>
+<ul class="list-group">
+    @foreach (var h in Model.Historial)
+    {
+        <li class="list-group-item">
+            <div class="d-flex justify-content-between">
+                <span>
+                    @if (h.EstadoAnterior != null && h.EstadoAnterior != h.EstadoNuevo)
+                    {
+                        <strong>@h.EstadoAnterior</strong> <text>→</text> <strong>@h.EstadoNuevo</strong>
+                    }
+                    else if (h.EstadoAnterior == h.EstadoNuevo)
+                    {
+                        <strong>@h.EstadoNuevo</strong> <span class="text-muted">(sin cambio de estado)</span>
+                    }
+                    else
+                    {
+                        <strong>Creación</strong> <text>→</text> <strong>@h.EstadoNuevo</strong>
+                    }
+                </span>
+                <small class="text-muted">@h.FechaCambio.ToString("dd/MM/yyyy HH:mm")</small>
+            </div>
+            <small class="text-muted">Por: @h.UsuarioAccion</small>
+            @if (!string.IsNullOrWhiteSpace(h.Comentario))
+            {
+                <div><em>@h.Comentario</em></div>
+            }
+        </li>
+    }
+</ul>
