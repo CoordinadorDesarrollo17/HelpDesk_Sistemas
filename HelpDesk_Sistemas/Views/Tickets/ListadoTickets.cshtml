@@ -8,7 +8,7 @@
 
 <div class="card shadow-sm mb-4">
 	<div class="card-header header-gradient text-black d-flex justify-content-between align-items-center">
-		<h5 class="mb-0 fw-bold">LISTADO DE TICKETS</h5>
+		<h5 class="mb-0 fw-bold">Listado de tickets</h5>
 
 		<!--BOTON CREAR TICKET-->
 		<button type="button" class="btn btn-primary btn-sm" onclick="abrirCrearTicket()">
@@ -408,6 +408,8 @@
 					inicializarComboCategoria();
 					inicializarComboTipoRequerimiento();
 					inicializarFormularioCrearTicket();
+					inicializarPrioridadEstimada();
+					inicializarContadorDetalle();
 				});
 		}
 
@@ -437,6 +439,8 @@
 							inicializarComboCategoria();
 							inicializarComboTipoRequerimiento();
 							inicializarFormularioCrearTicket();
+							inicializarPrioridadEstimada();
+							inicializarContadorDetalle();
 						});
 					}
 				});
@@ -503,15 +507,72 @@
 			const requiereCategoria = opcionSeleccionada.dataset.requiereCategoria === "true";
 
 			const grupoCategoria = document.getElementById("grupoCategoria");
-			const grupoAfecta = document.getElementById("grupoAfectaFuncionamiento");
+			const grupoImpactoUrgencia = document.getElementById("grupoImpactoUrgencia");
 
 			grupoCategoria.style.display = requiereCategoria ? "block" : "none";
-			grupoAfecta.style.display = requiereCategoria ? "block" : "none";
+			grupoImpactoUrgencia.style.display = requiereCategoria ? "block" : "none";
 
 			if (!requiereCategoria) {
 				document.getElementById("cboCategoria").value = "";
-				document.querySelectorAll('input[name="AfectaFuncionamiento"]').forEach(r => r.checked = false);
+				document.querySelector('select[name="IdImpacto"]').value = "";
+				document.querySelector('select[name="IdUrgencia"]').value = "";
 			}
+
+			actualizarPrioridadEstimada();
+		}
+
+		// ============================================================
+		// PRIORIDAD ESTIMADA EN VIVO (Impacto × Urgencia)
+		// ============================================================
+
+		function inicializarPrioridadEstimada() {
+			document.getElementById("cboImpacto").addEventListener("change", actualizarPrioridadEstimada);
+			document.getElementById("cboUrgencia").addEventListener("change", actualizarPrioridadEstimada);
+			actualizarPrioridadEstimada();
+		}
+
+		function actualizarPrioridadEstimada() {
+			const contenedor = document.getElementById("prioridadEstimada");
+			const idTipo = parseInt(document.getElementById("cboTipoRequerimiento").value);
+			const idImpacto = parseInt(document.getElementById("cboImpacto").value);
+			const idUrgencia = parseInt(document.getElementById("cboUrgencia").value);
+
+			if (!idTipo || !idImpacto || !idUrgencia) {
+				contenedor.innerHTML = "";
+				return;
+			}
+
+			const matriz = JSON.parse(document.getElementById("grupoImpactoUrgencia").dataset.matriz);
+			const fila = matriz.find(m => m.idTipoReq === idTipo && m.idImpacto === idImpacto && m.idUrgencia === idUrgencia);
+
+			if (!fila) {
+				contenedor.innerHTML = "";
+				return;
+			}
+
+			const clasesPorPrioridad = { "Baja": "bg-secondary", "Media": "bg-info text-dark", "Alta": "bg-warning text-dark", "Urgente": "bg-danger" };
+			const clase = clasesPorPrioridad[fila.prioridad] || "bg-secondary";
+
+			contenedor.innerHTML = `Prioridad estimada: <span class="badge ${clase}">${fila.prioridad}</span>`;
+		}
+
+		// ============================================================
+		// CONTADOR DE CARACTERES DEL DETALLE
+		// ============================================================
+
+		function inicializarContadorDetalle() {
+			const textarea = document.getElementById("txtDetalle");
+			const contador = document.getElementById("contadorDetalle");
+
+			function actualizar() {
+				const longitud = textarea.value.length;
+				contador.textContent = `${longitud} / 20 caracteres mínimo`;
+				contador.classList.toggle("text-success", longitud >= 20);
+				contador.classList.toggle("text-muted", longitud < 20);
+			}
+
+			textarea.addEventListener("input", actualizar);
+			actualizar();
 		}
 
 		function inicializarValidacionArchivos() {

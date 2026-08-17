@@ -5,6 +5,6 @@
     //del isuario autenticafo
     public class SesionTemporal
     {
-        public const int UsuarioActualTemporal = 3; //TODO: eliminar esta constante cuando exista el modulo de login
+        public const int UsuarioActualTemporal = 1; //TODO: eliminar esta constante cuando exista el modulo de login
     }
 }

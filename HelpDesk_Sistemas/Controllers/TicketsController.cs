@@ -71,6 +71,9 @@ namespace HelpDesk_Sistemas.Controllers
             ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
             ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
             ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(SesionTemporal.UsuarioActualTemporal);
+            ViewBag.Impactos = await ticketsService.ObtenerImpactos();
+            ViewBag.Urgencias = await ticketsService.ObtenerUrgencias();
+            ViewBag.Matriz = await ticketsService.ObtenerMatrizPrioridad();
 
             return PartialView("_CrearTicket");
         }
@@ -96,15 +99,21 @@ namespace HelpDesk_Sistemas.Controllers
                     ModelState.AddModelError(nameof(model.IdCategoria), "Selecciona una categoría para este tipo de requerimiento.");
                 }
 
-                if (requiereCategoria && model.AfectaFuncionamiento is null)
+                if (requiereCategoria && model.IdImpacto is null)
                 {
-                    ModelState.AddModelError(nameof(model.AfectaFuncionamiento), "Indica si el inconveniente detiene tus funciones o procesos.");
+                    ModelState.AddModelError(nameof(model.IdImpacto), "Indica el impacto del inconveniente.");
+                }
+
+                if (requiereCategoria && model.IdUrgencia is null)
+                {
+                    ModelState.AddModelError(nameof(model.IdUrgencia), "Indica la urgencia del inconveniente.");
                 }
 
                 if (!requiereCategoria)
                 {
                     model.IdCategoria = null;
-                    model.AfectaFuncionamiento = null;
+                    model.IdImpacto = null;
+                    model.IdUrgencia = null;
                 }
             }
 
@@ -118,6 +127,9 @@ namespace HelpDesk_Sistemas.Controllers
                 ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
                 ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
                 ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(SesionTemporal.UsuarioActualTemporal);
+                ViewBag.Impactos = await ticketsService.ObtenerImpactos();
+                ViewBag.Urgencias = await ticketsService.ObtenerUrgencias();
+                ViewBag.Matriz = await ticketsService.ObtenerMatrizPrioridad();
 
                 Response.StatusCode = 400;
                 return PartialView("_CrearTicket", model);
@@ -134,6 +146,10 @@ namespace HelpDesk_Sistemas.Controllers
 
                 ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
                 ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
+                ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(SesionTemporal.UsuarioActualTemporal);
+                ViewBag.Impactos = await ticketsService.ObtenerImpactos();
+                ViewBag.Urgencias = await ticketsService.ObtenerUrgencias();
+                ViewBag.Matriz = await ticketsService.ObtenerMatrizPrioridad();
 
                 Response.StatusCode = 400;
                 return PartialView("_CrearTicket", model);

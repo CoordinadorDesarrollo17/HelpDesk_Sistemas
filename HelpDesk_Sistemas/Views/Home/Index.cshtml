@@ -1,8 +1,132 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@using HelpDesk_Sistemas.Models
+@model HomeIndexModel
+
+@{
+    ViewData["Title"] = "Inicio";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="card shadow-sm mb-4">
+    <div class="card-header header-gradient text-black d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">Resumen</h5>
+        <div class="d-flex gap-2">
+            <a class="btn btn-primary btn-sm" asp-controller="Tickets" asp-action="ListadoTickets">
+                <i class="bi bi-eye"></i> Ver tickets
+            </a>
+            <a class="btn btn-outline-secondary btn-sm" asp-controller="Sla" asp-action="Dashboard">
+                <i class="bi bi-graph-up"></i> Ver SLA
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor">@Model.Tickets.Pendientes</div>
+                    <div class="kpi-etiqueta">Tickets pendientes</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor">@Model.Tickets.EnCurso</div>
+                    <div class="kpi-etiqueta">En curso</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor">@Model.Tickets.EnPausa</div>
+                    <div class="kpi-etiqueta">En pausa</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor">@Model.Tickets.MisAsignados</div>
+                    <div class="kpi-etiqueta">Asignados a mí</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor">@Model.Sla.PorcentajeCumplimiento%</div>
+                    <div class="kpi-etiqueta">Cumplimiento SLA</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor text-warning">@Model.Sla.EnRiesgo</div>
+                    <div class="kpi-etiqueta">SLA en riesgo</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor text-danger">@Model.Sla.IncumplidosEnCurso</div>
+                    <div class="kpi-etiqueta">SLA incumplidos (abiertos)</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor text-danger">@Model.Sla.IncumplidosCompletados</div>
+                    <div class="kpi-etiqueta">SLA incumplidos (cerrados)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header header-gradient text-black">
+        <h5 class="mb-0 fw-bold">Tickets que necesitan atención</h5>
+    </div>
+    <div class="card-body">
+        @if (Model.SlaEnRiesgo.Count == 0)
+        {
+            <p class="text-muted small mb-0">No hay ningún SLA en riesgo ni incumplido en este momento.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Ticket</th>
+                            <th>SLA</th>
+                            <th>Estado</th>
+                            <th>Prioridad</th>
+                            <th>Asignado</th>
+                            <th>Vence</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.SlaEnRiesgo)
+                        {
+                            <tr>
+                                <td>@r.CodigoTicket</td>
+                                <td>@r.TipoSla</td>
+                                <td>@r.Estado</td>
+                                <td>@(r.Prioridad ?? "-")</td>
+                                <td>@(r.Asignado ?? "-")</td>
+                                <td>@r.FechaObjetivo.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    @if (r.Incumplido)
+                                    {
+                                        <span class="badge bg-danger">Incumplido</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">Por vencer</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-end mt-2">
+                <a class="small" asp-controller="Sla" asp-action="Dashboard">Ver todos →</a>
+            </div>
+        }
+    </div>
 </div>

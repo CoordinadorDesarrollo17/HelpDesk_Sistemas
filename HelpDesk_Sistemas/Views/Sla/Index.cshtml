@@ -1,0 +1,196 @@
+@using HelpDesk_Sistemas.Models
+@model List<SlaDefinicionModel>
+
+@{
+    ViewData["Title"] = "Administración de SLA";
+}
+
+@functions {
+    string FormatearDuracion(int minutos)
+    {
+        if (minutos % 60 == 0 && minutos >= 60) return $"{minutos / 60} h";
+        if (minutos < 60) return $"{minutos} min";
+        return $"{minutos / 60} h {minutos % 60} min";
+    }
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header header-gradient text-black d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">Definiciones de SLA</h5>
+
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary btn-sm" asp-controller="Sla" asp-action="Dashboard">
+                <i class="bi bi-graph-up"></i> Cumplimiento
+            </a>
+            <a class="btn btn-outline-secondary btn-sm" asp-controller="Sla" asp-action="Calendario">
+                <i class="bi bi-calendar-week"></i> Calendario laboral
+            </a>
+            <button type="button" class="btn btn-primary btn-sm" onclick="abrirCrearEditarDefinicion()">
+                <i class="bi bi-plus-lg"></i> Nueva definición
+            </button>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle text-nowrap" id="tablaDefiniciones">
+                <thead class="table-header">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Tipo</th>
+                        <th>Condición</th>
+                        <th>Calendario</th>
+                        <th>Objetivo</th>
+                        <th>Advertencia</th>
+                        <th>Reactivable</th>
+                        <th>Activo</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in Model)
+                    {
+                        <tr>
+                            <td>@d.Nombre</td>
+                            <td>
+                                <span class="badge @(d.TipoSla == "Respuesta" ? "bg-info text-dark" : "bg-primary")">@d.TipoSla</span>
+                            </td>
+                            <td>
+                                @{
+                                    var condiciones = new[] { d.TipoRequerimiento, d.Categoria, d.Prioridad, d.Sociedad }
+                                        .Where(c => c != null);
+                                    var textoCondicion = condiciones.Any() ? string.Join(" · ", condiciones) : "Cualquier ticket";
+                                }
+                                <small>@textoCondicion</small>
+                            </td>
+                            <td>@d.Calendario</td>
+                            <td>@FormatearDuracion(d.DuracionMinutos)</td>
+                            <td>@d.PorcentajeAdvertencia%</td>
+                            <td>@(d.Reactivable ? "Sí" : "No")</td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           @(d.Activo ? "checked" : "")
+                                           onchange="cambiarActivoDefinicion(@d.Id, this.checked)">
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" title="Editar" onclick="abrirCrearEditarDefinicion(@d.Id)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR/EDITAR DEFINICIÓN -->
+<div class="modal fade" id="modalDefinicion" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Definición de SLA</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="contenidoDefinicion">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--TOAST-->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+    <div id="toastGenerico" class="toast align-items-center border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMensaje"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function fetchConManejo(url, opciones) {
+            return fetch(url, opciones).catch(error => {
+                console.error(error);
+                mostrarToast("No se pudo conectar con el servidor. Revisa tu conexión.", "danger");
+                return null;
+            });
+        }
+
+        function mostrarToast(mensaje, tipo = "danger") {
+            const toastEl = document.getElementById("toastGenerico");
+            const toastMensaje = document.getElementById("toastMensaje");
+
+            toastEl.classList.remove("text-bg-success", "text-bg-danger", "text-bg-warning");
+            toastEl.classList.add(`text-bg-${tipo}`);
+            toastMensaje.textContent = mensaje;
+
+            new bootstrap.Toast(toastEl, { delay: 4000 }).show();
+        }
+
+        function recargarPagina() {
+            window.location.reload();
+        }
+
+        function abrirCrearEditarDefinicion(id) {
+            const modal = new bootstrap.Modal(document.getElementById("modalDefinicion"));
+            const contenido = document.getElementById("contenidoDefinicion");
+
+            contenido.innerHTML = "Cargando...";
+            modal.show();
+
+            const url = id ? `@Url.Action("CrearEditarDefinicion")?id=${id}` : `@Url.Action("CrearEditarDefinicion")`;
+
+            fetchConManejo(url)
+                .then(r => r && r.text())
+                .then(html => {
+                    if (!html) return;
+                    contenido.innerHTML = html;
+                    inicializarFormularioDefinicion();
+                });
+        }
+
+        function inicializarFormularioDefinicion() {
+            const form = document.getElementById("formDefinicion");
+
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                const params = new URLSearchParams(new FormData(form));
+
+                fetchConManejo(`@Url.Action("GuardarDefinicion")?${params.toString()}`, { method: "POST" })
+                    .then(r => r && r.json())
+                    .then(data => {
+                        if (!data) return;
+                        if (data.exito) {
+                            bootstrap.Modal.getInstance(document.getElementById("modalDefinicion")).hide();
+                            mostrarToast("Definición guardada correctamente", "success");
+                            recargarPagina();
+                        } else {
+                            document.getElementById("errorDefinicion").textContent = data.mensaje || "No se pudo guardar la definición.";
+                        }
+                    });
+            });
+        }
+
+        function cambiarActivoDefinicion(id, activo) {
+            const params = new URLSearchParams({ id: id, activo: activo });
+
+            fetchConManejo(`@Url.Action("CambiarActivoDefinicion")?${params.toString()}`, { method: "POST" })
+                .then(r => r && r.json())
+                .then(data => {
+                    if (!data) return;
+                    if (!data.exito) {
+                        mostrarToast("No se pudo actualizar la definición.", "danger");
+                        recargarPagina();
+                    } else {
+                        mostrarToast("Definición actualizada.", "success");
+                    }
+                });
+        }
+    </script>
+}
