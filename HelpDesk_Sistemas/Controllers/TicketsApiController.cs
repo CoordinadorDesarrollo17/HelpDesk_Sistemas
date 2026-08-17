@@ -55,9 +55,9 @@ namespace HelpDesk_Sistemas.Controllers
 
         /// <summary>Crea un ticket nuevo (Consulta, Soporte, Implementación o Mejora).</summary>
         /// <remarks>
-        /// Para Consulta/Soporte, idCategoria y afectaFuncionamiento son obligatorios y la prioridad
-        /// se calcula automáticamente. Para Implementación/Mejora, ambos se ignoran y la prioridad
-        /// queda pendiente hasta usar POST /api/tickets/{id}/prioridad.
+        /// Para Consulta/Soporte, idCategoria, idImpacto e idUrgencia son obligatorios y la prioridad
+        /// se calcula automáticamente vía la matriz Impacto × Urgencia. Para Implementación/Mejora,
+        /// los tres se ignoran y la prioridad queda pendiente hasta usar POST /api/tickets/{id}/prioridad.
         /// </remarks>
         /// <response code="201">Ticket creado. El header Location apunta a su detalle.</response>
         /// <response code="400">Datos inválidos (categoría/sociedad faltante o incorrecta).</response>
@@ -78,15 +78,21 @@ namespace HelpDesk_Sistemas.Controllers
                     return BadRequest(new { mensaje = "Selecciona una categoría para este tipo de requerimiento." });
                 }
 
-                if (requiereCategoria && model.AfectaFuncionamiento is null)
+                if (requiereCategoria && model.IdImpacto is null)
                 {
-                    return BadRequest(new { mensaje = "Indica si el inconveniente afecta el funcionamiento (afectaFuncionamiento: true/false)." });
+                    return BadRequest(new { mensaje = "Indica el impacto del inconveniente (idImpacto)." });
+                }
+
+                if (requiereCategoria && model.IdUrgencia is null)
+                {
+                    return BadRequest(new { mensaje = "Indica la urgencia del inconveniente (idUrgencia)." });
                 }
 
                 if (!requiereCategoria)
                 {
                     model.IdCategoria = null;
-                    model.AfectaFuncionamiento = null;
+                    model.IdImpacto = null;
+                    model.IdUrgencia = null;
                 }
             }
 

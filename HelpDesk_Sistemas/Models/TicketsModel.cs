@@ -13,9 +13,10 @@
         public string Solicitante { get; set; }
         public string? Asignado { get; set; }
         public DateTime FechaCreacion { get; set; }
-        public bool? AfectaFuncionamiento { get; set; }
         public int CantidadMismaAsignadoPrioridad { get; set; }
         public int IdArea { get; set; }
         public string? Sociedad { get; set; }
+        public TicketSlaModel? SlaRespuesta { get; set; }
+        public TicketSlaModel? SlaResolucion { get; set; }
     }
 }
