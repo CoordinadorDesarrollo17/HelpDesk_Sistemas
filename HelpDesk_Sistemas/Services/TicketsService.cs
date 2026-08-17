@@ -34,6 +34,11 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.ListadoTickets(model, idUsuarioActual);
         }
 
+        public async Task<TicketsResumenModel> ObtenerResumen(int idUsuarioActual)
+        {
+            return await ticketsRepository.ObtenerResumen(idUsuarioActual);
+        }
+
         public async Task<(byte[] Content, string ContentType, string FileName)> ExportarExcelAsync(FiltrosTicketsModel model, int idUsuarioActual)
         {
             var lista = await ticketsRepository.ListadoTicketsExcel(model, idUsuarioActual);
@@ -126,6 +131,21 @@ namespace HelpDesk_Sistemas.Services
         public async Task<List<CatalogoModel>> ObtenerSociedadesPorUsuario(int idUsuario)
         {
             return await ticketsRepository.ObtenerSociedadesPorUsuario(idUsuario);
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerImpactos()
+        {
+            return await ticketsRepository.ObtenerImpactos();
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerUrgencias()
+        {
+            return await ticketsRepository.ObtenerUrgencias();
+        }
+
+        public async Task<List<MatrizPrioridadModel>> ObtenerMatrizPrioridad()
+        {
+            return await ticketsRepository.ObtenerMatrizPrioridad();
         }
 
         // ============================================================

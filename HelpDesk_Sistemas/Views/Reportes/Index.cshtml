@@ -1,0 +1,225 @@
+@using HelpDesk_Sistemas.Models
+@model ReporteGeneralModel
+
+@{
+    ViewData["Title"] = "Reportes";
+    var filtro = (ReporteFiltroModel)ViewBag.Filtro;
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header header-gradient text-black d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h5 class="mb-0 fw-bold">Reportes</h5>
+
+        <form class="d-flex flex-wrap align-items-end gap-2" method="get" asp-controller="Reportes" asp-action="Index">
+            <div>
+                <label class="form-label small mb-0">Desde</label>
+                <input type="date" name="FechaInicio" class="form-control form-control-sm" value="@filtro.FechaInicio.ToString("yyyy-MM-dd")" />
+            </div>
+            <div>
+                <label class="form-label small mb-0">Hasta</label>
+                <input type="date" name="FechaFin" class="form-control form-control-sm" value="@filtro.FechaFin.ToString("yyyy-MM-dd")" />
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Aplicar</button>
+            <a class="btn btn-outline-secondary btn-sm" asp-controller="Reportes" asp-action="ExportarExcel"
+               asp-route-FechaInicio="@filtro.FechaInicio.ToString("yyyy-MM-dd")" asp-route-FechaFin="@filtro.FechaFin.ToString("yyyy-MM-dd")">
+                <i class="bi bi-file-earmark-excel"></i> Exportar
+            </a>
+        </form>
+    </div>
+
+    <div class="card-body">
+        <!-- KPIs -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor">@Model.Resumen.TotalCreados</div>
+                    <div class="kpi-etiqueta">Tickets creados</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor">@Model.Resumen.TotalCerrados</div>
+                    <div class="kpi-etiqueta">Tickets cerrados</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor">@Model.Resumen.TicketsActivos</div>
+                    <div class="kpi-etiqueta">Tickets activos</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-valor">@(Model.Resumen.TiempoPromedioResolucionHoras.HasValue ? Math.Round(Model.Resumen.TiempoPromedioResolucionHoras.Value, 1).ToString() : "-")</div>
+                    <div class="kpi-etiqueta">Horas promedio de resolución</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tendencia -->
+        <h6 class="fw-bold">Tendencia de tickets</h6>
+        <div style="height: 280px;">
+            <canvas id="chartTendencia"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header header-gradient text-black">
+                <h6 class="mb-0 fw-bold">Por tipo de requerimiento</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartTipo"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header header-gradient text-black">
+                <h6 class="mb-0 fw-bold">Por área</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartArea"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header header-gradient text-black">
+                <h6 class="mb-0 fw-bold">Por prioridad</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartPrioridad"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header header-gradient text-black">
+        <h5 class="mb-0 fw-bold">Productividad por agente</h5>
+    </div>
+    <div class="card-body">
+        @if (Model.PorAgente.Count == 0)
+        {
+            <p class="text-muted small mb-0">No hay tickets asignados en este período.</p>
+        }
+        else
+        {
+            <div class="row g-4">
+                <div class="col-12 col-lg-5">
+                    <canvas id="chartAgentes" style="max-height: 320px;"></canvas>
+                </div>
+                <div class="col-12 col-lg-7">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Agente</th>
+                                    <th class="text-end">Asignados</th>
+                                    <th class="text-end">Cerrados</th>
+                                    <th class="text-end">Activos</th>
+                                    <th class="text-end">Prom. resolución (h)</th>
+                                    <th class="text-end">Devoluciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in Model.PorAgente)
+                                {
+                                    <tr>
+                                        <td>@a.Agente</td>
+                                        <td class="text-end">@a.Asignados</td>
+                                        <td class="text-end">@a.Cerrados</td>
+                                        <td class="text-end">@a.Activos</td>
+                                        <td class="text-end">@(a.TiempoPromedioResolucionHoras.HasValue ? Math.Round(a.TiempoPromedioResolucionHoras.Value, 1).ToString() : "-")</td>
+                                        <td class="text-end">
+                                            @if (a.Devoluciones > 0)
+                                            {
+                                                <span class="badge bg-warning text-dark">@a.Devoluciones</span>
+                                            }
+                                            else
+                                            {
+                                                @:0
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted d-block mt-2">El tiempo de resolución es el transcurrido entre la asignación y el cierre (no descuenta pausas).</small>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/chartjs/chart.umd.min.js"></script>
+    <script>
+        const brandGreen = '#1C932F';
+        const colorPorPrioridad = { 'Baja': '#6c757d', 'Media': '#0B5C87', 'Alta': '#B25E09', 'Urgente': '#B42318', 'Sin prioridad': '#adb5bd' };
+        const paletaGeneral = ['#1C932F', '#27A528', '#32B91E', '#0B5C87', '#B25E09', '#B42318', '#6c757d', '#495057'];
+
+        @{
+            var opcionesJson = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+        }
+        const tendencia = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Tendencia.Select(t => new { fecha = t.Fecha.ToString("dd/MM"), t.Creados, t.Cerrados }), opcionesJson));
+        const porTipo = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PorTipo, opcionesJson));
+        const porArea = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PorArea, opcionesJson));
+        const porPrioridad = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PorPrioridad, opcionesJson));
+        const porAgente = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PorAgente.Select(a => new { a.Agente, a.Cerrados }), opcionesJson));
+
+        new Chart(document.getElementById('chartTendencia'), {
+            type: 'line',
+            data: {
+                labels: tendencia.map(t => t.fecha),
+                datasets: [
+                    { label: 'Creados', data: tendencia.map(t => t.creados), borderColor: '#6c757d', backgroundColor: 'rgba(108,117,125,.1)', tension: .3, fill: true },
+                    { label: 'Cerrados', data: tendencia.map(t => t.cerrados), borderColor: brandGreen, backgroundColor: 'rgba(28,147,47,.12)', tension: .3, fill: true }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+
+        new Chart(document.getElementById('chartTipo'), {
+            type: 'doughnut',
+            data: {
+                labels: porTipo.map(x => x.etiqueta),
+                datasets: [{ data: porTipo.map(x => x.cantidad), backgroundColor: paletaGeneral }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        new Chart(document.getElementById('chartArea'), {
+            type: 'bar',
+            data: {
+                labels: porArea.map(x => x.etiqueta),
+                datasets: [{ label: 'Tickets', data: porArea.map(x => x.cantidad), backgroundColor: brandGreen }]
+            },
+            options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+
+        new Chart(document.getElementById('chartPrioridad'), {
+            type: 'bar',
+            data: {
+                labels: porPrioridad.map(x => x.etiqueta),
+                datasets: [{ label: 'Tickets', data: porPrioridad.map(x => x.cantidad), backgroundColor: porPrioridad.map(x => colorPorPrioridad[x.etiqueta] || '#6c757d') }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+
+        if (porAgente.length > 0) {
+            new Chart(document.getElementById('chartAgentes'), {
+                type: 'bar',
+                data: {
+                    labels: porAgente.map(a => a.agente),
+                    datasets: [{ label: 'Tickets cerrados', data: porAgente.map(a => a.cerrados), backgroundColor: brandGreen }]
+                },
+                options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+        }
+    </script>
+}
