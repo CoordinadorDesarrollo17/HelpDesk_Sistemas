@@ -22,6 +22,8 @@ builder.Services.AddScoped<ITicketsService, TicketsService>();
 builder.Services.AddScoped<ITicketsRepository, TicketsRepository>();
 builder.Services.AddScoped<ISlaService, SlaService>();
 builder.Services.AddScoped<ISlaRepository, SlaRepository>();
+builder.Services.AddScoped<IReportesService, ReportesService>();
+builder.Services.AddScoped<IReportesRepository, ReportesRepository>();
 builder.Services.AddHostedService<SlaEngineBackgroundService>();
 
 var app = builder.Build();
