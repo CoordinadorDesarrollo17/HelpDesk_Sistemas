@@ -1,0 +1,56 @@
+@using HelpDesk_Sistemas.Models
+@model LoginModel
+@{
+    ViewData["Title"] = "Iniciar sesión";
+    Layout = "_AuthLayout";
+}
+
+<div class="auth-card">
+    <div class="auth-brand">
+        <span class="sidebar-brand-mark auth-brand-mark">HD</span>
+        <div>
+            <div class="auth-brand-title">HelpDesk</div>
+            <div class="auth-brand-sub">Droguería Cobefar SAC</div>
+        </div>
+    </div>
+
+    <form method="post" asp-controller="Auth" asp-action="Login">
+        <input type="hidden" asp-for="ReturnUrl" />
+
+        <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+
+        <div class="mb-3">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-person"></i></span>
+                <input asp-for="Usuario" class="form-control" placeholder="Usuario" autocomplete="username" autofocus />
+            </div>
+            <span asp-validation-for="Usuario" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-4">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-lock"></i></span>
+                <input asp-for="Password" id="txtPassword" type="password" class="form-control" placeholder="Contraseña" autocomplete="current-password" />
+                <button class="input-group-text bg-white" type="button" id="btnMostrarPassword"><i class="bi bi-eye" id="iconoMostrarPassword"></i></button>
+            </div>
+            <span asp-validation-for="Password" class="text-danger small"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-box-arrow-in-right"></i> Ingresar
+        </button>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById("btnMostrarPassword").addEventListener("click", function () {
+            const input = document.getElementById("txtPassword");
+            const icono = document.getElementById("iconoMostrarPassword");
+            const esPassword = input.type === "password";
+
+            input.type = esPassword ? "text" : "password";
+            icono.className = esPassword ? "bi bi-eye-slash" : "bi bi-eye";
+        });
+    </script>
+}

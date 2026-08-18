@@ -17,6 +17,44 @@ namespace HelpDesk_Sistemas.Repositories
         }
 
         // ============================================================
+        // SLA — joins y columnas reutilizados por los SELECT de ticket
+        // (listado, detalle, GET por id). Ver Database/Sla/*.sql.
+        // ============================================================
+
+        private const string SqlJoinsSla = @"
+            LEFT JOIN Ticket_SLA tsr ON tsr.Id_Ticket = t.Id
+                AND tsr.Id_SLA_Definicion IN (SELECT Id FROM SLA_Definicion WHERE Tipo_SLA = 'Respuesta')
+            LEFT JOIN SLA_Definicion dsr ON dsr.Id = tsr.Id_SLA_Definicion
+            LEFT JOIN Ticket_SLA tso ON tso.Id_Ticket = t.Id
+                AND tso.Id_SLA_Definicion IN (SELECT Id FROM SLA_Definicion WHERE Tipo_SLA = 'Resolucion')
+            LEFT JOIN SLA_Definicion dso ON dso.Id = tso.Id_SLA_Definicion
+        ";
+
+        private const string SqlColumnasSla = @"
+            tsr.Id, dsr.Tipo_SLA AS TipoSla, tsr.Etapa, tsr.Fecha_Inicio AS FechaInicio, tsr.Fecha_Objetivo AS FechaObjetivo,
+            tsr.Fecha_Fin AS FechaFin, tsr.Incumplido, tsr.Advertencia_Activa AS AdvertenciaActiva, tsr.Cumplido_A_Tiempo AS CumplidoATiempo,
+            CASE WHEN tsr.Id IS NULL OR tsr.Minutos_Objetivo = 0 THEN NULL ELSE
+                CAST(dbo.fn_MinutosHabilesEntre(tsr.Fecha_Inicio, ISNULL(tsr.Fecha_Fin, GETDATE()), dsr.Id_Calendario) AS DECIMAL(10,2)) / tsr.Minutos_Objetivo * 100
+            END AS PorcentajeConsumido,
+
+            tso.Id, dso.Tipo_SLA AS TipoSla, tso.Etapa, tso.Fecha_Inicio AS FechaInicio, tso.Fecha_Objetivo AS FechaObjetivo,
+            tso.Fecha_Fin AS FechaFin, tso.Incumplido, tso.Advertencia_Activa AS AdvertenciaActiva, tso.Cumplido_A_Tiempo AS CumplidoATiempo,
+            CASE WHEN tso.Id IS NULL OR tso.Minutos_Objetivo = 0 THEN NULL ELSE
+                CAST(dbo.fn_MinutosHabilesEntre(tso.Fecha_Inicio, ISNULL(tso.Fecha_Fin, GETDATE()), dso.Id_Calendario) AS DECIMAL(10,2)) / tso.Minutos_Objetivo * 100
+            END AS PorcentajeConsumido
+        ";
+
+        // Dapper devuelve null (no una instancia con valores por defecto) cuando todas las
+        // columnas del sub-objeto vienen NULL por un LEFT JOIN sin match, así que basta con
+        // reasignar directo.
+        private static TicketsModel MapearSlaEnTicket(TicketsModel ticket, TicketSlaModel? slaRespuesta, TicketSlaModel? slaResolucion)
+        {
+            ticket.SlaRespuesta = slaRespuesta;
+            ticket.SlaResolucion = slaResolucion;
+            return ticket;
+        }
+
+        // ============================================================
         // LISTADO Y FILTROS
         // ============================================================
 
@@ -24,8 +62,11 @@ namespace HelpDesk_Sistemas.Repositories
         /// Trae los tickets que cumplen los filtros dados. Si se filtra por un Estado
         /// distinto de "Pendiente", solo devuelve los asignados al usuario actual
         /// (los Pendiente son visibles para todos, ya que nadie los tiene asignado aún).
+        /// Además, la bandeja se acota según el rol: Usuario ve solo lo que él creó,
+        /// Supervisor ve lo suyo más lo de su equipo (Usuarios.Id_Sup_Usuario), y
+        /// Soporte/Administrador ven todo.
         /// </summary>
-        public async Task<IEnumerable<TicketsModel>> ObtenerTickets(FiltrosTicketsModel model, int idUsuarioActual)
+        public async Task<IEnumerable<TicketsModel>> ObtenerTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
@@ -49,6 +90,16 @@ namespace HelpDesk_Sistemas.Repositories
             if (model.IdPrioridad.HasValue)
                 condiciones.Add("t.Id_Prioridad = @IdPrioridad");
 
+            if (rolActual == "Usuario")
+            {
+                condiciones.Add("t.Id_Usuario_Solicita = @IdUsuarioActual");
+            }
+            else if (rolActual == "Supervisor")
+            {
+                condiciones.Add(@"(t.Id_Usuario_Solicita = @IdUsuarioActual
+                    OR t.Id_Usuario_Solicita IN (SELECT Id FROM Usuarios WHERE Id_Sup_Usuario = @IdUsuarioActual))");
+            }
+
             var whereClause = string.Join(" AND ", condiciones);
 
             var sql = $@"
@@ -63,7 +114,6 @@ namespace HelpDesk_Sistemas.Repositories
                     CONCAT(us.Nombre, ' ', us.Apellido)   AS Solicitante,
                     CONCAT(ua.Nombre, ' ', ua.Apellido)   AS Asignado,
                     t.Fecha_Creacion                      AS FechaCreacion,
-                    t.Afecta_Funcionamiento               AS AfectaFuncionamiento,
                     t.Orden_Atencion                      AS OrdenAtencion,
                     t.Id_Area                             AS IdArea,
                     soc.Nombre                            AS Sociedad,
@@ -78,7 +128,8 @@ namespace HelpDesk_Sistemas.Repositories
                               AND e2.Nombre NOT IN ('Cerrado', 'Anulado')
                         )
                         END
-                    ) AS CantidadMismaAsignadoPrioridad
+                    ) AS CantidadMismaAsignadoPrioridad,
+                    {SqlColumnasSla}
                 FROM Tickets t
                 INNER JOIN Tipo_Requerimiento tr ON tr.Id = t.Id_Tipo_Req
                 INNER JOIN Area a                ON a.Id  = t.Id_Area
@@ -88,42 +139,70 @@ namespace HelpDesk_Sistemas.Repositories
                 INNER JOIN Usuarios us           ON us.Id = t.Id_Usuario_Solicita
                 LEFT  JOIN Usuarios ua           ON ua.Id = t.Id_Usuario_Asignado
                 LEFT JOIN Sociedad soc           ON soc.Id = t.Id_Sociedad
+                {SqlJoinsSla}
                 WHERE {whereClause}
-                ORDER BY CASE WHEN e.Nombre = 'Pendiente' THEN 0 ELSE 1 END, t.Fecha_Creacion DESC
+                ORDER BY
+                    CASE WHEN e.Nombre = 'Pendiente' THEN 0 ELSE 1 END,
+                    CASE WHEN t.Id_Usuario_Asignado = @IdUsuarioActual THEN 0 ELSE 1 END,
+                    t.Fecha_Creacion DESC
             ";
 
-            var result = await xCon.QueryAsync<TicketsModel>(sql, new
-            {
-                Buscar = "%" + model.Buscar + "%",
-                model.IdEstado,
-                model.IdArea,
-                model.IdTipoRequerimiento,
-                model.IdPrioridad,
-                IdUsuarioActual = idUsuarioActual
-            });
+            var result = await xCon.QueryAsync<TicketsModel, TicketSlaModel, TicketSlaModel, TicketsModel>(
+                sql,
+                MapearSlaEnTicket,
+                new
+                {
+                    Buscar = "%" + model.Buscar + "%",
+                    model.IdEstado,
+                    model.IdArea,
+                    model.IdTipoRequerimiento,
+                    model.IdPrioridad,
+                    IdUsuarioActual = idUsuarioActual
+                },
+                splitOn: "Id,Id"
+            );
 
             return result;
         }
 
         /// <summary>Versión paginada de ObtenerTickets, para la tabla del listado.</summary>
-        public async Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual)
+        public async Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual)
         {
-            var result = await ObtenerTickets(model, idUsuarioActual);
+            var result = await ObtenerTickets(model, idUsuarioActual, rolActual);
             return result.ToPagedList(model.Paginacion.Page, model.Paginacion.PageSize);
         }
 
         /// <summary>Versión sin paginar de ObtenerTickets, para la exportación a Excel.</summary>
-        public async Task<List<TicketsModel>> ListadoTicketsExcel(FiltrosTicketsModel model, int idUsuarioActual)
+        public async Task<List<TicketsModel>> ListadoTicketsExcel(FiltrosTicketsModel model, int idUsuarioActual, string rolActual)
         {
-            var result = await ObtenerTickets(model, idUsuarioActual);
+            var result = await ObtenerTickets(model, idUsuarioActual, rolActual);
             return result.ToList();
+        }
+
+        /// <summary>Conteos para las tarjetas KPI del Home.</summary>
+        public async Task<TicketsResumenModel> ObtenerResumen(int idUsuarioActual)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sql = @"
+                SELECT
+                    SUM(CASE WHEN e.Nombre = 'Pendiente' THEN 1 ELSE 0 END) AS Pendientes,
+                    SUM(CASE WHEN e.Nombre IN ('En revisión', 'En atención', 'Levantamiento', 'Desarrollo', 'Pruebas', 'Pase a producción') THEN 1 ELSE 0 END) AS EnCurso,
+                    SUM(CASE WHEN e.Nombre = 'En pausa' THEN 1 ELSE 0 END) AS EnPausa,
+                    SUM(CASE WHEN t.Id_Usuario_Asignado = @IdUsuarioActual AND e.Nombre NOT IN ('Cerrado', 'Anulado', 'Cierre') THEN 1 ELSE 0 END) AS MisAsignados
+                FROM Tickets t
+                INNER JOIN Estado e ON e.Id = t.Id_Estado
+            ";
+
+            var result = await xCon.QueryFirstOrDefaultAsync<TicketsResumenModel>(sql, new { IdUsuarioActual = idUsuarioActual });
+            return result ?? new TicketsResumenModel();
         }
 
         public async Task<TicketsModel?> ObtenerTicketPorId(int id)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
-            var sql = @"
+            var sql = $@"
                 SELECT
             t.Id                                 AS IdTicket,
             t.Codigo_Ticket                       AS CodigoTicket,
@@ -134,7 +213,8 @@ namespace HelpDesk_Sistemas.Repositories
             p.Nombre                              AS Prioridad,
             CONCAT(us.Nombre, ' ', us.Apellido)   AS Solicitante,
             CONCAT(ua.Nombre, ' ', ua.Apellido)   AS Asignado,
-            t.Fecha_Creacion                      AS FechaCreacion
+            t.Fecha_Creacion                      AS FechaCreacion,
+            {SqlColumnasSla}
         FROM Tickets t
         INNER JOIN Tipo_Requerimiento tr ON tr.Id = t.Id_Tipo_Req
         INNER JOIN Area a                ON a.Id  = t.Id_Area
@@ -143,10 +223,13 @@ namespace HelpDesk_Sistemas.Repositories
         LEFT  JOIN Prioridad p           ON p.Id  = t.Id_Prioridad
         INNER JOIN Usuarios us           ON us.Id = t.Id_Usuario_Solicita
         LEFT  JOIN Usuarios ua           ON ua.Id = t.Id_Usuario_Asignado
+        {SqlJoinsSla}
         WHERE t.Id = @Id
             ";
 
-            var result = await xCon.QueryFirstOrDefaultAsync<TicketsModel>(sql, new { Id = id });
+            var listado = await xCon.QueryAsync<TicketsModel, TicketSlaModel, TicketSlaModel, TicketsModel>(
+                sql, MapearSlaEnTicket, new { Id = id }, splitOn: "Id,Id");
+            var result = listado.FirstOrDefault();
 
             return result;
         }
@@ -196,12 +279,50 @@ namespace HelpDesk_Sistemas.Repositories
         }
 
         /// <summary>True si el tipo de requerimiento requiere Categoría (y, por extensión,
-        /// también la pregunta de "Afecta funcionamiento"). False para Implementación/Mejora.</summary>
+        /// también Impacto/Urgencia). False para Implementación/Mejora.</summary>
         public async Task<bool> TipoRequiereCategoria(int idTipoRequerimiento)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
             var sql = "SELECT Requiere_Categoria FROM Tipo_Requerimiento WHERE Id = @Id";
             return await xCon.ExecuteScalarAsync<bool>(sql, new { Id = idTipoRequerimiento });
+        }
+
+        /// <summary>Combo de Impacto para Soporte (parte de la matriz de prioridad).</summary>
+        public async Task<List<CatalogoModel>> ObtenerImpactos()
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Id, Nombre FROM Impacto WHERE Activo = 1 ORDER BY Orden";
+            var result = await xCon.QueryAsync<CatalogoModel>(sql);
+            return result.ToList();
+        }
+
+        /// <summary>Combo de Urgencia para Soporte (parte de la matriz de prioridad).</summary>
+        public async Task<List<CatalogoModel>> ObtenerUrgencias()
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Id, Nombre FROM Urgencia WHERE Activo = 1 ORDER BY Orden";
+            var result = await xCon.QueryAsync<CatalogoModel>(sql);
+            return result.ToList();
+        }
+
+        /// <summary>Toda la matriz Impacto × Urgencia → Prioridad, para calcular en vivo (JS)
+        /// la prioridad estimada mientras se llena el formulario de creación.</summary>
+        public async Task<List<MatrizPrioridadModel>> ObtenerMatrizPrioridad()
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sql = @"
+                SELECT
+                    mp.Id_Tipo_Req  AS IdTipoReq,
+                    mp.Id_Impacto   AS IdImpacto,
+                    mp.Id_Urgencia  AS IdUrgencia,
+                    p.Nombre        AS Prioridad
+                FROM Matriz_Prioridad mp
+                INNER JOIN Prioridad p ON p.Id = mp.Id_Prioridad
+            ";
+
+            var result = await xCon.QueryAsync<MatrizPrioridadModel>(sql);
+            return result.ToList();
         }
 
         /// <summary>Sociedades a las que pertenece un usuario — usado para llenar el
@@ -235,7 +356,7 @@ namespace HelpDesk_Sistemas.Repositories
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
-            var sqlTicket = @"
+            var sqlTicket = $@"
                 SELECT
                     t.Id                                 AS IdTicket,
                     t.Codigo_Ticket                       AS CodigoTicket,
@@ -244,18 +365,35 @@ namespace HelpDesk_Sistemas.Repositories
                     c.Nombre                              AS Categoria,
                     t.Detalle                             AS Detalle,
                     p.Nombre                              AS Prioridad,
+                    imp.Nombre                            AS Impacto,
+                    urg.Nombre                            AS Urgencia,
                     t.Afecta_Funcionamiento               AS AfectaFuncionamiento,
-                    soc.Nombre                            AS Sociedad
+                    soc.Nombre                            AS Sociedad,
+                    {SqlColumnasSla}
                 FROM Tickets t
                 INNER JOIN Tipo_Requerimiento tr ON tr.Id = t.Id_Tipo_Req
                 INNER JOIN Area a                ON a.Id  = t.Id_Area
                 LEFT  JOIN Categoria c           ON c.Id  = t.Id_Categoria
                 LEFT  JOIN Prioridad p           ON p.Id  = t.Id_Prioridad
+                LEFT  JOIN Impacto imp           ON imp.Id = t.Id_Impacto
+                LEFT  JOIN Urgencia urg          ON urg.Id = t.Id_Urgencia
                 LEFT JOIN Sociedad soc           ON soc.Id = t.Id_Sociedad
+                {SqlJoinsSla}
                 WHERE t.Id = @IdTicket
             ";
 
-            var ticket = await xCon.QueryFirstOrDefaultAsync<TicketDetalleModel>(sqlTicket, new { IdTicket = idTicket });
+            var listadoTicket = await xCon.QueryAsync<TicketDetalleModel, TicketSlaModel, TicketSlaModel, TicketDetalleModel>(
+                sqlTicket,
+                (t, slaResp, slaReso) =>
+                {
+                    t.SlaRespuesta = slaResp;
+                    t.SlaResolucion = slaReso;
+                    return t;
+                },
+                new { IdTicket = idTicket },
+                splitOn: "Id,Id"
+            );
+            var ticket = listadoTicket.FirstOrDefault();
 
             if (ticket is null)
             {
@@ -302,9 +440,10 @@ namespace HelpDesk_Sistemas.Repositories
 
         /// <summary>
         /// Crea el ticket con código autogenerado (TCK-AAAA-NNNNNN) y, si el tipo
-        /// requiere categoría, fija la prioridad automáticamente según la respuesta
-        /// de "Afecta funcionamiento" (Sí → Alta, No → Baja). Para Implementación/Mejora
-        /// la prioridad queda en NULL hasta que Soporte la asigne manualmente.
+        /// requiere categoría, fija la prioridad automáticamente vía la matriz
+        /// Impacto × Urgencia → Prioridad (ver Database/Sla/07_ImpactoUrgencia.sql).
+        /// Para Implementación/Mejora la prioridad queda en NULL hasta que Soporte
+        /// la asigne manualmente, igual que antes.
         /// </summary>
         public async Task<int> CrearTicket(CrearTicketModel model, int idUsuarioSolicita, bool requiereCategoria)
         {
@@ -320,21 +459,22 @@ namespace HelpDesk_Sistemas.Repositories
                 DECLARE @Codigo VARCHAR(20) = 'TK' + @Anio + RIGHT('000000' + CAST(@Siguiente AS VARCHAR), 6);
                 DECLARE @IdEstadoPendiente INT = (SELECT Id FROM Estado WHERE Nombre = 'Pendiente');
                 DECLARE @IdPrioridad INT = (
-                    CASE
-                        WHEN @RequiereCategoria = 0 THEN NULL
-                        WHEN @Afecta = 1 THEN (SELECT Id FROM Prioridad WHERE Nombre = 'Alta')
-                        ELSE (SELECT Id FROM Prioridad WHERE Nombre = 'Baja')
-                    END
+                    CASE WHEN @RequiereCategoria = 0 THEN NULL ELSE (
+                        SELECT Id_Prioridad FROM Matriz_Prioridad
+                        WHERE Id_Tipo_Req = @IdTipoReq AND Id_Impacto = @IdImpacto AND Id_Urgencia = @IdUrgencia
+                    ) END
                 );
                 DECLARE @IdTicketNuevo INT;
 
-                INSERT INTO Tickets (Codigo_Ticket, Id_Tipo_Req, Id_Categoria, Id_Area, Id_Usuario_Solicita, Detalle, Id_Estado, Afecta_Funcionamiento, Id_Prioridad, Id_Sociedad)
-                VALUES (@Codigo, @IdTipoReq, @IdCategoria, @IdArea, @IdUsuarioSolicita, @Detalle, @IdEstadoPendiente, @Afecta, @IdPrioridad, @IdSociedad);
+                INSERT INTO Tickets (Codigo_Ticket, Id_Tipo_Req, Id_Categoria, Id_Area, Id_Usuario_Solicita, Detalle, Id_Estado, Id_Impacto, Id_Urgencia, Id_Prioridad, Id_Sociedad)
+                VALUES (@Codigo, @IdTipoReq, @IdCategoria, @IdArea, @IdUsuarioSolicita, @Detalle, @IdEstadoPendiente, @IdImpacto, @IdUrgencia, @IdPrioridad, @IdSociedad);
 
                 SET @IdTicketNuevo = SCOPE_IDENTITY();
 
                 INSERT INTO Ticket_Historial (Id_Ticket, Id_Estado_Anterior, Id_Estado_Nuevo, Id_Usuario_Accion, Comentario)
                 VALUES (@IdTicketNuevo, NULL, @IdEstadoPendiente, @IdUsuarioSolicita, 'Ticket creado');
+
+                EXEC sp_SLA_IniciarParaTicket @IdTicket = @IdTicketNuevo;
 
                 SELECT @IdTicketNuevo;
             ";
@@ -346,7 +486,8 @@ namespace HelpDesk_Sistemas.Repositories
                 IdArea = model.IdArea,
                 IdUsuarioSolicita = idUsuarioSolicita,
                 Detalle = model.Detalle,
-                Afecta = model.AfectaFuncionamiento,
+                IdImpacto = model.IdImpacto,
+                IdUrgencia = model.IdUrgencia,
                 RequiereCategoria = requiereCategoria,
                 IdSociedad = model.IdSociedad
             });
@@ -379,11 +520,12 @@ namespace HelpDesk_Sistemas.Repositories
         /// en la bitácora. Si se indica campoFechaExtra (ej. "Fecha_Cierre"), esa
         /// columna también se actualiza a la fecha/hora actual en el mismo UPDATE.
         /// </summary>
-        private async Task<bool> CambiarEstado(int idTicket, string estadoOrigen, string estadoDestino, int idUsuarioAccion, string comentario, string? campoFechaExtra = null)
+        private async Task<bool> CambiarEstado(int idTicket, string estadoOrigen, string estadoDestino, int idUsuarioAccion, string comentario, string? campoFechaExtra = null, bool reactivarSla = false)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
             var setFechaExtra = campoFechaExtra != null ? $", {campoFechaExtra} = GETDATE()" : "";
+            var reactivarSlaSql = reactivarSla ? "EXEC sp_SLA_Reactivar @IdTicket = @IdTicket;" : "";
 
             var sql = $@"
                 DECLARE @IdEstadoAnterior INT = (SELECT Id_Estado FROM Tickets WHERE Id = @IdTicket);
@@ -394,13 +536,18 @@ namespace HelpDesk_Sistemas.Repositories
                 WHERE Id = @IdTicket
                   AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = @EstadoOrigen);
 
-                IF @@ROWCOUNT > 0
+                DECLARE @FilasActualizadas INT = @@ROWCOUNT;
+
+                IF @FilasActualizadas > 0
                 BEGIN
                     INSERT INTO Ticket_Historial (Id_Ticket, Id_Estado_Anterior, Id_Estado_Nuevo, Id_Usuario_Accion, Comentario)
                     VALUES (@IdTicket, @IdEstadoAnterior, @IdEstadoNuevo, @IdUsuarioAccion, @Comentario);
+
+                    EXEC sp_SLA_DetenerPorEstado @IdTicket = @IdTicket, @EstadoDestino = @EstadoDestino;
+                    {reactivarSlaSql}
                 END
 
-                SELECT @@ROWCOUNT;
+                SELECT @FilasActualizadas;
             ";
 
             var filas = await xCon.ExecuteScalarAsync<int>(sql, new
@@ -436,13 +583,17 @@ namespace HelpDesk_Sistemas.Repositories
                   AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = @EstadoOrigen)
                   AND Id_Prioridad IS NOT NULL;
 
-                IF @@ROWCOUNT > 0
+                DECLARE @FilasActualizadas INT = @@ROWCOUNT;
+
+                IF @FilasActualizadas > 0
                 BEGIN
                     INSERT INTO Ticket_Historial (Id_Ticket, Id_Estado_Anterior, Id_Estado_Nuevo, Id_Usuario_Accion, Comentario)
                     VALUES (@IdTicket, @IdEstadoAnterior, @IdEstadoNuevo, @IdUsuarioAsignado, @Comentario);
+
+                    EXEC sp_SLA_DetenerPorEstado @IdTicket = @IdTicket, @EstadoDestino = @EstadoDestino;
                 END
 
-                SELECT @@ROWCOUNT;
+                SELECT @FilasActualizadas;
             ";
 
             var filas = await xCon.ExecuteScalarAsync<int>(sql, new
@@ -486,16 +637,20 @@ namespace HelpDesk_Sistemas.Repositories
                 WHERE Id = @IdTicket
                   AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'En atención');
 
-                IF @@ROWCOUNT > 0
+                DECLARE @FilasActualizadas INT = @@ROWCOUNT;
+
+                IF @FilasActualizadas > 0
                 BEGIN
                     INSERT INTO Ticket_Pausas (Id_Ticket, Tipo_Motivo, Id_Ticket_Relacionado, Id_Usuario_Accion)
                     VALUES (@IdTicket, @TipoMotivo, @IdTicketRelacionado, @IdUsuarioAccion);
 
                     INSERT INTO Ticket_Historial (Id_Ticket, Id_Estado_Anterior, Id_Estado_Nuevo, Id_Usuario_Accion, Comentario)
                     VALUES (@IdTicket, @IdEstadoAnterior, @IdEstadoNuevo, @IdUsuarioAccion, 'Ticket pausado');
+
+                    EXEC sp_SLA_Pausar @IdTicket = @IdTicket;
                 END
 
-                SELECT @@ROWCOUNT;
+                SELECT @FilasActualizadas;
             ";
 
             var filasAfectadas = await xCon.ExecuteScalarAsync<int>(sql, new
@@ -523,17 +678,21 @@ namespace HelpDesk_Sistemas.Repositories
                 WHERE Id = @IdTicket
                   AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'En pausa');
 
-                IF @@ROWCOUNT > 0
+                DECLARE @FilasActualizadas INT = @@ROWCOUNT;
+
+                IF @FilasActualizadas > 0
                 BEGIN
                     UPDATE Ticket_Pausas
                     SET Fecha_Fin = GETDATE()
                     WHERE Id_Ticket = @IdTicket AND Fecha_Fin IS NULL;
 
+                    EXEC sp_SLA_Reanudar @IdTicket = @IdTicket;
+
                     INSERT INTO Ticket_Historial (Id_Ticket, Id_Estado_Anterior, Id_Estado_Nuevo, Id_Usuario_Accion, Comentario)
                     VALUES (@IdTicket, @IdEstadoAnterior, @IdEstadoNuevo, @IdUsuarioAccion, 'Ticket reanudado');
                 END
 
-                SELECT @@ROWCOUNT;
+                SELECT @FilasActualizadas;
             ";
 
             var filasAfectadas = await xCon.ExecuteScalarAsync<int>(sql, new { IdTicket = idTicket, IdUsuarioAccion = idUsuarioAccion });
@@ -555,13 +714,17 @@ namespace HelpDesk_Sistemas.Repositories
                 WHERE Id = @IdTicket
                   AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'En atención');
 
-                IF @@ROWCOUNT > 0
+                DECLARE @FilasActualizadas INT = @@ROWCOUNT;
+
+                IF @FilasActualizadas > 0
                 BEGIN
                     INSERT INTO Ticket_Historial (Id_Ticket, Id_Estado_Anterior, Id_Estado_Nuevo, Id_Usuario_Accion, Comentario)
                     VALUES (@IdTicket, @IdEstadoAnterior, @IdEstadoNuevo, @IdUsuarioAccion, 'Solución registrada, pendiente de validación del solicitante');
+
+                    EXEC sp_SLA_DetenerPorEstado @IdTicket = @IdTicket, @EstadoDestino = 'En validación';
                 END
 
-                SELECT @@ROWCOUNT;
+                SELECT @FilasActualizadas;
             ";
 
             var filasAfectadas = await xCon.ExecuteScalarAsync<int>(sql, new
@@ -578,12 +741,13 @@ namespace HelpDesk_Sistemas.Repositories
         public async Task<bool> ConfirmarSolucion(int idTicket, int idUsuarioAccion)
             => await CambiarEstado(idTicket, "En validación", "Cerrado", idUsuarioAccion, "Solución confirmada por el solicitante", "Fecha_Cierre");
 
-        /// <summary>En validación → En atención. El solicitante rechaza la solución con un motivo.</summary>
+        /// <summary>En validación → En atención. El solicitante rechaza la solución con un motivo.
+        /// Reactiva el SLA de Resolución si su definición es Reactivable (ver sp_SLA_Reactivar).</summary>
         public async Task<bool> DevolverTicket(int idTicket, int idUsuarioAccion, string motivo)
-            => await CambiarEstado(idTicket, "En validación", "En atención", idUsuarioAccion, motivo);
+            => await CambiarEstado(idTicket, "En validación", "En atención", idUsuarioAccion, motivo, reactivarSla: true);
 
         /// <summary>
-        /// Anula el ticket desde cualquier estado activo del flujo de Consulta/Soporte
+        /// Anula el ticket desde cualquier estado activo del flujo de Soporte
         /// (no aplica a Implementación/Mejora, que usa sus propios nombres de estado).
         /// </summary>
         public async Task<bool> AnularTicket(int idTicket, int idUsuarioAccion, string motivo)
@@ -603,13 +767,17 @@ namespace HelpDesk_Sistemas.Repositories
                         SELECT Id FROM Estado WHERE Nombre IN ('Pendiente', 'En revisión', 'En atención', 'En pausa', 'En validación')
                       );
 
-                IF @@ROWCOUNT > 0
+                DECLARE @FilasActualizadas INT = @@ROWCOUNT;
+
+                IF @FilasActualizadas > 0
                 BEGIN
                     INSERT INTO Ticket_Historial (Id_Ticket, Id_Estado_Anterior, Id_Estado_Nuevo, Id_Usuario_Accion, Comentario)
                     VALUES (@IdTicket, @IdEstadoAnterior, @IdEstadoNuevo, @IdUsuarioAccion, @Motivo);
+
+                    EXEC sp_SLA_DetenerPorEstado @IdTicket = @IdTicket, @EstadoDestino = 'Anulado';
                 END
 
-                SELECT @@ROWCOUNT;
+                SELECT @FilasActualizadas;
             ";
 
             var filasAfectadas = await xCon.ExecuteScalarAsync<int>(sql, new { IdTicket = idTicket, IdUsuarioAccion = idUsuarioAccion, Motivo = motivo });
@@ -621,9 +789,9 @@ namespace HelpDesk_Sistemas.Repositories
         // ============================================================
 
         /// <summary>
-        /// Asigna prioridad a un ticket Pendiente. Bloqueado si el ticket ya tiene
-        /// "Alta" fijada automáticamente (Afecta_Funcionamiento = Sí), ya que esa
-        /// prioridad no se puede cambiar manualmente.
+        /// Asigna/corrige la prioridad de un ticket Pendiente. La prioridad automática
+        /// que calcula la matriz Impacto × Urgencia es editable manualmente sin
+        /// restricción (Soporte puede corregirla si el triage automático no aplica).
         /// </summary>
         public async Task<bool> AsignarPrioridad(int idTicket, int idPrioridad)
         {
@@ -633,8 +801,12 @@ namespace HelpDesk_Sistemas.Repositories
                 UPDATE Tickets
                 SET Id_Prioridad = @IdPrioridad
                 WHERE Id = @IdTicket
-                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'Pendiente')
-                  AND ISNULL(Afecta_Funcionamiento, 0) <> 1;
+                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'Pendiente');
+
+                IF @@ROWCOUNT > 0
+                BEGIN
+                    EXEC sp_SLA_IniciarParaTicket @IdTicket = @IdTicket;
+                END
             ";
 
             var filasAfectadas = await xCon.ExecuteAsync(sql, new { IdTicket = idTicket, IdPrioridad = idPrioridad });
@@ -661,7 +833,7 @@ namespace HelpDesk_Sistemas.Repositories
             var info = await xCon.QueryFirstOrDefaultAsync<(int? IdUsuarioAsignado, int? IdPrioridad, string Estado)>(sqlInfo, new { IdTicket = idTicket });
 
             // Estados donde el ticket ya está "en curso" y no debe reordenarse:
-            // En atención (Consulta/Soporte) y Desarrollo en adelante (Implementación/Mejora).
+            // En atención (Soporte) y Desarrollo en adelante (Implementación/Mejora).
             var estadosNoPermitidos = new[] { "En atención", "Desarrollo", "Pruebas", "Pase a producción", "Cierre", "Cerrado", "Anulado" };
 
             if (estadosNoPermitidos.Contains(info.Estado))

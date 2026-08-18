@@ -1,0 +1,154 @@
+@using HelpDesk_Sistemas.Models
+@model SlaDashboardModel
+
+@{
+    ViewData["Title"] = "Cumplimiento de SLA";
+}
+
+@functions {
+    string BarraClass(decimal porcentaje) => porcentaje >= 90 ? "bg-success" : porcentaje >= 70 ? "bg-warning" : "bg-danger";
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header header-gradient text-black d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">Cumplimiento de SLA</h5>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary btn-sm" asp-controller="Sla" asp-action="Index">
+                <i class="bi bi-list-check"></i> Definiciones
+            </a>
+            <a class="btn btn-outline-secondary btn-sm" asp-controller="Sla" asp-action="Calendario">
+                <i class="bi bi-calendar-week"></i> Calendario laboral
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <!-- KPIs -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="border rounded p-3 text-center h-100">
+                    <div class="fs-3 fw-bold">@Model.Resumen.PorcentajeCumplimiento%</div>
+                    <div class="text-muted small">Cumplimiento histórico</div>
+                    <div class="text-muted small">(@Model.Resumen.CumplidosATiempo de @Model.Resumen.TotalCompletados completados)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="border rounded p-3 text-center h-100">
+                    <div class="fs-3 fw-bold text-danger">@Model.Resumen.IncumplidosCompletados</div>
+                    <div class="text-muted small">Incumplidos (cerrados)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="border rounded p-3 text-center h-100">
+                    <div class="fs-3 fw-bold text-warning">@Model.Resumen.EnRiesgo</div>
+                    <div class="text-muted small">En riesgo ahora mismo</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="border rounded p-3 text-center h-100">
+                    <div class="fs-3 fw-bold text-danger">@Model.Resumen.IncumplidosEnCurso</div>
+                    <div class="text-muted small">Incumplidos, sin cerrar</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Por prioridad -->
+            <div class="col-12 col-lg-6">
+                <h6 class="fw-bold">Cumplimiento por prioridad</h6>
+                @if (Model.PorPrioridad.Count == 0)
+                {
+                    <p class="text-muted small">Todavía no hay SLA completados.</p>
+                }
+                else
+                {
+                    @foreach (var g in Model.PorPrioridad)
+                    {
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>@g.Grupo</span>
+                                <small class="text-muted">@g.CumplidosATiempo/@g.Completados (@g.PorcentajeCumplimiento%)</small>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar @BarraClass(g.PorcentajeCumplimiento)" style="width: @g.PorcentajeCumplimiento%;"></div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Por agente -->
+            <div class="col-12 col-lg-6">
+                <h6 class="fw-bold">Cumplimiento por agente</h6>
+                @if (Model.PorAgente.Count == 0)
+                {
+                    <p class="text-muted small">Todavía no hay SLA completados con agente asignado.</p>
+                }
+                else
+                {
+                    @foreach (var g in Model.PorAgente)
+                    {
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>@g.Grupo</span>
+                                <small class="text-muted">@g.CumplidosATiempo/@g.Completados (@g.PorcentajeCumplimiento%)</small>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar @BarraClass(g.PorcentajeCumplimiento)" style="width: @g.PorcentajeCumplimiento%;"></div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <hr />
+
+        <h6 class="fw-bold">Tickets en riesgo o incumplidos (sin cerrar)</h6>
+        @if (Model.EnRiesgoOIncumplidos.Count == 0)
+        {
+            <p class="text-muted small">No hay ningún SLA en riesgo ni incumplido en este momento.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Ticket</th>
+                            <th>SLA</th>
+                            <th>Estado</th>
+                            <th>Prioridad</th>
+                            <th>Asignado</th>
+                            <th>Vence</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.EnRiesgoOIncumplidos)
+                        {
+                            <tr>
+                                <td>@r.CodigoTicket</td>
+                                <td>@r.TipoSla</td>
+                                <td>@r.Estado</td>
+                                <td>@(r.Prioridad ?? "-")</td>
+                                <td>@(r.Asignado ?? "-")</td>
+                                <td>@r.FechaObjetivo.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    @if (r.Incumplido)
+                                    {
+                                        <span class="badge bg-danger">Incumplido</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">Por vencer</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

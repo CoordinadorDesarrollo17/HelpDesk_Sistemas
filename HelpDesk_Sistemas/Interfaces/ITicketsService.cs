@@ -9,8 +9,9 @@ namespace HelpDesk_Sistemas.Interfaces
         // LISTADO Y FILTROS
         // ============================================================
 
-        Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual);
-        Task<(byte[] Content, string ContentType, string FileName)> ExportarExcelAsync(FiltrosTicketsModel model, int idUsuarioActual);
+        Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual);
+        Task<TicketsResumenModel> ObtenerResumen(int idUsuarioActual);
+        Task<(byte[] Content, string ContentType, string FileName)> ExportarExcelAsync(FiltrosTicketsModel model, int idUsuarioActual, string rolActual);
         Task<TicketsModel?> ObtenerTicketPorId(int id);   // NUEVO: para el endpoint GET /api/tickets/{id}
 
 
@@ -25,6 +26,9 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<List<CatalogoModel>> ObtenerPrioridades();
         Task<bool> TipoRequiereCategoria(int idTipoRequerimiento);
         Task<List<CatalogoModel>> ObtenerSociedadesPorUsuario(int idUsuario);
+        Task<List<CatalogoModel>> ObtenerImpactos();
+        Task<List<CatalogoModel>> ObtenerUrgencias();
+        Task<List<MatrizPrioridadModel>> ObtenerMatrizPrioridad();
 
         // ============================================================
         // DETALLE

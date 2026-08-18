@@ -1,0 +1,183 @@
+@using HelpDesk_Sistemas.Models
+@model List<UsuarioModel>
+
+@{
+    ViewData["Title"] = "Usuarios";
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header header-gradient text-black d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">Usuarios</h5>
+        <button type="button" class="btn btn-primary btn-sm" onclick="abrirCrearUsuario()">
+            <i class="bi bi-person-plus"></i> Nuevo usuario
+        </button>
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-header">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Usuario</th>
+                        <th>Rol</th>
+                        <th>Área</th>
+                        <th>Correo</th>
+                        <th>Activo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model)
+                    {
+                        <tr>
+                            <td>@u.Nombre @u.Apellido</td>
+                            <td><code>@u.Usuario</code></td>
+                            <td><span class="badge bg-primary">@u.Rol</span></td>
+                            <td>@u.Area</td>
+                            <td>@(u.Correo ?? "-")</td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           @(u.Activo ? "checked" : "")
+                                           onchange="cambiarActivoUsuario(@u.Id, this.checked)">
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR USUARIO -->
+<div class="modal fade" id="modalCrearUsuario" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="contenidoCrearUsuario">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREDENCIALES GENERADAS -->
+<div class="modal fade" id="modalCredenciales" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-shield-check text-success"></i> Usuario creado</h5>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Copia estas credenciales ahora — la contraseña no se vuelve a mostrar.</p>
+                <div class="mb-2">
+                    <label class="form-label small mb-0">Usuario</label>
+                    <input type="text" id="txtCredencialUsuario" class="form-control" readonly />
+                </div>
+                <div>
+                    <label class="form-label small mb-0">Contraseña</label>
+                    <input type="text" id="txtCredencialPassword" class="form-control" readonly />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="window.location.reload()">Listo</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+    <div id="toastGenerico" class="toast align-items-center border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMensaje"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function fetchConManejo(url, opciones) {
+            return fetch(url, opciones).catch(error => {
+                console.error(error);
+                mostrarToast("No se pudo conectar con el servidor. Revisa tu conexión.", "danger");
+                return null;
+            });
+        }
+
+        function mostrarToast(mensaje, tipo = "danger") {
+            const toastEl = document.getElementById("toastGenerico");
+            const toastMensaje = document.getElementById("toastMensaje");
+            toastEl.classList.remove("text-bg-success", "text-bg-danger", "text-bg-warning");
+            toastEl.classList.add(`text-bg-${tipo}`);
+            toastMensaje.textContent = mensaje;
+            new bootstrap.Toast(toastEl, { delay: 4000 }).show();
+        }
+
+        function abrirCrearUsuario() {
+            const modal = new bootstrap.Modal(document.getElementById("modalCrearUsuario"));
+            const contenido = document.getElementById("contenidoCrearUsuario");
+
+            contenido.innerHTML = "Cargando...";
+            modal.show();
+
+            fetchConManejo(`@Url.Action("CrearUsuario")`)
+                .then(r => r && r.text())
+                .then(html => {
+                    if (!html) return;
+                    contenido.innerHTML = html;
+                    inicializarFormularioUsuario();
+                });
+        }
+
+        function inicializarFormularioUsuario() {
+            const form = document.getElementById("formCrearUsuario");
+
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                const params = new URLSearchParams(new FormData(form));
+
+                fetchConManejo(`@Url.Action("CrearUsuario")?${params.toString()}`, { method: "POST" })
+                    .then(r => {
+                        if (!r) return;
+                        if (r.ok) {
+                            return r.json().then(data => {
+                                if (!data.exito) {
+                                    mostrarToast(data.mensaje || "No se pudo crear el usuario.", "danger");
+                                    return;
+                                }
+                                bootstrap.Modal.getInstance(document.getElementById("modalCrearUsuario")).hide();
+                                document.getElementById("txtCredencialUsuario").value = data.usuario;
+                                document.getElementById("txtCredencialPassword").value = data.password;
+                                new bootstrap.Modal(document.getElementById("modalCredenciales")).show();
+                            });
+                        } else {
+                            return r.text().then(html => {
+                                document.getElementById("contenidoCrearUsuario").innerHTML = html;
+                                inicializarFormularioUsuario();
+                            });
+                        }
+                    });
+            });
+        }
+
+        function cambiarActivoUsuario(id, activo) {
+            const params = new URLSearchParams({ id: id, activo: activo });
+
+            fetchConManejo(`@Url.Action("CambiarActivo")?${params.toString()}`, { method: "POST" })
+                .then(r => r && r.json())
+                .then(data => {
+                    if (!data) return;
+                    if (!data.exito) {
+                        mostrarToast("No se pudo actualizar el usuario.", "danger");
+                    } else {
+                        mostrarToast("Usuario actualizado.", "success");
+                    }
+                });
+        }
+    </script>
+}

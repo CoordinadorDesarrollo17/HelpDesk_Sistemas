@@ -1,10 +1,36 @@
-﻿namespace HelpDesk_Sistemas.Common
+using System.Security.Claims;
+
+namespace HelpDesk_Sistemas.Common
 {
-    //TODO: eliminar esta clase por cmpleto cuando exista el modulo de login.
-    //todos los usos de usuarioactualtemporal deben reemplazarse por el id
-    //del isuario autenticafo
-    public class SesionTemporal
+    // Expone el usuario autenticado actual (vía cookie de sesión, ver AuthController).
+    // Se conserva el nombre "SesionTemporal"/"UsuarioActualTemporal" para no tener que
+    // tocar cada punto del código que ya los usa — ya no es temporal, ahora lee la
+    // sesión real en vez de un usuario fijo.
+    public static class SesionTemporal
     {
-        public const int UsuarioActualTemporal = 3; //TODO: eliminar esta constante cuando exista el modulo de login
+        private static IHttpContextAccessor? httpContextAccessor;
+
+        public static void Configurar(IHttpContextAccessor accessor)
+        {
+            httpContextAccessor = accessor;
+        }
+
+        public static int UsuarioActualTemporal
+        {
+            get
+            {
+                var claim = httpContextAccessor?.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier);
+                return claim != null && int.TryParse(claim.Value, out var id) ? id : 0;
+            }
+        }
+
+        public static string RolActual =>
+            httpContextAccessor?.HttpContext?.User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
+
+        public static string NombreCompletoActual =>
+            httpContextAccessor?.HttpContext?.User.FindFirst("NombreCompleto")?.Value ?? string.Empty;
+
+        public static string UsuarioActual =>
+            httpContextAccessor?.HttpContext?.User.Identity?.Name ?? string.Empty;
     }
 }

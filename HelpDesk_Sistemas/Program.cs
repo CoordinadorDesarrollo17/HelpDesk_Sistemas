@@ -1,11 +1,30 @@
 using DocumentFormat.OpenXml.InkML;
+using HelpDesk_Sistemas.Common;
 using HelpDesk_Sistemas.Interfaces;
 using HelpDesk_Sistemas.Repositories;
 using HelpDesk_Sistemas.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add(new AuthorizeFilter());
+});
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Auth/Login";
+        options.AccessDeniedPath = "/Auth/AccesoDenegado";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -20,8 +39,17 @@ builder.Services.AddSingleton<DapperContext>();
 
 builder.Services.AddScoped<ITicketsService, TicketsService>();
 builder.Services.AddScoped<ITicketsRepository, TicketsRepository>();
+builder.Services.AddScoped<ISlaService, SlaService>();
+builder.Services.AddScoped<ISlaRepository, SlaRepository>();
+builder.Services.AddScoped<IReportesService, ReportesService>();
+builder.Services.AddScoped<IReportesRepository, ReportesRepository>();
+builder.Services.AddScoped<IUsuariosService, UsuariosService>();
+builder.Services.AddScoped<IUsuariosRepository, UsuariosRepository>();
+builder.Services.AddHostedService<SlaEngineBackgroundService>();
 
 var app = builder.Build();
+
+SesionTemporal.Configurar(app.Services.GetRequiredService<IHttpContextAccessor>());
 
 if (app.Environment.IsDevelopment())
 {
@@ -38,6 +66,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
@@ -53,14 +82,14 @@ app.Use(async (context, next) =>
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "Error de base de datos en {Path}", context.Request.Path);
 
-        await ResponderError(context, "No se pudo completar la operación por un problema con la base de datos. Intenta nuevamente.");
+        await ResponderError(context, "No se pudo completar la operaciï¿½n por un problema con la base de datos. Intenta nuevamente.");
     }
     catch (Exception ex)
     {
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "Error no controlado en {Path}", context.Request.Path);
 
-        await ResponderError(context, "Ocurrió un error inesperado. Intenta nuevamente.");
+        await ResponderError(context, "Ocurriï¿½ un error inesperado. Intenta nuevamente.");
     }
 });
 
