@@ -1,7 +1,9 @@
 @using HelpDesk_Sistemas.Models
-@model CrearUsuarioModel
+@model EditarUsuarioModel
 
-<form id="formCrearUsuario" method="post">
+<form id="formEditarUsuario" method="post">
+    <input type="hidden" name="Id" value="@Model.Id" />
+
     <div class="row g-3">
         <div class="col-sm-6">
             <label class="form-label">Nombre <span class="text-danger">*</span></label>
@@ -22,16 +24,6 @@
         </div>
 
         <div class="col-sm-6">
-            <label class="form-label">Rol <span class="text-danger">*</span></label>
-            <select name="IdRol" class="form-select" required>
-                <option value="">Selecciona...</option>
-                @foreach (var rol in (List<CatalogoModel>)ViewBag.Roles)
-                {
-                    <option value="@rol.Id" selected="@(Model.IdRol == rol.Id)">@rol.Nombre</option>
-                }
-            </select>
-        </div>
-        <div class="col-sm-6">
             <label class="form-label">Área <span class="text-danger">*</span></label>
             <select name="IdArea" class="form-select" required>
                 <option value="">Selecciona...</option>
@@ -41,7 +33,6 @@
                 }
             </select>
         </div>
-
         <div class="col-12">
             <label class="form-label">Sociedades <span class="text-danger">*</span></label>
             <div class="d-flex flex-wrap gap-3">
@@ -49,8 +40,8 @@
                 {
                     <div class="form-check">
                         <input type="checkbox" name="IdSociedades" value="@soc.Id" class="form-check-input"
-                               id="socCrear@(soc.Id)" checked="@Model.IdSociedades.Contains(soc.Id)" />
-                        <label class="form-check-label" for="socCrear@(soc.Id)">@soc.Nombre</label>
+                               id="socEditar@(soc.Id)" checked="@Model.IdSociedades.Contains(soc.Id)" />
+                        <label class="form-check-label" for="socEditar@(soc.Id)">@soc.Nombre</label>
                     </div>
                 }
             </div>
@@ -63,22 +54,24 @@
                 <option value="">Ninguno</option>
                 @foreach (var sup in (List<CatalogoModel>)ViewBag.Supervisores)
                 {
+                    if (sup.Id == Model.Id) { continue; }
                     <option value="@sup.Id" selected="@(Model.IdSupUsuario == sup.Id)">@sup.Nombre</option>
                 }
             </select>
         </div>
+
         <div class="col-sm-6 d-flex align-items-end">
             <div class="form-check">
-                <input type="checkbox" name="EsCoordinador" value="true" class="form-check-input" id="chkCoordinador" checked="@Model.EsCoordinador" />
-                <label class="form-check-label" for="chkCoordinador">Es coordinador</label>
+                <input type="checkbox" name="EsCoordinador" value="true" class="form-check-input" id="chkCoordinadorEditar" checked="@Model.EsCoordinador" />
+                <label class="form-check-label" for="chkCoordinadorEditar">Es coordinador</label>
             </div>
         </div>
 
         <div class="col-12">
             <small class="text-muted">
                 <i class="bi bi-info-circle"></i>
-                El usuario y la contraseña se generan automáticamente al guardar, siguiendo la convención de Cobefar
-                (rol + número secuencial / 3 letras de nombre y apellido + el mismo número).
+                El rol, el usuario y la contraseña no se editan aquí — cambiar el rol rompería la
+                convención de usuario/contraseña generada al crear la cuenta.
             </small>
         </div>
 
@@ -86,12 +79,12 @@
             @* Se muestran todos los errores (de campo y de modelo): este formulario no usa
                spans asp-validation-for por campo, así que si solo se leyera ModelState[""]
                los errores de validación de campo quedarían invisibles. *@
-            <span id="errorCrearUsuario" class="text-danger small">@string.Join(" ", ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage))</span>
+            <span id="errorEditarUsuario" class="text-danger small">@string.Join(" ", ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage))</span>
         </div>
     </div>
 
     <div class="modal-footer px-0 pb-0">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="submit" class="btn btn-primary">Crear usuario</button>
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
     </div>
 </form>
