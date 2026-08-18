@@ -18,5 +18,8 @@ obj/
 # VS Code (si lo usas)
 .vscode/
 
+# Claude Code (config local de la herramienta, puede incluir datos sensibles de sesión)
+.claude/
+
 # Archivos subidos por usuarios (contenido generado en tiempo de ejecución)
 wwwroot/uploads/
