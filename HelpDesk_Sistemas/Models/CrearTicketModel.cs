@@ -20,7 +20,7 @@ namespace HelpDesk_Sistemas.Models
         [MinLength(20, ErrorMessage = "Describe tu requerimiento con al menos 20 caracteres.")]
         public string Detalle { get; set; }
 
-        //solo para Consulta/Soporte: reemplazan al viejo AfectaFuncionamiento Sí/No
+        //solo para Soporte: reemplazan al viejo AfectaFuncionamiento Sí/No
         public int? IdImpacto { get; set; }
         public int? IdUrgencia { get; set; }
 
