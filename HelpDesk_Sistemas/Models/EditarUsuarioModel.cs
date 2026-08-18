@@ -2,8 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HelpDesk_Sistemas.Models
 {
-    public class CrearUsuarioModel
+    public class EditarUsuarioModel
     {
+        public int Id { get; set; }
+
         [Required(ErrorMessage = "El nombre es obligatorio.")]
         public string Nombre { get; set; } = string.Empty;
 
@@ -12,9 +14,6 @@ namespace HelpDesk_Sistemas.Models
 
         public string? Correo { get; set; }
         public string? NroContacto { get; set; }
-
-        [Required(ErrorMessage = "Selecciona un rol.")]
-        public int IdRol { get; set; }
 
         [Required(ErrorMessage = "Selecciona un área.")]
         public int IdArea { get; set; }
