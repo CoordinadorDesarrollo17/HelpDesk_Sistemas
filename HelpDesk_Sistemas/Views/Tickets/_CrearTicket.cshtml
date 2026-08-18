@@ -64,7 +64,7 @@
         </div>
     </div>
 
-    <!-- CATEGORÍA (solo Consulta/Soporte) -->
+    <!-- CATEGORÍA (solo Soporte) -->
     <div id="grupoCategoria" class="mb-3">
         <label class="form-label">Categoría <span class="text-danger">*</span></label>
         <select id="cboCategoria" name="IdCategoria" class="form-select">
@@ -73,7 +73,7 @@
         <span asp-validation-for="IdCategoria" class="text-danger small"></span>
     </div>
 
-    <!-- IMPACTO Y URGENCIA (solo Consulta/Soporte) — determinan la prioridad automáticamente -->
+    <!-- IMPACTO Y URGENCIA (solo Soporte) — determinan la prioridad automáticamente -->
     @{
         var opcionesJson = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
         var matrizJson = System.Text.Json.JsonSerializer.Serialize((List<MatrizPrioridadModel>)ViewBag.Matriz, opcionesJson);

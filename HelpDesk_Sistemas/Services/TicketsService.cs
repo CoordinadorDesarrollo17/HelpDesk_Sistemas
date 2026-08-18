@@ -24,14 +24,9 @@ namespace HelpDesk_Sistemas.Services
         // LISTADO Y FILTROS
         // ============================================================
 
-        /// <summary>
-        /// Capa preparada para crecer: hoy solo reenvía al Repository, pero aquí
-        /// iría la lógica de negocio futura (ej. restringir bandeja según el rol
-        /// del usuario logueado).
-        /// </summary>
-        public async Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual)
+        public async Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual)
         {
-            return await ticketsRepository.ListadoTickets(model, idUsuarioActual);
+            return await ticketsRepository.ListadoTickets(model, idUsuarioActual, rolActual);
         }
 
         public async Task<TicketsResumenModel> ObtenerResumen(int idUsuarioActual)
@@ -39,9 +34,9 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.ObtenerResumen(idUsuarioActual);
         }
 
-        public async Task<(byte[] Content, string ContentType, string FileName)> ExportarExcelAsync(FiltrosTicketsModel model, int idUsuarioActual)
+        public async Task<(byte[] Content, string ContentType, string FileName)> ExportarExcelAsync(FiltrosTicketsModel model, int idUsuarioActual, string rolActual)
         {
-            var lista = await ticketsRepository.ListadoTicketsExcel(model, idUsuarioActual);
+            var lista = await ticketsRepository.ListadoTicketsExcel(model, idUsuarioActual, rolActual);
 
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("Tickets");

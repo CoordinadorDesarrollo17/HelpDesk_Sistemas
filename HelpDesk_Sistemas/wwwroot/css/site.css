@@ -227,6 +227,35 @@ a:hover {
     font-size: .87rem;
 }
 
+.sidebar-user {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    padding: .85rem 1rem;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+.sidebar-user-info {
+    min-width: 0;
+}
+
+.sidebar-user-nombre {
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-user-rol {
+    color: #9a9d9e;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
 .app-main {
     flex: 1;
     min-width: 0;
@@ -387,6 +416,59 @@ a:hover {
 .badge.bg-primary-subtle {
     background-color: var(--brand-green-50) !important;
     color: var(--brand-green-700) !important;
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+
+.auth-body {
+    background: linear-gradient(160deg, var(--brand-green-50) 0%, #ffffff 55%);
+    min-height: 100vh;
+}
+
+.auth-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 380px;
+    background: #fff;
+    border: 1px solid var(--card-border);
+    border-radius: .75rem;
+    box-shadow: 0 10px 30px rgba(29, 29, 27, .08);
+    padding: 2rem;
+}
+
+.auth-brand {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: 1.75rem;
+}
+
+.auth-brand-mark {
+    width: 44px;
+    height: 44px;
+    font-size: 1rem;
+    border-radius: 12px;
+}
+
+.auth-brand-title {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--brand-950);
+    line-height: 1.1;
+}
+
+.auth-brand-sub {
+    font-size: .8rem;
+    color: var(--bs-secondary-color);
 }
 
 /* ============================================================

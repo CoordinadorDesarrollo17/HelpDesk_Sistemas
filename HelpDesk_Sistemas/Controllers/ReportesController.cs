@@ -1,9 +1,11 @@
 using HelpDesk_Sistemas.Interfaces;
 using HelpDesk_Sistemas.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HelpDesk_Sistemas.Controllers
 {
+    [Authorize(Roles = "Administrador")]
     public class ReportesController : Controller
     {
         private readonly IReportesService reportesService;

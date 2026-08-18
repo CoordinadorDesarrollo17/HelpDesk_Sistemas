@@ -2,10 +2,12 @@ using System.Diagnostics;
 using HelpDesk_Sistemas.Common;
 using HelpDesk_Sistemas.Interfaces;
 using HelpDesk_Sistemas.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HelpDesk_Sistemas.Controllers
 {
+    [Authorize(Roles = "Administrador")]
     public class HomeController : Controller
     {
         private readonly ITicketsService ticketsService;
@@ -32,6 +34,7 @@ namespace HelpDesk_Sistemas.Controllers
             return View(model);
         }
 
+        [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

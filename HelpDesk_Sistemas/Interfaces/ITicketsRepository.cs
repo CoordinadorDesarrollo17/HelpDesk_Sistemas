@@ -9,13 +9,13 @@ namespace HelpDesk_Sistemas.Interfaces
         // LISTADO Y FILTROS
         // ============================================================
 
-        Task<IEnumerable<TicketsModel>> ObtenerTickets(FiltrosTicketsModel model, int idUsuarioActual);
+        Task<IEnumerable<TicketsModel>> ObtenerTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual);
         Task<TicketsResumenModel> ObtenerResumen(int idUsuarioActual);
-        Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual);
+        Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual);
         Task<TicketsModel?> ObtenerTicketPorId(int id); //PARA EL ENDPOINT GET /api/tickets/{id}
 
         /// <summary>Listado completo sin paginar, usado para exportar a Excel.</summary>
-        Task<List<TicketsModel>> ListadoTicketsExcel(FiltrosTicketsModel model, int idUsuarioActual);
+        Task<List<TicketsModel>> ListadoTicketsExcel(FiltrosTicketsModel model, int idUsuarioActual, string rolActual);
 
         // ============================================================
         // CATÁLOGOS
