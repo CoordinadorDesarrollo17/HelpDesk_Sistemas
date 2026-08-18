@@ -22,8 +22,10 @@
                         <th>Usuario</th>
                         <th>Rol</th>
                         <th>Área</th>
+                        <th>Sociedades</th>
                         <th>Correo</th>
                         <th>Activo</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -34,6 +36,7 @@
                             <td><code>@u.Usuario</code></td>
                             <td><span class="badge bg-primary">@u.Rol</span></td>
                             <td>@u.Area</td>
+                            <td>@(string.IsNullOrEmpty(u.Sociedades) ? "-" : u.Sociedades)</td>
                             <td>@(u.Correo ?? "-")</td>
                             <td>
                                 <div class="form-check form-switch">
@@ -41,6 +44,14 @@
                                            @(u.Activo ? "checked" : "")
                                            onchange="cambiarActivoUsuario(@u.Id, this.checked)">
                                 </div>
+                            </td>
+                            <td class="text-nowrap">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" title="Editar" onclick="abrirEditarUsuario(@u.Id)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Eliminar" data-nombre="@u.Nombre @u.Apellido" onclick="eliminarUsuario(@u.Id, this.dataset.nombre)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </td>
                         </tr>
                     }
@@ -59,6 +70,20 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="contenidoCrearUsuario">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR USUARIO -->
+<div class="modal fade" id="modalEditarUsuario" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="contenidoEditarUsuario">
             </div>
         </div>
     </div>
@@ -163,6 +188,71 @@
                         }
                     });
             });
+        }
+
+        function abrirEditarUsuario(id) {
+            const modal = new bootstrap.Modal(document.getElementById("modalEditarUsuario"));
+            const contenido = document.getElementById("contenidoEditarUsuario");
+
+            contenido.innerHTML = "Cargando...";
+            modal.show();
+
+            fetchConManejo(`@Url.Action("EditarUsuario")?id=${id}`)
+                .then(r => r && r.text())
+                .then(html => {
+                    if (!html) return;
+                    contenido.innerHTML = html;
+                    inicializarFormularioEditarUsuario();
+                });
+        }
+
+        function inicializarFormularioEditarUsuario() {
+            const form = document.getElementById("formEditarUsuario");
+
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                const params = new URLSearchParams(new FormData(form));
+
+                fetchConManejo(`@Url.Action("EditarUsuario")?${params.toString()}`, { method: "POST" })
+                    .then(r => {
+                        if (!r) return;
+                        if (r.ok) {
+                            return r.json().then(data => {
+                                if (!data.exito) {
+                                    mostrarToast(data.mensaje || "No se pudo actualizar el usuario.", "danger");
+                                    return;
+                                }
+                                bootstrap.Modal.getInstance(document.getElementById("modalEditarUsuario")).hide();
+                                mostrarToast("Usuario actualizado.", "success");
+                                window.location.reload();
+                            });
+                        } else {
+                            return r.text().then(html => {
+                                document.getElementById("contenidoEditarUsuario").innerHTML = html;
+                                inicializarFormularioEditarUsuario();
+                            });
+                        }
+                    });
+            });
+        }
+
+        function eliminarUsuario(id, nombre) {
+            if (!confirm(`¿Eliminar al usuario "${nombre}"? Esta acción no se puede deshacer.`)) {
+                return;
+            }
+
+            fetchConManejo(`@Url.Action("EliminarUsuario")?id=${id}`, { method: "POST" })
+                .then(r => r && r.json())
+                .then(data => {
+                    if (!data) return;
+                    if (!data.exito) {
+                        mostrarToast(data.mensaje || "No se pudo eliminar el usuario.", "danger");
+                    } else {
+                        mostrarToast("Usuario eliminado.", "success");
+                        window.location.reload();
+                    }
+                });
         }
 
         function cambiarActivoUsuario(id, activo) {

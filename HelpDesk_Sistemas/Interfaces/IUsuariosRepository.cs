@@ -10,8 +10,13 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<int> CrearUsuario(CrearUsuarioModel model, string usuario, string passwordHash, int numeroSecuencial, string usuarioCreacion);
         Task<bool> CambiarActivo(int id, bool activo);
 
+        Task<EditarUsuarioModel?> ObtenerUsuarioParaEditar(int id);
+        Task<bool> ActualizarUsuario(EditarUsuarioModel model);
+        Task<(bool Exito, string? Mensaje)> EliminarUsuario(int id);
+
         Task<List<CatalogoModel>> ObtenerRoles();
         Task<List<CatalogoModel>> ObtenerTodasLasAreas();
         Task<List<CatalogoModel>> ObtenerPosiblesSupervisores();
+        Task<List<CatalogoModel>> ObtenerSociedades();
     }
 }

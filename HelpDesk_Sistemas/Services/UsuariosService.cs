@@ -37,6 +37,13 @@ namespace HelpDesk_Sistemas.Services
                 return (false, "El rol seleccionado no es válido.", null, null);
             }
 
+            model.IdSociedades = model.IdSociedades.Distinct().ToList();
+
+            if (model.IdSociedades.Count == 0)
+            {
+                return (false, "Selecciona al menos una sociedad.", null, null);
+            }
+
             var numeroSecuencial = await usuariosRepository.ObtenerSiguienteNumeroSecuencial(model.IdRol);
             var usuarioGenerado = GeneradorCredenciales.GenerarUsuario(rol.Nombre, numeroSecuencial);
             var passwordGenerada = GeneradorCredenciales.GenerarPassword(model.Nombre, model.Apellido, numeroSecuencial);
@@ -52,6 +59,42 @@ namespace HelpDesk_Sistemas.Services
             return await usuariosRepository.CambiarActivo(id, activo);
         }
 
+        public async Task<EditarUsuarioModel?> ObtenerUsuarioParaEditar(int id)
+        {
+            return await usuariosRepository.ObtenerUsuarioParaEditar(id);
+        }
+
+        public async Task<(bool Exito, string? Mensaje)> ActualizarUsuario(EditarUsuarioModel model)
+        {
+            if (model.IdSupUsuario == model.Id)
+            {
+                return (false, "Un usuario no puede ser su propio supervisor.");
+            }
+
+            model.IdSociedades = model.IdSociedades.Distinct().ToList();
+
+            if (model.IdSociedades.Count == 0)
+            {
+                return (false, "Selecciona al menos una sociedad.");
+            }
+
+            var actualizado = await usuariosRepository.ActualizarUsuario(model);
+
+            return actualizado
+                ? (true, (string?)null)
+                : (false, "No se encontró el usuario a actualizar.");
+        }
+
+        public async Task<(bool Exito, string? Mensaje)> EliminarUsuario(int id, int idUsuarioActual)
+        {
+            if (id == idUsuarioActual)
+            {
+                return (false, "No puedes eliminar tu propio usuario.");
+            }
+
+            return await usuariosRepository.EliminarUsuario(id);
+        }
+
         public async Task<List<CatalogoModel>> ObtenerRoles()
         {
             return await usuariosRepository.ObtenerRoles();
@@ -65,6 +108,11 @@ namespace HelpDesk_Sistemas.Services
         public async Task<List<CatalogoModel>> ObtenerPosiblesSupervisores()
         {
             return await usuariosRepository.ObtenerPosiblesSupervisores();
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerSociedades()
+        {
+            return await usuariosRepository.ObtenerSociedades();
         }
     }
 }
