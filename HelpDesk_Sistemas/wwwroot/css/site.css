@@ -1,36 +1,480 @@
+/* ============================================================
+   SISTEMA DE DISEÑO — HelpDesk_Sistemas (Cobefar)
+   Paleta corporativa (verdes Cobefar + neutro oscuro) sobre un
+   layout minimalista de sidebar, inspirado en el estilo ServiceNow.
+   ============================================================ */
+
+:root {
+    --brand-950: #1D1D1B;   /* neutro oscuro corporativo — sidebar */
+    --brand-900: #2A2A27;
+    --brand-green-700: #1C932F; /* verde primario (acciones, enlaces) */
+    --brand-green-600: #27A528; /* hover / énfasis */
+    --brand-green-500: #32B91E; /* acentos */
+    --brand-green-400: #36C21B; /* acentos claros */
+    --brand-green-300: #47E20B; /* solo detalles puntuales, no texto/fondo grandes */
+    --brand-green-50: #EAF7EA;  /* fondo tenue (hover, chips, activos suaves) */
+
+    --page-bg: #F4F5F6;
+    --card-border: rgba(0, 0, 0, .08);
+    --sidebar-width: 248px;
+}
+
 html {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+    html {
+        font-size: 16px;
+    }
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+html, body {
+    position: relative;
+    min-height: 100%;
 }
 
 body {
-  margin-bottom: 60px;
+    background-color: var(--page-bg);
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+    color: var(--bs-secondary-color);
+    text-align: end;
 }
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+    text-align: start;
 }
 
-/* PAGINACION */
+/* ============================================================
+   COLOR DE MARCA — sobreescribe los componentes de Bootstrap que
+   usan azul por defecto (los botones/paginación de Bootstrap 5.3
+   fijan su color por variante, así que se sobreescriben directo).
+   ============================================================ */
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus,
+.form-select:focus {
+    box-shadow: 0 0 0 0.1rem #fff, 0 0 0 0.25rem rgba(28, 147, 47, .35);
+    border-color: var(--brand-green-600);
+}
+
+.btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--brand-green-700);
+    --bs-btn-border-color: var(--brand-green-700);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--brand-green-600);
+    --bs-btn-hover-border-color: var(--brand-green-600);
+    --bs-btn-active-bg: #157025;
+    --bs-btn-active-border-color: #157025;
+    --bs-btn-disabled-bg: var(--brand-green-700);
+    --bs-btn-disabled-border-color: var(--brand-green-700);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--brand-green-700);
+    --bs-btn-border-color: var(--brand-green-700);
+    --bs-btn-hover-bg: var(--brand-green-700);
+    --bs-btn-hover-border-color: var(--brand-green-700);
+    --bs-btn-active-bg: var(--brand-green-700);
+    --bs-btn-active-border-color: var(--brand-green-700);
+}
+
+.text-primary {
+    color: var(--brand-green-700) !important;
+}
+
+.bg-primary {
+    background-color: var(--brand-green-700) !important;
+}
+
+.border-primary {
+    border-color: var(--brand-green-700) !important;
+}
+
+a {
+    color: var(--brand-green-700);
+}
+
+a:hover {
+    color: var(--brand-green-600);
+}
+
+.page-item.active .page-link {
+    background-color: var(--brand-green-700);
+    border-color: var(--brand-green-700);
+}
+
+.page-link {
+    color: var(--brand-green-700);
+}
+
+.page-link:hover {
+    color: var(--brand-green-600);
+}
+
+/* ============================================================
+   LAYOUT — sidebar fijo + contenido
+   ============================================================ */
+
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+    background: var(--brand-950);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1030;
+    transition: transform .2s ease;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: 1.15rem 1.25rem;
+    color: #fff;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.sidebar-brand:hover {
+    color: #fff;
+}
+
+.sidebar-brand-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, var(--brand-green-500), var(--brand-green-700));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.sidebar-brand-text {
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.1;
+}
+
+.sidebar-brand-text small {
+    display: block;
+    font-weight: 400;
+    font-size: .7rem;
+    color: #9a9d9e;
+}
+
+.sidebar-nav {
+    padding: .85rem .6rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.sidebar-section-label {
+    text-transform: uppercase;
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    color: #8b8f91;
+    padding: 1.1rem .75rem .4rem;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .55rem .75rem;
+    border-radius: .5rem;
+    color: #c9cccd;
+    text-decoration: none;
+    font-size: .92rem;
+    margin-bottom: .1rem;
+}
+
+.sidebar-link i {
+    font-size: 1.05rem;
+    width: 1.1rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.sidebar-link:hover {
+    background: rgba(255, 255, 255, .07);
+    color: #fff;
+}
+
+.sidebar-link.active {
+    background: var(--brand-green-700);
+    color: #fff;
+}
+
+.sidebar-link-sub {
+    padding-left: 1.15rem;
+    font-size: .87rem;
+}
+
+.sidebar-user {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    padding: .85rem 1rem;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+.sidebar-user-info {
+    min-width: 0;
+}
+
+.sidebar-user-nombre {
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-user-rol {
+    color: #9a9d9e;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.app-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    margin-left: var(--sidebar-width);
+}
+
+.app-topbar {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .6rem 1rem;
+    background: #fff;
+    border-bottom: 1px solid var(--card-border);
+}
+
+.app-topbar-brand {
+    font-weight: 600;
+}
+
+.app-content {
+    padding: 1.25rem;
+    flex: 1;
+}
+
+.sidebar-backdrop {
+    display: none;
+}
+
+@media (max-width: 767.98px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .app-main {
+        margin-left: 0;
+    }
+
+    .sidebar-backdrop.show {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .35);
+        z-index: 1020;
+    }
+}
+
+.app-footer {
+    padding: 1rem 1.25rem;
+    color: var(--bs-secondary-color);
+    font-size: .85rem;
+}
+
+/* ============================================================
+   TARJETAS — encabezado limpio en vez del banner de color sólido
+   ============================================================ */
+
+.card {
+    border: 1px solid var(--card-border);
+    border-radius: .6rem;
+}
+
+.card-header {
+    background: #fff;
+}
+
+.header-gradient {
+    background: #fff;
+    border-bottom: 1px solid var(--card-border);
+    padding-top: .9rem;
+    padding-bottom: .9rem;
+}
+
+.header-gradient h5 {
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+
+.shadow-sm {
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .05) !important;
+}
+
+/* ============================================================
+   KPIs DEL HOME
+   ============================================================ */
+
+.kpi-card {
+    border: 1px solid var(--card-border);
+    border-radius: .6rem;
+    padding: 1rem;
+    height: 100%;
+    background: #fff;
+}
+
+.kpi-card .kpi-valor {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--brand-950);
+}
+
+.kpi-card .kpi-etiqueta {
+    color: var(--bs-secondary-color);
+    font-size: .85rem;
+}
+
+/* ============================================================
+   BADGES — versión "pill" suave en vez de colores sólidos
+   ============================================================ */
+
+.badge {
+    font-weight: 600;
+    font-size: .74rem;
+    padding: .38em .65em;
+    border-radius: 999px;
+}
+
+.badge.bg-success {
+    background-color: #E4F6E6 !important;
+    color: #157025 !important;
+}
+
+.badge.bg-danger {
+    background-color: #FBE8E8 !important;
+    color: #B42318 !important;
+}
+
+.badge.bg-warning {
+    background-color: #FEF3E0 !important;
+    color: #B25E09 !important;
+}
+
+.badge.bg-info {
+    background-color: #E5F3FB !important;
+    color: #0B5C87 !important;
+}
+
+.badge.bg-secondary {
+    background-color: #EEF0F1 !important;
+    color: #495057 !important;
+}
+
+.badge.bg-primary {
+    background-color: var(--brand-green-50) !important;
+    color: var(--brand-green-700) !important;
+}
+
+.badge.bg-dark {
+    background-color: #E4E4E3 !important;
+    color: var(--brand-950) !important;
+}
+
+.badge.bg-primary-subtle {
+    background-color: var(--brand-green-50) !important;
+    color: var(--brand-green-700) !important;
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+
+.auth-body {
+    background: linear-gradient(160deg, var(--brand-green-50) 0%, #ffffff 55%);
+    min-height: 100vh;
+}
+
+.auth-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 380px;
+    background: #fff;
+    border: 1px solid var(--card-border);
+    border-radius: .75rem;
+    box-shadow: 0 10px 30px rgba(29, 29, 27, .08);
+    padding: 2rem;
+}
+
+.auth-brand {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: 1.75rem;
+}
+
+.auth-brand-mark {
+    width: 44px;
+    height: 44px;
+    font-size: 1rem;
+    border-radius: 12px;
+}
+
+.auth-brand-title {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--brand-950);
+    line-height: 1.1;
+}
+
+.auth-brand-sub {
+    font-size: .8rem;
+    color: var(--bs-secondary-color);
+}
+
+/* ============================================================
+   PAGINACION
+   ============================================================ */
+
 .paginacion {
     display: flex;
     justify-content: end;
@@ -41,7 +485,6 @@ body {
     .pagination li:last-child {
         display: none;
     }
-
 
     .paginacion {
         display: flex;

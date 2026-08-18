@@ -1,0 +1,228 @@
+@using HelpDesk_Sistemas.Models
+@model SlaCalendarioModel?
+
+@{
+    ViewData["Title"] = "Calendario laboral";
+    var calendarios = (List<CatalogoModel>)ViewBag.Calendarios;
+    var idSeleccionado = (int?)ViewBag.IdCalendarioSeleccionado;
+    var nombresDias = new[] { "Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado" };
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header header-gradient text-black d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">Calendario laboral</h5>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary btn-sm" asp-controller="Sla" asp-action="Dashboard">
+                <i class="bi bi-graph-up"></i> Cumplimiento
+            </a>
+            <a class="btn btn-outline-secondary btn-sm" asp-controller="Sla" asp-action="Index">
+                <i class="bi bi-arrow-left"></i> Definiciones de SLA
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="row g-4">
+            <div class="col-12 col-md-4">
+                <label class="form-label fw-semibold">Calendario</label>
+                <select id="cboCalendario" class="form-select mb-2">
+                    @foreach (var cal in calendarios)
+                    {
+                        <option value="@cal.Id" selected="@(cal.Id == idSeleccionado)">@cal.Nombre</option>
+                    }
+                </select>
+
+                <div class="input-group input-group-sm">
+                    <input type="text" id="txtNuevoCalendario" class="form-control" placeholder="Nombre del nuevo calendario" />
+                    <button class="btn btn-outline-primary" onclick="crearCalendario()"><i class="bi bi-plus-lg"></i></button>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-8">
+                @if (Model is null)
+                {
+                    <p class="text-muted">Crea un calendario laboral para empezar.</p>
+                }
+                else
+                {
+                    <h6 class="fw-bold">Horario semanal</h6>
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Día</th><th>Inicio</th><th>Fin</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var h in Model.Horarios)
+                            {
+                                <tr>
+                                    <td>@nombresDias[h.DiaSemana - 1]</td>
+                                    <td>@h.HoraInicio.ToString(@"hh\:mm")</td>
+                                    <td>@h.HoraFin.ToString(@"hh\:mm")</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="eliminarHorario(@h.Id)"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <div class="d-flex gap-2 align-items-end flex-wrap mb-4">
+                        <div>
+                            <label class="form-label small mb-0">Día</label>
+                            <select id="selDiaSemana" class="form-select form-select-sm">
+                                @for (var i = 0; i < nombresDias.Length; i++)
+                                {
+                                    <option value="@(i + 1)">@nombresDias[i]</option>
+                                }
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label small mb-0">Inicio</label>
+                            <input type="time" id="txtHoraInicio" class="form-control form-control-sm" value="08:00" />
+                        </div>
+                        <div>
+                            <label class="form-label small mb-0">Fin</label>
+                            <input type="time" id="txtHoraFin" class="form-control form-control-sm" value="18:00" />
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="agregarHorario()">Agregar franja</button>
+                    </div>
+
+                    <h6 class="fw-bold">Feriados</h6>
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Fecha</th><th>Descripción</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var f in Model.Feriados)
+                            {
+                                <tr>
+                                    <td>@f.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>@f.Descripcion</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="eliminarFeriado(@f.Id)"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <div class="d-flex gap-2 align-items-end flex-wrap">
+                        <div>
+                            <label class="form-label small mb-0">Fecha</label>
+                            <input type="date" id="txtFechaFeriado" class="form-control form-control-sm" />
+                        </div>
+                        <div class="flex-grow-1">
+                            <label class="form-label small mb-0">Descripción</label>
+                            <input type="text" id="txtDescripcionFeriado" class="form-control form-control-sm" placeholder="Ej. Fiestas Patrias" />
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="agregarFeriado()">Agregar feriado</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+    <div id="toastGenerico" class="toast align-items-center border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMensaje"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function fetchConManejo(url, opciones) {
+            return fetch(url, opciones).catch(error => {
+                console.error(error);
+                mostrarToast("No se pudo conectar con el servidor. Revisa tu conexión.", "danger");
+                return null;
+            });
+        }
+
+        function mostrarToast(mensaje, tipo = "danger") {
+            const toastEl = document.getElementById("toastGenerico");
+            const toastMensaje = document.getElementById("toastMensaje");
+            toastEl.classList.remove("text-bg-success", "text-bg-danger", "text-bg-warning");
+            toastEl.classList.add(`text-bg-${tipo}`);
+            toastMensaje.textContent = mensaje;
+            new bootstrap.Toast(toastEl, { delay: 4000 }).show();
+        }
+
+        document.getElementById("cboCalendario").addEventListener("change", function () {
+            window.location.href = `@Url.Action("Calendario")?id=${this.value}`;
+        });
+
+        function crearCalendario() {
+            const nombre = document.getElementById("txtNuevoCalendario").value;
+            if (!nombre.trim()) {
+                mostrarToast("Indica un nombre para el calendario.", "danger");
+                return;
+            }
+
+            fetchConManejo(`@Url.Action("CrearCalendario")?nombre=${encodeURIComponent(nombre)}`, { method: "POST" })
+                .then(r => r && r.json())
+                .then(data => {
+                    if (!data) return;
+                    if (data.exito) {
+                        window.location.href = `@Url.Action("Calendario")?id=${data.idCalendario}`;
+                    } else {
+                        mostrarToast(data.mensaje || "No se pudo crear el calendario.", "danger");
+                    }
+                });
+        }
+
+        function agregarHorario() {
+            const idCalendario = document.getElementById("cboCalendario").value;
+            const diaSemana = document.getElementById("selDiaSemana").value;
+            const horaInicio = document.getElementById("txtHoraInicio").value;
+            const horaFin = document.getElementById("txtHoraFin").value;
+
+            const params = new URLSearchParams({ idCalendario, diaSemana, horaInicio, horaFin });
+
+            fetchConManejo(`@Url.Action("AgregarHorario")?${params.toString()}`, { method: "POST" })
+                .then(r => r && r.json())
+                .then(data => {
+                    if (!data) return;
+                    if (data.exito) {
+                        window.location.reload();
+                    } else {
+                        mostrarToast(data.mensaje || "No se pudo agregar el horario.", "danger");
+                    }
+                });
+        }
+
+        function eliminarHorario(id) {
+            fetchConManejo(`@Url.Action("EliminarHorario")?id=${id}`, { method: "POST" })
+                .then(r => r && r.json())
+                .then(data => { if (data) window.location.reload(); });
+        }
+
+        function agregarFeriado() {
+            const idCalendario = document.getElementById("cboCalendario").value;
+            const fecha = document.getElementById("txtFechaFeriado").value;
+            const descripcion = document.getElementById("txtDescripcionFeriado").value;
+
+            if (!fecha) {
+                mostrarToast("Selecciona una fecha.", "danger");
+                return;
+            }
+
+            const params = new URLSearchParams({ idCalendario, fecha, descripcion: descripcion || "" });
+
+            fetchConManejo(`@Url.Action("AgregarFeriado")?${params.toString()}`, { method: "POST" })
+                .then(r => r && r.json())
+                .then(data => {
+                    if (!data) return;
+                    if (data.exito) {
+                        window.location.reload();
+                    } else {
+                        mostrarToast(data.mensaje || "No se pudo agregar el feriado.", "danger");
+                    }
+                });
+        }
+
+        function eliminarFeriado(id) {
+            fetchConManejo(`@Url.Action("EliminarFeriado")?id=${id}`, { method: "POST" })
+                .then(r => r && r.json())
+                .then(data => { if (data) window.location.reload(); });
+        }
+    </script>
+}

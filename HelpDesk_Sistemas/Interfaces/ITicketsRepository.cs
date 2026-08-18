@@ -9,12 +9,13 @@ namespace HelpDesk_Sistemas.Interfaces
         // LISTADO Y FILTROS
         // ============================================================
 
-        Task<IEnumerable<TicketsModel>> ObtenerTickets(FiltrosTicketsModel model, int idUsuarioActual);
-        Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual);
+        Task<IEnumerable<TicketsModel>> ObtenerTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual);
+        Task<TicketsResumenModel> ObtenerResumen(int idUsuarioActual);
+        Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual);
         Task<TicketsModel?> ObtenerTicketPorId(int id); //PARA EL ENDPOINT GET /api/tickets/{id}
 
         /// <summary>Listado completo sin paginar, usado para exportar a Excel.</summary>
-        Task<List<TicketsModel>> ListadoTicketsExcel(FiltrosTicketsModel model, int idUsuarioActual);
+        Task<List<TicketsModel>> ListadoTicketsExcel(FiltrosTicketsModel model, int idUsuarioActual, string rolActual);
 
         // ============================================================
         // CATÁLOGOS
@@ -26,6 +27,9 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<List<CatalogoModel>> ObtenerCategoriasPorArea(int idArea);
         Task<List<CatalogoModel>> ObtenerPrioridades();
         Task<List<CatalogoModel>> ObtenerSociedadesPorUsuario(int idUsuario);
+        Task<List<CatalogoModel>> ObtenerImpactos();
+        Task<List<CatalogoModel>> ObtenerUrgencias();
+        Task<List<MatrizPrioridadModel>> ObtenerMatrizPrioridad();
 
         /// <summary>True si el tipo requiere Categoría (y, por extensión, la pregunta de Afecta_Funcionamiento).</summary>
         Task<bool> TipoRequiereCategoria(int idTipoRequerimiento);

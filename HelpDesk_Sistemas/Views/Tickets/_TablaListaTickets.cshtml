@@ -3,6 +3,46 @@
 @using X.PagedList.Mvc.Core
 @model IPagedList<TicketsModel>
 
+@functions {
+    string EstadoBadgeClass(string? estado) => estado switch
+    {
+        "Pendiente" => "bg-secondary",
+        "En revisión" or "Levantamiento" => "bg-info text-dark",
+        "En atención" or "Desarrollo" or "Pase a producción" => "bg-primary",
+        "En pausa" => "bg-warning text-dark",
+        "En validación" or "Pruebas" => "bg-primary-subtle text-primary-emphasis",
+        "Cerrado" or "Cierre" => "bg-success",
+        "Anulado" => "bg-dark",
+        _ => "bg-light text-dark"
+    };
+
+    string PrioridadBadgeClass(string? prioridad) => prioridad switch
+    {
+        "Urgente" => "bg-danger",
+        "Alta" => "bg-warning text-dark",
+        "Media" => "bg-info text-dark",
+        "Baja" => "bg-secondary",
+        _ => "bg-light text-dark"
+    };
+
+    TicketSlaModel? SlaPrincipal(TicketsModel t) =>
+        (t.SlaRespuesta != null && (t.SlaRespuesta.Etapa == "EnCurso" || t.SlaRespuesta.Etapa == "Pausado"))
+            ? t.SlaRespuesta
+            : t.SlaResolucion ?? t.SlaRespuesta;
+
+    string SlaEtiqueta(TicketsModel t, TicketSlaModel sla) => sla == t.SlaRespuesta ? "Respuesta" : "Resolución";
+
+    (string Css, string Texto) SlaBadge(TicketSlaModel? sla)
+    {
+        if (sla is null || sla.Etapa == "Cancelado") return ("bg-light text-dark", "-");
+        if (sla.Incumplido == true) return ("bg-danger", "Incumplido");
+        if (sla.Etapa == "Completado") return sla.CumplidoATiempo == true ? ("bg-success", "Cumplido") : ("bg-danger", "Incumplido");
+        if (sla.Etapa == "Pausado") return ("bg-secondary", "Pausado");
+        if (sla.AdvertenciaActiva == true) return ("bg-warning text-dark", $"{sla.PorcentajeConsumido:0}% - por vencer");
+        return ("bg-info text-dark", $"{sla.PorcentajeConsumido:0}%");
+    }
+}
+
 <div class="table-responsive">
     <table class="table table-hover align-middle text-nowrap">
         <thead class="table-header">
@@ -14,6 +54,7 @@
                 <th>Categoría</th>
                 <th>Estado</th>
                 <th>Prioridad</th>
+                <th>SLA</th>
                 <th>Orden</th>
                 <th>Solicitante</th>
                 <th>Personal Asignado</th>
@@ -31,13 +72,10 @@
                     <td data-label="Tipo Requerimiento">@u?.TipoRequerimiento</td>
                     <td data-label="Área">@u?.Area</td>
                     <td data-label="Categoría">@u?.Categoria</td>
-                    <td data-label="Estado">@u?.Estado</td>
+                    <td data-label="Estado"><span class="badge @EstadoBadgeClass(u.Estado)">@u?.Estado</span></td>
 
                     <td data-label="Prioridad">
-                        @{
-                            var prioridadBloqueada = (u.TipoRequerimiento == "Consulta" || u.TipoRequerimiento == "Soporte") && u.AfectaFuncionamiento == true;
-                        }
-                        @if (u.Estado == "Pendiente" && !prioridadBloqueada)
+                        @if (u.Estado == "Pendiente")
                         {
                             <select class="form-select form-select-sm" onchange="asignarPrioridad(@u.IdTicket, this.value)">
                                 <option value="">Sin definir</option>
@@ -47,9 +85,30 @@
                                 }
                             </select>
                         }
+                        else if (u.Prioridad != null)
+                        {
+                            <span class="badge @PrioridadBadgeClass(u.Prioridad)">@u.Prioridad</span>
+                        }
                         else
                         {
-                            @(u.Prioridad ?? "-")
+                            @:-
+                        }
+                    </td>
+
+                    <td data-label="SLA">
+                        @{
+                            var slaPrincipal = SlaPrincipal(u);
+                            var slaBadge = SlaBadge(slaPrincipal);
+                        }
+                        @if (slaPrincipal is null)
+                        {
+                            @:-
+                        }
+                        else
+                        {
+                            <span class="badge @slaBadge.Css" title="@SlaEtiqueta(u, slaPrincipal) &#183; vence @slaPrincipal.FechaObjetivo?.ToString("dd/MM HH:mm")">
+                                @SlaEtiqueta(u, slaPrincipal): @slaBadge.Texto
+                            </span>
                         }
                     </td>
 
@@ -81,7 +140,7 @@
                             <i class="bi bi-eye"></i>
                         </button>
 
-                        @if (u.Estado == "Pendiente" && (u.TipoRequerimiento == "Consulta" || u.TipoRequerimiento == "Soporte"))
+                        @if (u.Estado == "Pendiente" && u.TipoRequerimiento == "Soporte")
                         {
                             <button type="button" class="btn btn-sm btn-outline-primary" title="Tomar ticket" onclick="tomarTicket(@u.IdTicket)">
                                 <i class="bi bi-hand-index"></i>
@@ -126,7 +185,7 @@
                         }
 
                         <!-- IMPLEMENTACIÓN Y MEJORA -->
-                        @if (u.Estado == "Pendiente" && u.TipoRequerimiento != "Consulta" && u.TipoRequerimiento != "Soporte")
+                        @if (u.Estado == "Pendiente" && u.TipoRequerimiento != "Soporte")
                         {
                             <button type="button" class="btn btn-sm btn-outline-primary" title="Tomar para levantamiento" onclick="tomarLevantamiento(@u.IdTicket)">
                                 <i class="bi bi-clipboard-check"></i>

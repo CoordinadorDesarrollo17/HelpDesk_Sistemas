@@ -1,5 +1,5 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,41 +13,91 @@
     @RenderSection("Styles", required: false)
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-primary-subtle border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">HelpDesk_Sistemas</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <!--<li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Clientes" asp-action="ListadoClientes">Clientes</a>
-                        </li>-->
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Tickets" asp-action="ListadoTickets">Tickets</a>
-                        </li>
-                    </ul>
+    @{
+        var controladorActual = ViewContext.RouteData.Values["controller"]?.ToString();
+        var accionActual = ViewContext.RouteData.Values["action"]?.ToString();
+    }
+    <div class="app-shell">
+        @{
+            var esAdministrador = User.IsInRole("Administrador");
+        }
+        <aside class="sidebar" id="sidebar">
+            <a class="sidebar-brand" asp-area="" asp-controller="@(esAdministrador ? "Home" : "Tickets")" asp-action="@(esAdministrador ? "Index" : "ListadoTickets")">
+                <span class="sidebar-brand-mark">HD</span>
+                <span class="sidebar-brand-text">HelpDesk<small>Cobefar</small></span>
+            </a>
+
+            <nav class="sidebar-nav">
+                @if (esAdministrador)
+                {
+                    <a class="sidebar-link @(controladorActual == "Home" ? "active" : "")" asp-area="" asp-controller="Home" asp-action="Index">
+                        <i class="bi bi-house-door"></i> <span>Home</span>
+                    </a>
+                }
+                <a class="sidebar-link @(controladorActual == "Tickets" ? "active" : "")" asp-area="" asp-controller="Tickets" asp-action="ListadoTickets">
+                    <i class="bi bi-ticket-perforated"></i> <span>Tickets</span>
+                </a>
+
+                @if (esAdministrador)
+                {
+                    <a class="sidebar-link @(controladorActual == "Reportes" ? "active" : "")" asp-area="" asp-controller="Reportes" asp-action="Index">
+                        <i class="bi bi-bar-chart-line"></i> <span>Reportes</span>
+                    </a>
+
+                    <div class="sidebar-section-label">SLA</div>
+                    <a class="sidebar-link sidebar-link-sub @(controladorActual == "Sla" && accionActual == "Index" ? "active" : "")" asp-area="" asp-controller="Sla" asp-action="Index">
+                        <i class="bi bi-list-check"></i> <span>Definiciones</span>
+                    </a>
+                    <a class="sidebar-link sidebar-link-sub @(controladorActual == "Sla" && accionActual == "Calendario" ? "active" : "")" asp-area="" asp-controller="Sla" asp-action="Calendario">
+                        <i class="bi bi-calendar-week"></i> <span>Calendario laboral</span>
+                    </a>
+                    <a class="sidebar-link sidebar-link-sub @(controladorActual == "Sla" && accionActual == "Dashboard" ? "active" : "")" asp-area="" asp-controller="Sla" asp-action="Dashboard">
+                        <i class="bi bi-graph-up"></i> <span>Cumplimiento</span>
+                    </a>
+
+                    <div class="sidebar-section-label">Administración</div>
+                    <a class="sidebar-link @(controladorActual == "Usuarios" ? "active" : "")" asp-area="" asp-controller="Usuarios" asp-action="Index">
+                        <i class="bi bi-people"></i> <span>Usuarios</span>
+                    </a>
+                }
+            </nav>
+
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <div class="sidebar-user">
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-nombre">@HelpDesk_Sistemas.Common.SesionTemporal.NombreCompletoActual</div>
+                        <div class="sidebar-user-rol">@HelpDesk_Sistemas.Common.SesionTemporal.RolActual</div>
+                    </div>
+                    <form method="post" asp-controller="Auth" asp-action="Logout">
+                        <button type="submit" class="btn btn-sm btn-outline-light" title="Cerrar sesión">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </button>
+                    </form>
                 </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container-fluid">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+            }
+        </aside>
+
+        <div class="app-main">
+            <header class="app-topbar d-md-none">
+                <button class="btn btn-sm btn-outline-secondary" type="button" id="btnToggleSidebar" aria-label="Abrir menú">
+                    <i class="bi bi-list"></i>
+                </button>
+                <span class="app-topbar-brand">HelpDesk_Sistemas</span>
+            </header>
+
+            <main class="app-content" role="main">
+                @RenderBody()
+            </main>
+
+            <footer class="app-footer">
+                &copy; 2026 - HelpDesk_Sistemas
+            </footer>
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - HelpDesk_Sistemas - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

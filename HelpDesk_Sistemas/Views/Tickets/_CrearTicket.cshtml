@@ -1,11 +1,13 @@
-﻿@using HelpDesk_Sistemas.Models
+@using HelpDesk_Sistemas.Models
 @model HelpDesk_Sistemas.Models.CrearTicketModel
 
 <form id="formCrearTicket" asp-controller="Tickets" asp-action="CrearTicket" method="post" enctype="multipart/form-data">
 
+    <h6 class="text-uppercase text-muted small fw-bold mb-2">Tipo de solicitud</h6>
+
     <!-- TIPO DE REQUERIMIENTO -->
     <div class="mb-3">
-        <label class="form-label">Tipo de requerimiento</label>
+        <label class="form-label">Tipo de requerimiento <span class="text-danger">*</span></label>
         <select id="cboTipoRequerimiento" name="IdTipoRequerimiento" class="form-select">
             <option value="">Selecciona...</option>
             @foreach (var tipo in (List<TipoRequerimientoModel>)ViewBag.Tipos)
@@ -20,32 +22,104 @@
         <span asp-validation-for="IdTipoRequerimiento" class="text-danger small"></span>
     </div>
 
-    <!-- ÁREA -->
-    <div class="mb-3">
-        <label class="form-label">Área</label>
-        <select id="cboArea" name="IdArea" class="form-select" data-categoria-seleccionada="@Model?.IdCategoria">
-            <option value="">Selecciona...</option>
-            @foreach (var area in (List<CatalogoModel>)ViewBag.Areas)
+    @{
+        var sociedades = (List<CatalogoModel>)ViewBag.Sociedades;
+    }
+
+    <div class="row g-3 mb-3">
+        <!-- SOCIEDAD -->
+        <div class="col-sm-6">
+            <label class="form-label">Sociedad <span class="text-danger">*</span></label>
+
+            @if (sociedades.Count == 1)
             {
-                <option value="@area.Id" selected="@(Model?.IdArea == area.Id)">@area.Nombre</option>
+                <input type="text" class="form-control" value="@sociedades[0].Nombre" disabled />
+                <input type="hidden" name="IdSociedad" value="@sociedades[0].Id" />
             }
-        </select>
-        <span asp-validation-for="IdArea" class="text-danger small"></span>
+            else
+            {
+                <select name="IdSociedad" class="form-select">
+                    <option value="">Selecciona...</option>
+                    @foreach (var soc in sociedades)
+                    {
+                        <option value="@soc.Id" selected="@(Model?.IdSociedad == soc.Id)">@soc.Nombre</option>
+                    }
+                </select>
+            }
+
+            <span asp-validation-for="IdSociedad" class="text-danger small"></span>
+        </div>
+
+        <!-- ÁREA -->
+        <div class="col-sm-6">
+            <label class="form-label">Área <span class="text-danger">*</span></label>
+            <select id="cboArea" name="IdArea" class="form-select" data-categoria-seleccionada="@Model?.IdCategoria">
+                <option value="">Selecciona...</option>
+                @foreach (var area in (List<CatalogoModel>)ViewBag.Areas)
+                {
+                    <option value="@area.Id" selected="@(Model?.IdArea == area.Id)">@area.Nombre</option>
+                }
+            </select>
+            <span asp-validation-for="IdArea" class="text-danger small"></span>
+        </div>
     </div>
 
-    <!-- CATEGORÍA (solo Consulta/Soporte) -->
+    <!-- CATEGORÍA (solo Soporte) -->
     <div id="grupoCategoria" class="mb-3">
-        <label class="form-label">Categoría</label>
+        <label class="form-label">Categoría <span class="text-danger">*</span></label>
         <select id="cboCategoria" name="IdCategoria" class="form-select">
             <option value="">Selecciona un área primero...</option>
         </select>
+        <span asp-validation-for="IdCategoria" class="text-danger small"></span>
     </div>
+
+    <!-- IMPACTO Y URGENCIA (solo Soporte) — determinan la prioridad automáticamente -->
+    @{
+        var opcionesJson = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+        var matrizJson = System.Text.Json.JsonSerializer.Serialize((List<MatrizPrioridadModel>)ViewBag.Matriz, opcionesJson);
+    }
+    <div id="grupoImpactoUrgencia" class="mb-4" data-matriz='@Html.Raw(matrizJson)'>
+        <h6 class="text-uppercase text-muted small fw-bold mb-2">Impacto y urgencia</h6>
+
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label class="form-label">Impacto — ¿a quién afecta? <span class="text-danger">*</span></label>
+                <select id="cboImpacto" name="IdImpacto" class="form-select">
+                    <option value="">Selecciona...</option>
+                    @foreach (var impacto in (List<CatalogoModel>)ViewBag.Impactos)
+                    {
+                        <option value="@impacto.Id" selected="@(Model?.IdImpacto == impacto.Id)">@impacto.Nombre</option>
+                    }
+                </select>
+                <span asp-validation-for="IdImpacto" class="text-danger small"></span>
+            </div>
+
+            <div class="col-sm-6">
+                <label class="form-label">Urgencia — ¿qué tan pronto se necesita? <span class="text-danger">*</span></label>
+                <select id="cboUrgencia" name="IdUrgencia" class="form-select">
+                    <option value="">Selecciona...</option>
+                    @foreach (var urgencia in (List<CatalogoModel>)ViewBag.Urgencias)
+                    {
+                        <option value="@urgencia.Id" selected="@(Model?.IdUrgencia == urgencia.Id)">@urgencia.Nombre</option>
+                    }
+                </select>
+                <span asp-validation-for="IdUrgencia" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div id="prioridadEstimada" class="small mt-2"></div>
+    </div>
+
+    <h6 class="text-uppercase text-muted small fw-bold mb-2">Detalle</h6>
 
     <!-- DETALLE DEL REQUERIMIENTO -->
     <div class="mb-3">
-        <label class="form-label">Detalle del requerimiento</label>
-        <textarea name="Detalle" class="form-control" rows="4">@Model?.Detalle</textarea>
-        <span asp-validation-for="Detalle" class="text-danger small"></span>
+        <label class="form-label">Detalle del requerimiento <span class="text-danger">*</span></label>
+        <textarea id="txtDetalle" name="Detalle" class="form-control" rows="4" minlength="20">@Model?.Detalle</textarea>
+        <div class="d-flex justify-content-between">
+            <span asp-validation-for="Detalle" class="text-danger small"></span>
+            <small id="contadorDetalle" class="text-muted">0 / 20 caracteres mínimo</small>
+        </div>
     </div>
 
     <!-- ARCHIVOS ADJUNTOS -->
@@ -54,49 +128,6 @@
         <input type="file" name="Archivos" class="form-control" multiple accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx,.ppt,.pptx,.mp4" />
         <span asp-validation-for="Archivos" class="text-danger small d-block"></span>
         <small class="text-muted">Máximo 10 MB por archivo. Formatos permitidos: jpg, png, pdf, xlsx, docx, ppt, pptx, mp4.</small>
-    </div>
-
-    <!-- PREGUNTA "AFECTA FUNCIONAMIENTO" (solo Consulta/Soporte) -->
-    <div id="grupoAfectaFuncionamiento" class="mb-3">
-        <label class="form-label d-block">¿Este inconveniente detiene o dificulta tus funciones o procesos normales?</label>
-
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="AfectaFuncionamiento" id="afectaSi" value="true">
-            <label class="form-check-label" for="afectaSi">Sí</label>
-        </div>
-
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="AfectaFuncionamiento" id="afectaNo" value="false">
-            <label class="form-check-label" for="afectaNo">No</label>
-        </div>
-
-        <span asp-validation-for="AfectaFuncionamiento" class="text-danger small d-block"></span>
-    </div>
-
-    @{
-        var sociedades = (List<CatalogoModel>)ViewBag.Sociedades;
-    }
-
-    <div class="mb-3">
-        <label class="form-label">Sociedad</label>
-
-        @if (sociedades.Count == 1)
-        {
-            <input type="text" class="form-control" value="@sociedades[0].Nombre" disabled />
-            <input type="hidden" name="IdSociedad" value="@sociedades[0].Id" />
-        }
-        else
-        {
-            <select name="IdSociedad" class="form-select">
-                <option value="">Selecciona...</option>
-                @foreach (var soc in sociedades)
-                {
-                    <option value="@soc.Id" selected="@(Model?.IdSociedad == soc.Id)">@soc.Nombre</option>
-                }
-            </select>
-        }
-
-        <span asp-validation-for="IdSociedad" class="text-danger small"></span>
     </div>
 
     <!-- BOTÓN CREAR TICKET -->
