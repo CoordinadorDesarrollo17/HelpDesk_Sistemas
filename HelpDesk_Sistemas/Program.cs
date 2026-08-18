@@ -20,6 +20,11 @@ builder.Services.AddSingleton<DapperContext>();
 
 builder.Services.AddScoped<ITicketsService, TicketsService>();
 builder.Services.AddScoped<ITicketsRepository, TicketsRepository>();
+builder.Services.AddScoped<ISlaService, SlaService>();
+builder.Services.AddScoped<ISlaRepository, SlaRepository>();
+builder.Services.AddScoped<IReportesService, ReportesService>();
+builder.Services.AddScoped<IReportesRepository, ReportesRepository>();
+builder.Services.AddHostedService<SlaEngineBackgroundService>();
 
 var app = builder.Build();
 
@@ -53,14 +58,14 @@ app.Use(async (context, next) =>
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "Error de base de datos en {Path}", context.Request.Path);
 
-        await ResponderError(context, "No se pudo completar la operación por un problema con la base de datos. Intenta nuevamente.");
+        await ResponderError(context, "No se pudo completar la operaciï¿½n por un problema con la base de datos. Intenta nuevamente.");
     }
     catch (Exception ex)
     {
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "Error no controlado en {Path}", context.Request.Path);
 
-        await ResponderError(context, "Ocurrió un error inesperado. Intenta nuevamente.");
+        await ResponderError(context, "Ocurriï¿½ un error inesperado. Intenta nuevamente.");
     }
 });
 

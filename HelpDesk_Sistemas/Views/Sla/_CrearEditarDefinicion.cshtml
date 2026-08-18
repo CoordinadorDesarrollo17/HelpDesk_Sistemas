@@ -1,0 +1,108 @@
+@using HelpDesk_Sistemas.Models
+@model SlaDefinicionModel?
+
+<form id="formDefinicion" method="post">
+    @if (Model != null)
+    {
+        <input type="hidden" name="id" value="@Model.Id" />
+    }
+
+    <div class="row g-3">
+        <div class="col-12">
+            <label class="form-label">Nombre</label>
+            <input type="text" name="Nombre" class="form-control" required value="@Model?.Nombre" />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Tipo de SLA</label>
+            <select name="TipoSla" class="form-select" required>
+                <option value="Respuesta" selected="@(Model?.TipoSla == "Respuesta")">Respuesta</option>
+                <option value="Resolucion" selected="@(Model?.TipoSla == "Resolucion")">Resolución</option>
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Calendario laboral</label>
+            <select name="IdCalendario" class="form-select" required>
+                @foreach (var cal in (List<CatalogoModel>)ViewBag.Calendarios)
+                {
+                    <option value="@cal.Id" selected="@(Model?.IdCalendario == cal.Id)">@cal.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-12"><hr class="my-1" /><small class="text-muted">Condición de aplicación — deja "Cualquiera" para que aplique a todos los valores de esa dimensión</small></div>
+
+        <div class="col-md-6">
+            <label class="form-label">Tipo de requerimiento</label>
+            <select name="IdTipoReq" class="form-select">
+                <option value="">Cualquiera</option>
+                @foreach (var tipo in (List<TipoRequerimientoModel>)ViewBag.Tipos)
+                {
+                    <option value="@tipo.Id" selected="@(Model?.IdTipoReq == tipo.Id)">@tipo.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Categoría</label>
+            <select name="IdCategoria" class="form-select">
+                <option value="">Cualquiera</option>
+                @foreach (var cat in (List<CatalogoModel>)ViewBag.Categorias)
+                {
+                    <option value="@cat.Id" selected="@(Model?.IdCategoria == cat.Id)">@cat.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Prioridad</label>
+            <select name="IdPrioridad" class="form-select">
+                <option value="">Cualquiera</option>
+                @foreach (var prioridad in (List<CatalogoModel>)ViewBag.Prioridades)
+                {
+                    <option value="@prioridad.Id" selected="@(Model?.IdPrioridad == prioridad.Id)">@prioridad.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Sociedad</label>
+            <select name="IdSociedad" class="form-select">
+                <option value="">Cualquiera</option>
+                @foreach (var soc in (List<CatalogoModel>)ViewBag.Sociedades)
+                {
+                    <option value="@soc.Id" selected="@(Model?.IdSociedad == soc.Id)">@soc.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-12"><hr class="my-1" /></div>
+
+        <div class="col-md-4">
+            <label class="form-label">Duración objetivo (minutos hábiles)</label>
+            <input type="number" name="DuracionMinutos" class="form-control" min="1" required value="@(Model?.DuracionMinutos ?? 60)" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Advertencia (%)</label>
+            <input type="number" name="PorcentajeAdvertencia" class="form-control" min="1" max="100" required value="@(Model?.PorcentajeAdvertencia ?? 80)" />
+        </div>
+
+        <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check">
+                <input type="checkbox" name="Reactivable" value="true" class="form-check-input" id="chkReactivable" checked="@(Model?.Reactivable ?? false)" />
+                <label class="form-check-label" for="chkReactivable">Reactivable si el ticket se devuelve</label>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <span id="errorDefinicion" class="text-danger small"></span>
+        </div>
+    </div>
+
+    <div class="modal-footer px-0 pb-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+    </div>
+</form>
