@@ -140,7 +140,7 @@
                             <i class="bi bi-eye"></i>
                         </button>
 
-                        @if (u.Estado == "Pendiente" && u.TipoRequerimiento == "Soporte")
+                        @if (u.Estado == "Pendiente" && u.TipoRequerimiento == "Soporte" && (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte"))
                         {
                             <button type="button" class="btn btn-sm btn-outline-primary" title="Tomar ticket" onclick="tomarTicket(@u.IdTicket)">
                                 <i class="bi bi-hand-index"></i>
@@ -224,7 +224,7 @@
                         @{
                             var estadosNoReasignables = new[] { "Cerrado", "Anulado", "Cierre" };
                         }
-                        @if (u.Asignado != null && !estadosNoReasignables.Contains(u.Estado))
+                        @if (u.Asignado != null && !estadosNoReasignables.Contains(u.Estado) && (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte"))
                         {
                             <button type="button" class="btn btn-sm btn-outline-secondary" title="Reasignar" onclick="abrirReasignarTicket(@u.IdTicket, @u.IdArea)">
                                 <i class="bi bi-people"></i>

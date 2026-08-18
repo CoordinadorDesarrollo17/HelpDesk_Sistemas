@@ -33,6 +33,7 @@ namespace HelpDesk_Sistemas.Controllers
             ViewBag.Estados = await ticketsService.ObtenerEstados();
             ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
             ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
+            ViewBag.Rol = SesionTemporal.RolActual;
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
