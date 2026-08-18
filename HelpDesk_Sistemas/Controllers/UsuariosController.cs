@@ -59,11 +59,57 @@ namespace HelpDesk_Sistemas.Controllers
             return Json(new { exito });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> EditarUsuario(int id)
+        {
+            var usuario = await usuariosService.ObtenerUsuarioParaEditar(id);
+
+            if (usuario is null)
+            {
+                return NotFound();
+            }
+
+            await CargarCatalogos();
+            return PartialView("_EditarUsuario", usuario);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> EditarUsuario(EditarUsuarioModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                await CargarCatalogos();
+                Response.StatusCode = 400;
+                return PartialView("_EditarUsuario", model);
+            }
+
+            var (exito, mensaje) = await usuariosService.ActualizarUsuario(model);
+
+            if (!exito)
+            {
+                ModelState.AddModelError(string.Empty, mensaje ?? "No se pudo actualizar el usuario.");
+                await CargarCatalogos();
+                Response.StatusCode = 400;
+                return PartialView("_EditarUsuario", model);
+            }
+
+            return Json(new { exito = true });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> EliminarUsuario(int id)
+        {
+            var (exito, mensaje) = await usuariosService.EliminarUsuario(id, SesionTemporal.UsuarioActualTemporal);
+            return Json(new { exito, mensaje });
+        }
+
         private async Task CargarCatalogos()
         {
             ViewBag.Roles = await usuariosService.ObtenerRoles();
             ViewBag.Areas = await usuariosService.ObtenerTodasLasAreas();
             ViewBag.Supervisores = await usuariosService.ObtenerPosiblesSupervisores();
+            ViewBag.Sociedades = await usuariosService.ObtenerSociedades();
+            ViewBag.Sociedades = await usuariosService.ObtenerSociedades();
         }
     }
 }
