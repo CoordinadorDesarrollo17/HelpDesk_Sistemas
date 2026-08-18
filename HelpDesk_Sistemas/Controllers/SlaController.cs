@@ -1,11 +1,13 @@
 using HelpDesk_Sistemas.Common;
 using HelpDesk_Sistemas.Interfaces;
 using HelpDesk_Sistemas.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HelpDesk_Sistemas.Controllers
 {
     // Administración de SLA: definiciones (Respuesta/Resolución) y calendario laboral.
+    [Authorize(Roles = "Administrador")]
     public class SlaController : Controller
     {
         private readonly ISlaService slaService;

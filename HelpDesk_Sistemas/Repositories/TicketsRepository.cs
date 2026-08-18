@@ -62,8 +62,11 @@ namespace HelpDesk_Sistemas.Repositories
         /// Trae los tickets que cumplen los filtros dados. Si se filtra por un Estado
         /// distinto de "Pendiente", solo devuelve los asignados al usuario actual
         /// (los Pendiente son visibles para todos, ya que nadie los tiene asignado aún).
+        /// Además, la bandeja se acota según el rol: Usuario ve solo lo que él creó,
+        /// Supervisor ve lo suyo más lo de su equipo (Usuarios.Id_Sup_Usuario), y
+        /// Soporte/Administrador ven todo.
         /// </summary>
-        public async Task<IEnumerable<TicketsModel>> ObtenerTickets(FiltrosTicketsModel model, int idUsuarioActual)
+        public async Task<IEnumerable<TicketsModel>> ObtenerTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
@@ -86,6 +89,16 @@ namespace HelpDesk_Sistemas.Repositories
 
             if (model.IdPrioridad.HasValue)
                 condiciones.Add("t.Id_Prioridad = @IdPrioridad");
+
+            if (rolActual == "Usuario")
+            {
+                condiciones.Add("t.Id_Usuario_Solicita = @IdUsuarioActual");
+            }
+            else if (rolActual == "Supervisor")
+            {
+                condiciones.Add(@"(t.Id_Usuario_Solicita = @IdUsuarioActual
+                    OR t.Id_Usuario_Solicita IN (SELECT Id FROM Usuarios WHERE Id_Sup_Usuario = @IdUsuarioActual))");
+            }
 
             var whereClause = string.Join(" AND ", condiciones);
 
@@ -128,7 +141,10 @@ namespace HelpDesk_Sistemas.Repositories
                 LEFT JOIN Sociedad soc           ON soc.Id = t.Id_Sociedad
                 {SqlJoinsSla}
                 WHERE {whereClause}
-                ORDER BY CASE WHEN e.Nombre = 'Pendiente' THEN 0 ELSE 1 END, t.Fecha_Creacion DESC
+                ORDER BY
+                    CASE WHEN e.Nombre = 'Pendiente' THEN 0 ELSE 1 END,
+                    CASE WHEN t.Id_Usuario_Asignado = @IdUsuarioActual THEN 0 ELSE 1 END,
+                    t.Fecha_Creacion DESC
             ";
 
             var result = await xCon.QueryAsync<TicketsModel, TicketSlaModel, TicketSlaModel, TicketsModel>(
@@ -150,16 +166,16 @@ namespace HelpDesk_Sistemas.Repositories
         }
 
         /// <summary>Versión paginada de ObtenerTickets, para la tabla del listado.</summary>
-        public async Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual)
+        public async Task<IPagedList<TicketsModel>> ListadoTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual)
         {
-            var result = await ObtenerTickets(model, idUsuarioActual);
+            var result = await ObtenerTickets(model, idUsuarioActual, rolActual);
             return result.ToPagedList(model.Paginacion.Page, model.Paginacion.PageSize);
         }
 
         /// <summary>Versión sin paginar de ObtenerTickets, para la exportación a Excel.</summary>
-        public async Task<List<TicketsModel>> ListadoTicketsExcel(FiltrosTicketsModel model, int idUsuarioActual)
+        public async Task<List<TicketsModel>> ListadoTicketsExcel(FiltrosTicketsModel model, int idUsuarioActual, string rolActual)
         {
-            var result = await ObtenerTickets(model, idUsuarioActual);
+            var result = await ObtenerTickets(model, idUsuarioActual, rolActual);
             return result.ToList();
         }
 
@@ -271,7 +287,7 @@ namespace HelpDesk_Sistemas.Repositories
             return await xCon.ExecuteScalarAsync<bool>(sql, new { Id = idTipoRequerimiento });
         }
 
-        /// <summary>Combo de Impacto para Consulta/Soporte (parte de la matriz de prioridad).</summary>
+        /// <summary>Combo de Impacto para Soporte (parte de la matriz de prioridad).</summary>
         public async Task<List<CatalogoModel>> ObtenerImpactos()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
@@ -280,7 +296,7 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
-        /// <summary>Combo de Urgencia para Consulta/Soporte (parte de la matriz de prioridad).</summary>
+        /// <summary>Combo de Urgencia para Soporte (parte de la matriz de prioridad).</summary>
         public async Task<List<CatalogoModel>> ObtenerUrgencias()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
@@ -731,7 +747,7 @@ namespace HelpDesk_Sistemas.Repositories
             => await CambiarEstado(idTicket, "En validación", "En atención", idUsuarioAccion, motivo, reactivarSla: true);
 
         /// <summary>
-        /// Anula el ticket desde cualquier estado activo del flujo de Consulta/Soporte
+        /// Anula el ticket desde cualquier estado activo del flujo de Soporte
         /// (no aplica a Implementación/Mejora, que usa sus propios nombres de estado).
         /// </summary>
         public async Task<bool> AnularTicket(int idTicket, int idUsuarioAccion, string motivo)
@@ -817,7 +833,7 @@ namespace HelpDesk_Sistemas.Repositories
             var info = await xCon.QueryFirstOrDefaultAsync<(int? IdUsuarioAsignado, int? IdPrioridad, string Estado)>(sqlInfo, new { IdTicket = idTicket });
 
             // Estados donde el ticket ya está "en curso" y no debe reordenarse:
-            // En atención (Consulta/Soporte) y Desarrollo en adelante (Implementación/Mejora).
+            // En atención (Soporte) y Desarrollo en adelante (Implementación/Mejora).
             var estadosNoPermitidos = new[] { "En atención", "Desarrollo", "Pruebas", "Pase a producción", "Cierre", "Cerrado", "Anulado" };
 
             if (estadosNoPermitidos.Contains(info.Estado))

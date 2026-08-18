@@ -2,11 +2,16 @@
 using HelpDesk_Sistemas.Interfaces;
 using HelpDesk_Sistemas.Models;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 
 namespace HelpDesk_Sistemas.Controllers
 {
     public class TicketsController : Controller
     {
+        // Implementación/Mejora quedan reservadas a estos roles; el rol "Usuario"
+        // (empleado común) solo puede pedir Soporte.
+        private static readonly string[] RolesPermitidosImplementacionMejora = { "Supervisor", "Administrador", "Soporte" };
+
         private readonly ITicketsService ticketsService;
         private readonly ILogger<TicketsController> logger;
 
@@ -22,7 +27,7 @@ namespace HelpDesk_Sistemas.Controllers
 
         public async Task<IActionResult> ListadoTickets(FiltrosTicketsModel model)
         {
-            var listaTickets = await ticketsService.ListadoTickets(model, SesionTemporal.UsuarioActualTemporal);
+            var listaTickets = await ticketsService.ListadoTickets(model, SesionTemporal.UsuarioActualTemporal, SesionTemporal.RolActual);
 
             ViewBag.Prioridades = await ticketsService.ObtenerPrioridades();
             ViewBag.Estados = await ticketsService.ObtenerEstados();
@@ -40,7 +45,7 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpGet]
         public async Task<IActionResult> ExportarExcel(FiltrosTicketsModel model)
         {
-            var file = await ticketsService.ExportarExcelAsync(model, SesionTemporal.UsuarioActualTemporal);
+            var file = await ticketsService.ExportarExcelAsync(model, SesionTemporal.UsuarioActualTemporal, SesionTemporal.RolActual);
             return File(file.Content, file.ContentType, file.FileName);
         }
 
@@ -114,6 +119,11 @@ namespace HelpDesk_Sistemas.Controllers
                     model.IdCategoria = null;
                     model.IdImpacto = null;
                     model.IdUrgencia = null;
+
+                    if (!RolesPermitidosImplementacionMejora.Contains(SesionTemporal.RolActual))
+                    {
+                        ModelState.AddModelError(nameof(model.IdTipoRequerimiento), "Solo Soporte, Supervisor o Administrador pueden crear tickets de Implementación/Mejora.");
+                    }
                 }
             }
 

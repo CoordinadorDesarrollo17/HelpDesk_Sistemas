@@ -1,12 +1,14 @@
 using HelpDesk_Sistemas.Common;
 using HelpDesk_Sistemas.Interfaces;
 using HelpDesk_Sistemas.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HelpDesk_Sistemas.Controllers
 {
     [ApiController]
     [Route("api/sla")]
+    [Authorize(Roles = "Administrador")]
     public class SlaApiController : ControllerBase
     {
         private readonly ISlaService slaService;
