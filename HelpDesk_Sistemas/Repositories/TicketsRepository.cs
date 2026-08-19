@@ -63,8 +63,9 @@ namespace HelpDesk_Sistemas.Repositories
         /// distinto de "Pendiente", solo devuelve los asignados al usuario actual
         /// (los Pendiente son visibles para todos, ya que nadie los tiene asignado aún).
         /// Además, la bandeja se acota según el rol: Usuario ve solo lo que él creó,
-        /// Supervisor ve lo suyo más lo de su equipo (Usuarios.Id_Sup_Usuario), y
-        /// Soporte/Administrador ven todo.
+        /// Supervisor ve lo suyo más lo de su equipo (Usuarios.Id_Sup_Usuario), Soporte
+        /// ve solo lo de su propia área (Soporte TI/Sistemas/Desarrollo son bandejas
+        /// separadas), y Administrador ve todo.
         /// </summary>
         public async Task<IEnumerable<TicketsModel>> ObtenerTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual)
         {
@@ -98,6 +99,15 @@ namespace HelpDesk_Sistemas.Repositories
             {
                 condiciones.Add(@"(t.Id_Usuario_Solicita = @IdUsuarioActual
                     OR t.Id_Usuario_Solicita IN (SELECT Id FROM Usuarios WHERE Id_Sup_Usuario = @IdUsuarioActual))");
+            }
+            else if (rolActual == "Soporte")
+            {
+                // Un agente de Soporte solo atiende tickets de su propia área (Soporte TI /
+                // Sistemas / Desarrollo son bandejas separadas): no debe ver los pendientes
+                // de otra área. La reasignación ya está acotada por área (ver
+                // ObtenerUsuariosSoportePorArea), así que ningún ticket asignado a este agente
+                // puede pertenecer a otra área — filtrar toda la bandeja así es seguro.
+                condiciones.Add("t.Id_Area = (SELECT Id_Area FROM Usuarios WHERE Id = @IdUsuarioActual)");
             }
 
             var whereClause = string.Join(" AND ", condiciones);
@@ -352,6 +362,34 @@ namespace HelpDesk_Sistemas.Repositories
         /// Trae los datos del formulario original de un ticket, más sus archivos
         /// adjuntos y la bitácora completa de cambios de estado.
         /// </summary>
+        /// <summary>
+        /// Solución registrada por Soporte, para que el solicitante la lea antes de
+        /// confirmar o devolver. La fecha sale del historial: es el último paso a
+        /// "En validación", que es justo cuando Soporte redactó la solución.
+        /// </summary>
+        public async Task<TicketSolucionModel?> ObtenerSolucion(int idTicket)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sql = @"
+                SELECT
+                    t.Codigo_Ticket AS CodigoTicket,
+                    t.Solucion,
+                    CONCAT(ua.Nombre, ' ', ua.Apellido) AS ResueltoPor,
+                    (
+                        SELECT MAX(h.Fecha_Cambio)
+                        FROM Ticket_Historial h
+                        INNER JOIN Estado e ON e.Id = h.Id_Estado_Nuevo
+                        WHERE h.Id_Ticket = t.Id AND e.Nombre = 'En validación'
+                    ) AS FechaSolucion
+                FROM Tickets t
+                LEFT JOIN Usuarios ua ON ua.Id = t.Id_Usuario_Asignado
+                WHERE t.Id = @IdTicket
+            ";
+
+            return await xCon.QueryFirstOrDefaultAsync<TicketSolucionModel>(sql, new { IdTicket = idTicket });
+        }
+
         public async Task<TicketDetalleModel?> ObtenerDetalleTicket(int idTicket)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
@@ -364,6 +402,7 @@ namespace HelpDesk_Sistemas.Repositories
                     a.Nombre                              AS Area,
                     c.Nombre                              AS Categoria,
                     t.Detalle                             AS Detalle,
+                    t.Solucion                            AS Solucion,
                     p.Nombre                              AS Prioridad,
                     imp.Nombre                            AS Impacto,
                     urg.Nombre                            AS Urgencia,

@@ -98,6 +98,14 @@ namespace HelpDesk_Sistemas.Repositories
             return await xCon.ExecuteScalarAsync<int>(sql, new { model.IdCalendario, model.DiaSemana, model.HoraInicio, model.HoraFin });
         }
 
+        public async Task<bool> ActualizarHorario(int id, SlaHorarioRequest model)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "UPDATE Calendario_Horario SET Dia_Semana = @DiaSemana, Hora_Inicio = @HoraInicio, Hora_Fin = @HoraFin WHERE Id = @Id";
+            var filas = await xCon.ExecuteAsync(sql, new { Id = id, model.DiaSemana, model.HoraInicio, model.HoraFin });
+            return filas > 0;
+        }
+
         public async Task<bool> EliminarHorario(int id)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
@@ -117,6 +125,14 @@ namespace HelpDesk_Sistemas.Repositories
             ";
 
             return await xCon.ExecuteScalarAsync<int>(sql, new { model.IdCalendario, model.Fecha, model.Descripcion, Usuario = usuarioCreacion });
+        }
+
+        public async Task<bool> ActualizarFeriado(int id, SlaFeriadoRequest model)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "UPDATE Calendario_Feriado SET Fecha = @Fecha, Descripcion = @Descripcion WHERE Id = @Id";
+            var filas = await xCon.ExecuteAsync(sql, new { Id = id, model.Fecha, model.Descripcion });
+            return filas > 0;
         }
 
         public async Task<bool> EliminarFeriado(int id)
@@ -316,7 +332,9 @@ namespace HelpDesk_Sistemas.Repositories
                 GROUP BY u.Id, u.Nombre, u.Apellido
                 ORDER BY Incumplidos DESC, Grupo;
 
-                -- 4) SLA en riesgo o ya incumplidos, todavía en curso (para actuar ahora)
+                -- 4) SLA en riesgo, incumplidos en curso, o incumplidos ya finalizados
+                -- (antes solo se listaban los dos primeros; los finalizados solo se
+                -- contaban en el resumen y no se podían ver en ninguna lista).
                 SELECT
                     t.Id AS IdTicket,
                     t.Codigo_Ticket AS CodigoTicket,
@@ -326,15 +344,16 @@ namespace HelpDesk_Sistemas.Repositories
                     CONCAT(ua.Nombre, ' ', ua.Apellido) AS Asignado,
                     ts.Fecha_Objetivo AS FechaObjetivo,
                     ts.Incumplido,
-                    ts.Advertencia_Activa AS AdvertenciaActiva
+                    ts.Advertencia_Activa AS AdvertenciaActiva,
+                    ts.Etapa
                 FROM Ticket_SLA ts
                 INNER JOIN SLA_Definicion d ON d.Id = ts.Id_SLA_Definicion
                 INNER JOIN Tickets t ON t.Id = ts.Id_Ticket
                 INNER JOIN Estado e ON e.Id = t.Id_Estado
                 LEFT JOIN Prioridad p ON p.Id = t.Id_Prioridad
                 LEFT JOIN Usuarios ua ON ua.Id = t.Id_Usuario_Asignado
-                WHERE ts.Etapa IN ('EnCurso', 'Pausado')
-                  AND (ts.Incumplido = 1 OR ts.Advertencia_Activa = 1)
+                WHERE (ts.Etapa IN ('EnCurso', 'Pausado') AND (ts.Incumplido = 1 OR ts.Advertencia_Activa = 1))
+                   OR (ts.Etapa = 'Completado' AND ts.Cumplido_A_Tiempo = 0)
                 ORDER BY ts.Incumplido DESC, ts.Fecha_Objetivo ASC;
             ";
 

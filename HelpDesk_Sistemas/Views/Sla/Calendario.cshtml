@@ -55,14 +55,19 @@
                                     <td>@nombresDias[h.DiaSemana - 1]</td>
                                     <td>@h.HoraInicio.ToString(@"hh\:mm")</td>
                                     <td>@h.HoraFin.ToString(@"hh\:mm")</td>
-                                    <td class="text-end">
-                                        <button class="btn btn-sm btn-outline-danger" onclick="eliminarHorario(@h.Id)"><i class="bi bi-trash"></i></button>
+                                    <td class="text-end text-nowrap">
+                                        <button class="btn btn-sm btn-outline-secondary" title="Editar"
+                                                onclick="editarHorario(@h.Id, @h.DiaSemana, '@h.HoraInicio.ToString(@"hh\:mm")', '@h.HoraFin.ToString(@"hh\:mm")')">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="eliminarHorario(@h.Id)"><i class="bi bi-trash"></i></button>
                                     </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
 
+                    <input type="hidden" id="idHorarioEditando" value="" />
                     <div class="d-flex gap-2 align-items-end flex-wrap mb-4">
                         <div>
                             <label class="form-label small mb-0">Día</label>
@@ -81,7 +86,8 @@
                             <label class="form-label small mb-0">Fin</label>
                             <input type="time" id="txtHoraFin" class="form-control form-control-sm" value="18:00" />
                         </div>
-                        <button class="btn btn-sm btn-outline-primary" onclick="agregarHorario()">Agregar franja</button>
+                        <button class="btn btn-sm btn-outline-primary" id="btnGuardarHorario" onclick="guardarHorario()">Agregar franja</button>
+                        <button class="btn btn-sm btn-link d-none" id="btnCancelarHorario" onclick="cancelarEdicionHorario()">Cancelar</button>
                     </div>
 
                     <h6 class="fw-bold">Feriados</h6>
@@ -93,14 +99,20 @@
                                 <tr>
                                     <td>@f.Fecha.ToString("dd/MM/yyyy")</td>
                                     <td>@f.Descripcion</td>
-                                    <td class="text-end">
-                                        <button class="btn btn-sm btn-outline-danger" onclick="eliminarFeriado(@f.Id)"><i class="bi bi-trash"></i></button>
+                                    <td class="text-end text-nowrap">
+                                        <button class="btn btn-sm btn-outline-secondary" title="Editar"
+                                                data-id="@f.Id" data-fecha="@f.Fecha.ToString("yyyy-MM-dd")" data-descripcion="@f.Descripcion"
+                                                onclick="editarFeriado(this.dataset.id, this.dataset.fecha, this.dataset.descripcion)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="eliminarFeriado(@f.Id)"><i class="bi bi-trash"></i></button>
                                     </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
 
+                    <input type="hidden" id="idFeriadoEditando" value="" />
                     <div class="d-flex gap-2 align-items-end flex-wrap">
                         <div>
                             <label class="form-label small mb-0">Fecha</label>
@@ -110,7 +122,8 @@
                             <label class="form-label small mb-0">Descripción</label>
                             <input type="text" id="txtDescripcionFeriado" class="form-control form-control-sm" placeholder="Ej. Fiestas Patrias" />
                         </div>
-                        <button class="btn btn-sm btn-outline-primary" onclick="agregarFeriado()">Agregar feriado</button>
+                        <button class="btn btn-sm btn-outline-primary" id="btnGuardarFeriado" onclick="guardarFeriado()">Agregar feriado</button>
+                        <button class="btn btn-sm btn-link d-none" id="btnCancelarFeriado" onclick="cancelarEdicionFeriado()">Cancelar</button>
                     </div>
                 }
             </div>
@@ -169,22 +182,44 @@
                 });
         }
 
-        function agregarHorario() {
+        function editarHorario(id, diaSemana, horaInicio, horaFin) {
+            document.getElementById("idHorarioEditando").value = id;
+            document.getElementById("selDiaSemana").value = diaSemana;
+            document.getElementById("txtHoraInicio").value = horaInicio;
+            document.getElementById("txtHoraFin").value = horaFin;
+            document.getElementById("btnGuardarHorario").textContent = "Guardar cambios";
+            document.getElementById("btnCancelarHorario").classList.remove("d-none");
+        }
+
+        function cancelarEdicionHorario() {
+            document.getElementById("idHorarioEditando").value = "";
+            document.getElementById("selDiaSemana").value = "2";
+            document.getElementById("txtHoraInicio").value = "08:00";
+            document.getElementById("txtHoraFin").value = "18:00";
+            document.getElementById("btnGuardarHorario").textContent = "Agregar franja";
+            document.getElementById("btnCancelarHorario").classList.add("d-none");
+        }
+
+        function guardarHorario() {
+            const idEditando = document.getElementById("idHorarioEditando").value;
             const idCalendario = document.getElementById("cboCalendario").value;
             const diaSemana = document.getElementById("selDiaSemana").value;
             const horaInicio = document.getElementById("txtHoraInicio").value;
             const horaFin = document.getElementById("txtHoraFin").value;
 
             const params = new URLSearchParams({ idCalendario, diaSemana, horaInicio, horaFin });
+            if (idEditando) params.set("id", idEditando);
 
-            fetchConManejo(`@Url.Action("AgregarHorario")?${params.toString()}`, { method: "POST" })
+            const url = idEditando ? `@Url.Action("ActualizarHorario")` : `@Url.Action("AgregarHorario")`;
+
+            fetchConManejo(`${url}?${params.toString()}`, { method: "POST" })
                 .then(r => r && r.json())
                 .then(data => {
                     if (!data) return;
                     if (data.exito) {
                         window.location.reload();
                     } else {
-                        mostrarToast(data.mensaje || "No se pudo agregar el horario.", "danger");
+                        mostrarToast(data.mensaje || "No se pudo guardar el horario.", "danger");
                     }
                 });
         }
@@ -195,7 +230,24 @@
                 .then(data => { if (data) window.location.reload(); });
         }
 
-        function agregarFeriado() {
+        function editarFeriado(id, fecha, descripcion) {
+            document.getElementById("idFeriadoEditando").value = id;
+            document.getElementById("txtFechaFeriado").value = fecha;
+            document.getElementById("txtDescripcionFeriado").value = descripcion;
+            document.getElementById("btnGuardarFeriado").textContent = "Guardar cambios";
+            document.getElementById("btnCancelarFeriado").classList.remove("d-none");
+        }
+
+        function cancelarEdicionFeriado() {
+            document.getElementById("idFeriadoEditando").value = "";
+            document.getElementById("txtFechaFeriado").value = "";
+            document.getElementById("txtDescripcionFeriado").value = "";
+            document.getElementById("btnGuardarFeriado").textContent = "Agregar feriado";
+            document.getElementById("btnCancelarFeriado").classList.add("d-none");
+        }
+
+        function guardarFeriado() {
+            const idEditando = document.getElementById("idFeriadoEditando").value;
             const idCalendario = document.getElementById("cboCalendario").value;
             const fecha = document.getElementById("txtFechaFeriado").value;
             const descripcion = document.getElementById("txtDescripcionFeriado").value;
@@ -206,15 +258,18 @@
             }
 
             const params = new URLSearchParams({ idCalendario, fecha, descripcion: descripcion || "" });
+            if (idEditando) params.set("id", idEditando);
 
-            fetchConManejo(`@Url.Action("AgregarFeriado")?${params.toString()}`, { method: "POST" })
+            const url = idEditando ? `@Url.Action("ActualizarFeriado")` : `@Url.Action("AgregarFeriado")`;
+
+            fetchConManejo(`${url}?${params.toString()}`, { method: "POST" })
                 .then(r => r && r.json())
                 .then(data => {
                     if (!data) return;
                     if (data.exito) {
                         window.location.reload();
                     } else {
-                        mostrarToast(data.mensaje || "No se pudo agregar el feriado.", "danger");
+                        mostrarToast(data.mensaje || "No se pudo guardar el feriado.", "danger");
                     }
                 });
         }
