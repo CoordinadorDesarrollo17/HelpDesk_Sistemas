@@ -64,8 +64,10 @@ namespace HelpDesk_Sistemas.Repositories
         /// (los Pendiente son visibles para todos, ya que nadie los tiene asignado aún).
         /// Además, la bandeja se acota según el rol: Usuario ve solo lo que él creó,
         /// Supervisor ve lo suyo más lo de su equipo (Usuarios.Id_Sup_Usuario), Soporte
-        /// ve solo lo de su propia área (Soporte TI/Sistemas/Desarrollo son bandejas
-        /// separadas), y Administrador ve todo.
+        /// ve lo de su propia área de trabajo (Soporte TI/Sistemas/Desarrollo son
+        /// bandejas separadas) más lo que él mismo haya solicitado a otra área, y
+        /// Administrador ve todo. En todos los casos, un usuario siempre ve los
+        /// tickets que él creó, sin importar el rol.
         /// </summary>
         public async Task<IEnumerable<TicketsModel>> ObtenerTickets(FiltrosTicketsModel model, int idUsuarioActual, string rolActual)
         {
@@ -106,8 +108,13 @@ namespace HelpDesk_Sistemas.Repositories
                 // Sistemas / Desarrollo son bandejas separadas): no debe ver los pendientes
                 // de otra área. La reasignación ya está acotada por área (ver
                 // ObtenerUsuariosSoportePorArea), así que ningún ticket asignado a este agente
-                // puede pertenecer a otra área — filtrar toda la bandeja así es seguro.
-                condiciones.Add("t.Id_Area = (SELECT Id_Area FROM Usuarios WHERE Id = @IdUsuarioActual)");
+                // puede pertenecer a otra área — filtrar así es seguro.
+                //
+                // PERO un Soporte también puede ser solicitante de un ticket dirigido a OTRA
+                // área (ej. alguien de Soporte Desarrollo pide algo a Soporte TI): ese ticket
+                // no es de su área de trabajo, pero sigue siendo suyo y debe verlo igual.
+                condiciones.Add(@"(t.Id_Area = (SELECT Id_Area FROM Usuarios WHERE Id = @IdUsuarioActual)
+                    OR t.Id_Usuario_Solicita = @IdUsuarioActual)");
             }
 
             var whereClause = string.Join(" AND ", condiciones);
