@@ -234,6 +234,26 @@ namespace HelpDesk_Sistemas.Controllers
             return Json(new { exito, mensaje });
         }
 
+        /// <summary>Solución registrada por Soporte, para mostrarla antes de confirmar o devolver.</summary>
+        [HttpGet]
+        public async Task<IActionResult> ObtenerSolucion(int id)
+        {
+            var solucion = await ticketsService.ObtenerSolucion(id);
+
+            if (solucion is null)
+            {
+                return NotFound();
+            }
+
+            return Json(new
+            {
+                codigoTicket = solucion.CodigoTicket,
+                solucion = solucion.Solucion,
+                resueltoPor = solucion.ResueltoPor,
+                fechaSolucion = solucion.FechaSolucion?.ToString("dd/MM/yyyy HH:mm")
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> ConfirmarSolucion(int id)
         {

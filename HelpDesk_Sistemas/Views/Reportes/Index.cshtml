@@ -21,7 +21,8 @@
             </div>
             <button type="submit" class="btn btn-primary btn-sm">Aplicar</button>
             <a class="btn btn-outline-secondary btn-sm" asp-controller="Reportes" asp-action="ExportarExcel"
-               asp-route-FechaInicio="@filtro.FechaInicio.ToString("yyyy-MM-dd")" asp-route-FechaFin="@filtro.FechaFin.ToString("yyyy-MM-dd")">
+               asp-route-FechaInicio="@filtro.FechaInicio.ToString("yyyy-MM-dd")" asp-route-FechaFin="@filtro.FechaFin.ToString("yyyy-MM-dd")"
+               asp-route-IdAreaAgente="@filtro.IdAreaAgente">
                 <i class="bi bi-file-earmark-excel"></i> Exportar
             </a>
         </form>
@@ -98,13 +99,28 @@
 </div>
 
 <div class="card shadow-sm mb-4">
-    <div class="card-header header-gradient text-black">
+    <div class="card-header header-gradient text-black d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h5 class="mb-0 fw-bold">Productividad por agente</h5>
+
+        <form class="d-flex align-items-end gap-2" method="get" asp-controller="Reportes" asp-action="Index">
+            <input type="hidden" name="FechaInicio" value="@filtro.FechaInicio.ToString("yyyy-MM-dd")" />
+            <input type="hidden" name="FechaFin" value="@filtro.FechaFin.ToString("yyyy-MM-dd")" />
+            <div>
+                <label class="form-label small mb-0">Área</label>
+                <select name="IdAreaAgente" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Todas las áreas</option>
+                    @foreach (var area in (List<CatalogoModel>)ViewBag.AreasSoporte)
+                    {
+                        <option value="@area.Id" selected="@(filtro.IdAreaAgente == area.Id)">@area.Nombre</option>
+                    }
+                </select>
+            </div>
+        </form>
     </div>
     <div class="card-body">
         @if (Model.PorAgente.Count == 0)
         {
-            <p class="text-muted small mb-0">No hay tickets asignados en este período.</p>
+            <p class="text-muted small mb-0">No hay tickets asignados en este período@(filtro.IdAreaAgente.HasValue ? " para el área seleccionada" : "").</p>
         }
         else
         {
