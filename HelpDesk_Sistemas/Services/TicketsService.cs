@@ -152,6 +152,11 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.ObtenerDetalleTicket(idTicket);
         }
 
+        public async Task<TicketSolucionModel?> ObtenerSolucion(int idTicket)
+        {
+            return await ticketsRepository.ObtenerSolucion(idTicket);
+        }
+
         // ============================================================
         // CREACIÓN
         // ============================================================

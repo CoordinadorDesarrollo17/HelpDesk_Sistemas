@@ -12,6 +12,39 @@
         if (minutos < 60) return $"{minutos} min";
         return $"{minutos / 60} h {minutos % 60} min";
     }
+
+    // Orden fijo de prioridad dentro de cada grupo (no alfabético).
+    int OrdenPrioridad(string? prioridad) => prioridad switch
+    {
+        "Baja" => 1,
+        "Media" => 2,
+        "Alta" => 3,
+        "Urgente" => 4,
+        _ => 5
+    };
+}
+
+@{
+    // Se agrupa por todo lo que define "a qué aplica" (tipo/categoría/sociedad),
+    // EXCEPTO la prioridad: las 4 prioridades de un mismo grupo se muestran juntas,
+    // plegadas bajo una sola fila resumen, en vez de una fila larga por cada una.
+    var grupos = Model
+        .Select((d, idx) => (Definicion: d, Indice: idx))
+        .GroupBy(x => new { x.Definicion.TipoSla, x.Definicion.TipoRequerimiento, x.Definicion.Categoria, x.Definicion.Sociedad })
+        .Select(g => new
+        {
+            Clave = $"grupo{g.First().Indice}",
+            g.Key.TipoSla,
+            g.Key.TipoRequerimiento,
+            g.Key.Categoria,
+            g.Key.Sociedad,
+            Definiciones = g.Select(x => x.Definicion).OrderBy(d => OrdenPrioridad(d.Prioridad)).ToList()
+        })
+        .OrderBy(g => g.TipoSla)
+        .ThenBy(g => g.TipoRequerimiento ?? "")
+        .ThenBy(g => g.Categoria ?? "")
+        .ThenBy(g => g.Sociedad ?? "")
+        .ToList();
 }
 
 <div class="card shadow-sm mb-4">
@@ -48,38 +81,52 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var d in Model)
+                    @foreach (var g in grupos)
                     {
-                        <tr>
-                            <td>@d.Nombre</td>
-                            <td>
-                                <span class="badge @(d.TipoSla == "Respuesta" ? "bg-info text-dark" : "bg-primary")">@d.TipoSla</span>
-                            </td>
-                            <td>
-                                @{
-                                    var condiciones = new[] { d.TipoRequerimiento, d.Categoria, d.Prioridad, d.Sociedad }
-                                        .Where(c => c != null);
-                                    var textoCondicion = condiciones.Any() ? string.Join(" · ", condiciones) : "Cualquier ticket";
-                                }
-                                <small>@textoCondicion</small>
-                            </td>
-                            <td>@d.Calendario</td>
-                            <td>@FormatearDuracion(d.DuracionMinutos)</td>
-                            <td>@d.PorcentajeAdvertencia%</td>
-                            <td>@(d.Reactivable ? "Sí" : "No")</td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch"
-                                           @(d.Activo ? "checked" : "")
-                                           onchange="cambiarActivoDefinicion(@d.Id, this.checked)">
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" title="Editar" onclick="abrirCrearEditarDefinicion(@d.Id)">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
+                        var condicionesGrupo = new[] { g.TipoRequerimiento, g.Categoria, g.Sociedad }.Where(c => c != null);
+                        var textoCondicionGrupo = condicionesGrupo.Any() ? string.Join(" · ", condicionesGrupo) : "Cualquier ticket";
+                        var activos = g.Definiciones.Count(d => d.Activo);
+                        <tr class="fila-grupo-definicion" role="button" onclick="toggleGrupoDefinicion(this, '@g.Clave')">
+                            <td colspan="9">
+                                <i class="bi bi-chevron-right grupo-chevron me-2"></i>
+                                <span class="fw-semibold">@textoCondicionGrupo</span>
+                                <span class="badge @(g.TipoSla == "Respuesta" ? "bg-info text-dark" : "bg-primary") ms-2">@g.TipoSla</span>
+                                <span class="text-muted small ms-2">
+                                    @g.Definiciones.Count prioridad@(g.Definiciones.Count == 1 ? "" : "es")
+                                    @if (activos < g.Definiciones.Count)
+                                    {
+                                        @:· @activos activa@(activos == 1 ? "" : "s")
+                                    }
+                                </span>
                             </td>
                         </tr>
+                        @foreach (var d in g.Definiciones)
+                        {
+                            <tr class="fila-definicion-hija d-none" data-grupo="@g.Clave">
+                                <td class="ps-4">
+                                    <i class="bi bi-arrow-return-right text-muted small"></i>
+                                    @(d.Prioridad ?? "Cualquier prioridad")
+                                </td>
+                                <td></td>
+                                <td></td>
+                                <td>@d.Calendario</td>
+                                <td>@FormatearDuracion(d.DuracionMinutos)</td>
+                                <td>@d.PorcentajeAdvertencia%</td>
+                                <td>@(d.Reactivable ? "Sí" : "No")</td>
+                                <td>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               @(d.Activo ? "checked" : "")
+                                               onchange="cambiarActivoDefinicion(@d.Id, this.checked)">
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Editar" onclick="abrirCrearEditarDefinicion(@d.Id)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
                     }
                 </tbody>
             </table>
@@ -175,6 +222,14 @@
                         }
                     });
             });
+        }
+
+        function toggleGrupoDefinicion(filaGrupo, clave) {
+            const hijas = document.querySelectorAll(`.fila-definicion-hija[data-grupo="${clave}"]`);
+            const abrir = hijas.length > 0 && hijas[0].classList.contains("d-none");
+
+            hijas.forEach(fila => fila.classList.toggle("d-none", !abrir));
+            filaGrupo.querySelector(".grupo-chevron").classList.toggle("rotada", abrir);
         }
 
         function cambiarActivoDefinicion(id, activo) {

@@ -9,6 +9,10 @@
         public string Area { get; set; }
         public string? Categoria { get; set; }
         public string Detalle { get; set; }
+
+        /// <summary>Solución redactada por Soporte al enviar el ticket a validación.</summary>
+        public string? Solucion { get; set; }
+
         public string? Prioridad { get; set; }
 
         // Tickets nuevos usan Impacto/Urgencia; los históricos (previos a la matriz

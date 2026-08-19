@@ -66,7 +66,7 @@
         <tbody>
             @foreach (var u in Model)
             {
-                <tr>
+                <tr class="@(u.Estado == "En validación" ? "fila-en-validacion" : u.Estado == "Cerrado" ? "fila-cerrado" : "")">
                     <td data-label="Código Ticket">@u?.CodigoTicket</td>
                     <td data-label="Sociedad">@(u?.Sociedad ?? "-")</td>
                     <td data-label="Tipo Requerimiento">@u?.TipoRequerimiento</td>
@@ -176,7 +176,7 @@
 
                         @if (u.Estado == "En validación")
                         {
-                            <button type="button" class="btn btn-sm btn-outline-success" title="Confirmar solución" onclick="confirmarSolucion(@u.IdTicket)">
+                            <button type="button" class="btn btn-sm btn-outline-success" title="Ver solución y confirmar" onclick="abrirConfirmarSolucion(@u.IdTicket)">
                                 <i class="bi bi-check-circle"></i>
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-warning" title="Devolver ticket" onclick="abrirDevolverTicket(@u.IdTicket)">

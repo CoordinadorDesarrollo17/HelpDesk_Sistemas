@@ -23,7 +23,7 @@
     </div>
 
     <div class="card-body">
-        <!-- KPIs -->
+        <!-- KPIs: además de informar, funcionan como filtro de la tabla de abajo -->
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-3">
                 <div class="border rounded p-3 text-center h-100">
@@ -33,22 +33,25 @@
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="border rounded p-3 text-center h-100">
-                    <div class="fs-3 fw-bold text-danger">@Model.Resumen.IncumplidosCompletados</div>
-                    <div class="text-muted small">Incumplidos (cerrados)</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="border rounded p-3 text-center h-100">
+                <button type="button" class="border rounded p-3 text-center h-100 w-100 btn-filtro-kpi" data-categoria="en-riesgo" onclick="filtrarPorCategoria('en-riesgo')">
                     <div class="fs-3 fw-bold text-warning">@Model.Resumen.EnRiesgo</div>
-                    <div class="text-muted small">En riesgo ahora mismo</div>
-                </div>
+                    <div class="text-muted small">En riesgo</div>
+                    <div class="text-muted small">SLA activo, por vencer</div>
+                </button>
             </div>
             <div class="col-6 col-md-3">
-                <div class="border rounded p-3 text-center h-100">
+                <button type="button" class="border rounded p-3 text-center h-100 w-100 btn-filtro-kpi" data-categoria="incumplido-activo" onclick="filtrarPorCategoria('incumplido-activo')">
                     <div class="fs-3 fw-bold text-danger">@Model.Resumen.IncumplidosEnCurso</div>
-                    <div class="text-muted small">Incumplidos, sin cerrar</div>
-                </div>
+                    <div class="text-muted small">Incumplidos activos</div>
+                    <div class="text-muted small">SLA vencido, ticket en curso</div>
+                </button>
+            </div>
+            <div class="col-6 col-md-3">
+                <button type="button" class="border rounded p-3 text-center h-100 w-100 btn-filtro-kpi" data-categoria="incumplido-finalizado" onclick="filtrarPorCategoria('incumplido-finalizado')">
+                    <div class="fs-3 fw-bold text-danger">@Model.Resumen.IncumplidosCompletados</div>
+                    <div class="text-muted small">Incumplidos finalizados</div>
+                    <div class="text-muted small">SLA vencido, ya finalizado</div>
+                </button>
             </div>
         </div>
 
@@ -104,7 +107,12 @@
 
         <hr />
 
-        <h6 class="fw-bold">Tickets en riesgo o incumplidos (sin cerrar)</h6>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <h6 class="fw-bold mb-0">Tickets en riesgo o incumplidos</h6>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnQuitarFiltro" onclick="filtrarPorCategoria(null)">
+                <i class="bi bi-x-lg"></i> Quitar filtro
+            </button>
+        </div>
         @if (Model.EnRiesgoOIncumplidos.Count == 0)
         {
             <p class="text-muted small">No hay ningún SLA en riesgo ni incumplido en este momento.</p>
@@ -112,7 +120,7 @@
         else
         {
             <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle">
+                <table class="table table-sm table-hover align-middle" id="tablaEnRiesgo">
                     <thead>
                         <tr>
                             <th>Ticket</th>
@@ -127,7 +135,7 @@
                     <tbody>
                         @foreach (var r in Model.EnRiesgoOIncumplidos)
                         {
-                            <tr>
+                            <tr data-categoria="@r.Categoria">
                                 <td>@r.CodigoTicket</td>
                                 <td>@r.TipoSla</td>
                                 <td>@r.Estado</td>
@@ -135,20 +143,50 @@
                                 <td>@(r.Asignado ?? "-")</td>
                                 <td>@r.FechaObjetivo.ToString("dd/MM/yyyy HH:mm")</td>
                                 <td>
-                                    @if (r.Incumplido)
+                                    @if (r.Categoria == "incumplido-finalizado")
                                     {
-                                        <span class="badge bg-danger">Incumplido</span>
+                                        <span class="badge bg-dark">Incumplido finalizado</span>
+                                    }
+                                    else if (r.Incumplido)
+                                    {
+                                        <span class="badge bg-danger">Incumplido activo</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-warning text-dark">Por vencer</span>
+                                        <span class="badge bg-warning text-dark">En riesgo</span>
                                     }
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
+                <p class="text-muted small d-none" id="sinResultadosFiltro">No hay tickets en esta categoría.</p>
             </div>
         }
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Las tarjetas KPI (En riesgo / Incumplidos activos / Incumplidos finalizados)
+        // funcionan como filtro de la tabla de abajo, sin ir al servidor: los datos
+        // ya están todos cargados en la página.
+        function filtrarPorCategoria(categoria) {
+            const filas = document.querySelectorAll("#tablaEnRiesgo tbody tr");
+            let visibles = 0;
+
+            filas.forEach(fila => {
+                const coincide = !categoria || fila.dataset.categoria === categoria;
+                fila.classList.toggle("d-none", !coincide);
+                if (coincide) visibles++;
+            });
+
+            document.getElementById("sinResultadosFiltro")?.classList.toggle("d-none", visibles > 0);
+            document.getElementById("btnQuitarFiltro")?.classList.toggle("d-none", !categoria);
+
+            document.querySelectorAll(".btn-filtro-kpi").forEach(btn => {
+                btn.classList.toggle("kpi-activo", btn.dataset.categoria === categoria);
+            });
+        }
+    </script>
+}

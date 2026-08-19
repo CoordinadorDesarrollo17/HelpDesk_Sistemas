@@ -40,6 +40,9 @@ namespace HelpDesk_Sistemas.Interfaces
 
         Task<TicketDetalleModel?> ObtenerDetalleTicket(int idTicket);
 
+        /// <summary>Solución registrada por Soporte, para revisarla antes de confirmar o devolver.</summary>
+        Task<TicketSolucionModel?> ObtenerSolucion(int idTicket);
+
         // ============================================================
         // CREACIÓN
         // ============================================================

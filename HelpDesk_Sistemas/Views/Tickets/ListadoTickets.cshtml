@@ -208,6 +208,40 @@
 			</div>
 		</div>
 
+		<!-- MODAL CONFIRMAR SOLUCIÓN: el solicitante lee lo que registró Soporte
+		     antes de aceptar o devolver el ticket. -->
+		<div class="modal fade" id="modalConfirmarSolucion" tabindex="-1">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">
+							<i class="bi bi-clipboard-check text-success"></i>
+							Solución propuesta <span id="codigoTicketSolucion" class="text-muted fw-normal"></span>
+						</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+					</div>
+					<div class="modal-body">
+						<input type="hidden" id="idTicketConfirmar" />
+
+						<div class="small text-muted mb-2" id="metaSolucion"></div>
+
+						<div class="border rounded p-3 bg-light mb-3" style="white-space: pre-wrap; max-height: 320px; overflow-y: auto;"
+							 id="textoSolucion"></div>
+
+						<p class="mb-0 fw-semibold">¿Esta solución resolvió tu requerimiento?</p>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-outline-warning" onclick="devolverDesdeSolucion()">
+							<i class="bi bi-arrow-counterclockwise"></i> No, devolver
+						</button>
+						<button type="button" class="btn btn-success" onclick="confirmarSolucion()">
+							<i class="bi bi-check-circle"></i> Sí, confirmar
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<!--MODAL DEVOLVER TICKET -->
 		<div class="modal fade" id="modalDevolverTicket" tabindex="-1">
 			<div class="modal-dialog">
@@ -778,7 +812,47 @@
 				});
 		}
 
-		function confirmarSolucion(idTicket) {
+		// Antes de confirmar se muestra la solución que registró Soporte: así el
+		// solicitante decide con la información a la vista, no a ciegas.
+		function abrirConfirmarSolucion(idTicket) {
+			document.getElementById("idTicketConfirmar").value = idTicket;
+			document.getElementById("codigoTicketSolucion").textContent = "";
+			document.getElementById("metaSolucion").textContent = "";
+			document.getElementById("textoSolucion").textContent = "Cargando...";
+
+			const modal = new bootstrap.Modal(document.getElementById("modalConfirmarSolucion"));
+			modal.show();
+
+			fetchConManejo(`@Url.Action("ObtenerSolucion")?id=${idTicket}`)
+				.then(r => {
+					if (!r) return null;
+					if (!r.ok) {
+						document.getElementById("textoSolucion").textContent = "No se pudo cargar la solución.";
+						return null;
+					}
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+
+					document.getElementById("codigoTicketSolucion").textContent = data.codigoTicket || "";
+
+					const partes = [];
+					if (data.resueltoPor) partes.push(`Resuelto por ${data.resueltoPor}`);
+					if (data.fechaSolucion) partes.push(data.fechaSolucion);
+					document.getElementById("metaSolucion").textContent = partes.join(" · ");
+
+					// textContent (no innerHTML): la solución es texto escrito por un usuario.
+					document.getElementById("textoSolucion").textContent =
+						data.solucion && data.solucion.trim()
+							? data.solucion
+							: "Soporte no registró un detalle de la solución.";
+				});
+		}
+
+		function confirmarSolucion() {
+			const idTicket = document.getElementById("idTicketConfirmar").value;
+
 			fetchConManejo(`@Url.Action("ConfirmarSolucion")?id=${idTicket}`, { method: "POST" })
 				.then(r => {
 					if (!r) return;
@@ -789,10 +863,18 @@
 					if (!data.exito) {
 						mostrarToast("No se pudo confirmar la solución del ticket.", "danger");
 					} else {
+						bootstrap.Modal.getInstance(document.getElementById("modalConfirmarSolucion")).hide();
 						mostrarToast("Se confirmó la solución correctamente.", "success");
 					}
 					cargarTabla(1);
 				});
+		}
+
+		// Pasa del modal de revisión al de devolución, arrastrando el ticket.
+		function devolverDesdeSolucion() {
+			const idTicket = document.getElementById("idTicketConfirmar").value;
+			bootstrap.Modal.getInstance(document.getElementById("modalConfirmarSolucion")).hide();
+			abrirDevolverTicket(idTicket);
 		}
 
 		function abrirDevolverTicket(idTicket) {

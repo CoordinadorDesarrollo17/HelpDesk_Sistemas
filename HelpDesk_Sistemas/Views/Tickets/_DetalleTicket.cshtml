@@ -93,6 +93,14 @@
 <h6 class="fw-bold">Detalle del requerimiento</h6>
 <p>@Model.Detalle</p>
 
+@if (!string.IsNullOrWhiteSpace(Model.Solucion))
+{
+    <hr />
+
+    <h6 class="fw-bold">Solución registrada por Soporte</h6>
+    <div class="border rounded p-3 bg-light" style="white-space: pre-wrap;">@Model.Solucion</div>
+}
+
 <hr />
 
 <h6 class="fw-bold">Archivos adjuntos</h6>

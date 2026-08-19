@@ -23,23 +23,24 @@
 
         <div class="col-sm-6">
             <label class="form-label">Rol <span class="text-danger">*</span></label>
-            <select name="IdRol" class="form-select" required>
+            <select name="IdRol" id="selRolCrear" class="form-select" required onchange="filtrarAreasPorRol('selRolCrear', 'selAreaCrear')">
                 <option value="">Selecciona...</option>
                 @foreach (var rol in (List<CatalogoModel>)ViewBag.Roles)
                 {
-                    <option value="@rol.Id" selected="@(Model.IdRol == rol.Id)">@rol.Nombre</option>
+                    <option value="@rol.Id" data-nombre="@rol.Nombre" selected="@(Model.IdRol == rol.Id)">@rol.Nombre</option>
                 }
             </select>
         </div>
         <div class="col-sm-6">
             <label class="form-label">Área <span class="text-danger">*</span></label>
-            <select name="IdArea" class="form-select" required>
+            <select name="IdArea" id="selAreaCrear" class="form-select" required>
                 <option value="">Selecciona...</option>
-                @foreach (var area in (List<CatalogoModel>)ViewBag.Areas)
+                @foreach (var area in (List<AreaModel>)ViewBag.Areas)
                 {
-                    <option value="@area.Id" selected="@(Model.IdArea == area.Id)">@area.Nombre</option>
+                    <option value="@area.Id" data-sistemas="@(area.EsAreaSistemas ? "1" : "0")" selected="@(Model.IdArea == area.Id)">@area.Nombre</option>
                 }
             </select>
+            <small class="text-muted d-none" id="avisoAreaCrear">Administrador y Soporte solo pueden ser de un área de soporte (TI, Sistemas o Desarrollo).</small>
         </div>
 
         <div class="col-12">
@@ -77,8 +78,8 @@
         <div class="col-12">
             <small class="text-muted">
                 <i class="bi bi-info-circle"></i>
-                El usuario y la contraseña se generan automáticamente al guardar, siguiendo la convención de Cobefar
-                (rol + número secuencial / 3 letras de nombre y apellido + el mismo número).
+                El usuario y la contraseña se generan automáticamente al guardar, siguiendo la convención de la empresa
+                (prefijo del área + número secuencial / 3 letras de nombre y apellido + el mismo número).
             </small>
         </div>
 
