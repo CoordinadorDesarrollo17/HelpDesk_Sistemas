@@ -1,56 +1,478 @@
-    @using HelpDesk_Sistemas.Models
+@using HelpDesk_Sistemas.Models
 @model LoginModel
+
 @{
     ViewData["Title"] = "Iniciar sesión";
     Layout = "_AuthLayout";
 }
 
-<div class="auth-card">
-    <div class="auth-brand">
-        <span class="sidebar-brand-mark auth-brand-mark">HD</span>
-        <div>
-            <div class="auth-brand-title">HelpDesk</div>
-            <div class="auth-brand-sub">Droguería Cobefar SAC</div>
+<div class="login-page">
+
+    <div class="auth-card">
+
+        <!-- Branding -->
+        <div class="auth-brand">
+
+            <span class="sidebar-brand-mark auth-brand-mark">
+                HD
+            </span>
+
+            <div>
+                <div class="auth-brand-title">
+                    HelpDesk
+                </div>
+
+                <div class="auth-brand-sub">
+                    Droguería Cobefar SAC
+                </div>
+            </div>
+
         </div>
+
+
+        <!-- Bienvenida -->
+        <div class="auth-welcome">
+
+            <h1>Bienvenido</h1>
+
+            <p>
+                Ingresa tus credenciales para continuar
+            </p>
+
+        </div>
+
+
+        <form method="post"
+              asp-controller="Auth"
+              asp-action="Login"
+              id="loginForm">
+
+            <input type="hidden" asp-for="ReturnUrl" />
+
+
+            <!-- Validaciones -->
+            <div asp-validation-summary="All"
+                 class="text-danger small login-validation">
+            </div>
+
+
+            <!-- Usuario -->
+            <div class="login-field">
+
+                <label asp-for="Usuario">
+                    Usuario
+                </label>
+
+                <div class="input-group login-input-group">
+
+                    <span class="input-group-text">
+                        <i class="bi bi-person"></i>
+                    </span>
+
+                    <input asp-for="Usuario"
+                           class="form-control"
+                           placeholder="Usuario"
+                           autocomplete="username"
+                           autofocus />
+
+                </div>
+
+                <span asp-validation-for="Usuario"
+                      class="text-danger small">
+                </span>
+
+            </div>
+
+
+            <!-- Contraseña -->
+            <div class="login-field password-field">
+
+                <label asp-for="Password">
+                    Contraseña
+                </label>
+
+                <div class="input-group login-input-group">
+
+                    <span class="input-group-text">
+                        <i class="bi bi-lock"></i>
+                    </span>
+
+                    <input asp-for="Password"
+                           id="txtPassword"
+                           type="password"
+                           class="form-control"
+                           placeholder="Contraseña"
+                           autocomplete="current-password" />
+
+                    <button class="input-group-text password-button"
+                            type="button"
+                            id="btnMostrarPassword"
+                            aria-label="Mostrar contraseña">
+
+                        <i class="bi bi-eye"
+                           id="iconoMostrarPassword">
+                        </i>
+
+                    </button>
+
+                </div>
+
+                <span asp-validation-for="Password"
+                      class="text-danger small">
+                </span>
+
+            </div>
+
+
+            <!-- Botón -->
+            <button type="submit"
+                    class="btn btn-primary w-100 login-button"
+                    id="btnLogin">
+
+                <span id="loginNormal">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    Ingresar
+                </span>
+
+                <span id="loginLoading"
+                      class="d-none">
+
+                    <span class="spinner-border spinner-border-sm me-2"
+                          role="status">
+                    </span>
+
+                    Ingresando...
+
+                </span>
+
+            </button>
+
+        </form>
+
+
+        <!-- Footer -->
+        <div class="auth-footer">
+            Sistema de Gestión de Soporte
+        </div>
+
     </div>
 
-    <form method="post" asp-controller="Auth" asp-action="Login">
-        <input type="hidden" asp-for="ReturnUrl" />
-
-        <div asp-validation-summary="All" class="text-danger small mb-3"></div>
-
-        <div class="mb-3">
-            <div class="input-group">
-                <span class="input-group-text bg-white"><i class="bi bi-person"></i></span>
-                <input asp-for="Usuario" class="form-control" placeholder="Usuario" autocomplete="username" autofocus />
-            </div>
-            <span asp-validation-for="Usuario" class="text-danger small"></span>
-        </div>
-
-        <div class="mb-4">
-            <div class="input-group">
-                <span class="input-group-text bg-white"><i class="bi bi-lock"></i></span>
-                <input asp-for="Password" id="txtPassword" type="password" class="form-control" placeholder="Contraseña" autocomplete="current-password" />
-                <button class="input-group-text bg-white" type="button" id="btnMostrarPassword"><i class="bi bi-eye" id="iconoMostrarPassword"></i></button>
-            </div>
-            <span asp-validation-for="Password" class="text-danger small"></span>
-        </div>
-
-        <button type="submit" class="btn btn-primary w-100">
-            <i class="bi bi-box-arrow-in-right"></i> Ingresar
-        </button>
-    </form>
 </div>
 
-@section Scripts {
-    <script>
-        document.getElementById("btnMostrarPassword").addEventListener("click", function () {
-            const input = document.getElementById("txtPassword");
-            const icono = document.getElementById("iconoMostrarPassword");
-            const esPassword = input.type === "password";
 
-            input.type = esPassword ? "text" : "password";
-            icono.className = esPassword ? "bi bi-eye-slash" : "bi bi-eye";
+<style>
+
+    /* =========================================
+           CONTENEDOR
+           ========================================= */
+
+    .login-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 25px;
+    }
+
+
+    /* =========================================
+           CARD
+           ========================================= */
+
+    .auth-card {
+        width: 100%;
+        max-width: 420px;
+        padding: 38px 40px 30px;
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 0, 0, .06);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, .08);
+        animation: loginCard .35s ease-out;
+    }
+
+
+    /* =========================================
+           BRAND
+           ========================================= */
+
+    .auth-brand {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        margin-bottom: 35px;
+    }
+
+    .auth-brand-mark {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        flex-shrink: 0;
+        font-weight: 700;
+    }
+
+    .auth-brand-title {
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+    .auth-brand-sub {
+        margin-top: 4px;
+        font-size: 12px;
+        opacity: .7;
+    }
+
+
+    /* =========================================
+           BIENVENIDA
+           ========================================= */
+
+    .auth-welcome {
+        margin-bottom: 27px;
+    }
+
+        .auth-welcome h1 {
+            margin: 0 0 6px;
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .auth-welcome p {
+            margin: 0;
+            font-size: 14px;
+            opacity: .65;
+        }
+
+
+    /* =========================================
+           CAMPOS
+           ========================================= */
+
+    .login-field {
+        margin-bottom: 20px;
+    }
+
+        .login-field label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+    .login-input-group {
+        height: 46px;
+    }
+
+        .login-input-group .input-group-text {
+            background: #fff;
+            border-right: 0;
+            padding-left: 13px;
+            padding-right: 10px;
+        }
+
+            .login-input-group .input-group-text i {
+                font-size: 16px;
+            }
+
+        .login-input-group .form-control {
+            border-left: 0;
+            box-shadow: none;
+        }
+
+        .login-input-group:focus-within .input-group-text,
+        .login-input-group:focus-within .form-control {
+            border-color: var(--bs-primary);
+        }
+
+        .login-input-group .form-control:focus {
+            box-shadow: none;
+        }
+
+
+    /* =========================================
+           PASSWORD
+           ========================================= */
+
+    .password-button {
+        cursor: pointer;
+        transition: opacity .15s ease;
+    }
+
+        .password-button:hover {
+            opacity: .7;
+        }
+
+
+    /* =========================================
+           VALIDACIÓN
+           ========================================= */
+
+    .login-validation {
+        margin-bottom: 18px;
+    }
+
+        .login-validation:empty {
+            display: none;
+        }
+
+
+    /* =========================================
+           BOTÓN
+           ========================================= */
+
+    .login-button {
+        height: 46px;
+        margin-top: 5px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+        .login-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 14px rgba(0, 0, 0, .12);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+
+    /* =========================================
+           FOOTER
+           ========================================= */
+
+    .auth-footer {
+        margin-top: 25px;
+        padding-top: 18px;
+        border-top: 1px solid rgba(0, 0, 0, .06);
+        text-align: center;
+        font-size: 11px;
+        opacity: .55;
+    }
+
+
+    /* =========================================
+           ANIMACIÓN
+           ========================================= */
+
+    @@keyframes loginCard {
+
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+
+    /* =========================================
+           RESPONSIVE
+           ========================================= */
+
+    @@media (max-width: 480px) {
+
+        .login-page {
+            padding: 15px;
+        }
+
+        .auth-card {
+            padding: 30px 24px 25px;
+            border-radius: 14px;
+        }
+
+        .auth-brand {
+            margin-bottom: 28px;
+        }
+
+        .auth-welcome h1 {
+            font-size: 24px;
+        }
+    }
+
+</style>
+
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const passwordInput =
+                document.getElementById("txtPassword");
+
+            const passwordButton =
+                document.getElementById("btnMostrarPassword");
+
+            const passwordIcon =
+                document.getElementById("iconoMostrarPassword");
+
+            const loginForm =
+                document.getElementById("loginForm");
+
+            const loginButton =
+                document.getElementById("btnLogin");
+
+            const loginNormal =
+                document.getElementById("loginNormal");
+
+            const loginLoading =
+                document.getElementById("loginLoading");
+
+
+            /* Mostrar / ocultar contraseña */
+
+            passwordButton.addEventListener("click", function () {
+
+                const mostrar =
+                    passwordInput.type === "password";
+
+                passwordInput.type =
+                    mostrar ? "text" : "password";
+
+                passwordIcon.className =
+                    mostrar
+                        ? "bi bi-eye-slash"
+                        : "bi bi-eye";
+
+                passwordButton.setAttribute(
+                    "aria-label",
+                    mostrar
+                        ? "Ocultar contraseña"
+                        : "Mostrar contraseña"
+                );
+
+            });
+
+
+            /* Estado de carga */
+
+            loginForm.addEventListener("submit", function () {
+
+                if (!loginForm.checkValidity()) {
+                    return;
+                }
+
+                loginButton.disabled = true;
+
+                loginNormal.classList.add("d-none");
+
+                loginLoading.classList.remove("d-none");
+
+            });
+
         });
+
     </script>
+
 }
