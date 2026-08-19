@@ -1,0 +1,18 @@
+Para poner el logo real de la empresa, agrega un archivo llamado:
+
+    logo.png
+
+en esta misma carpeta (wwwroot/img/logo.png).
+
+En cuanto exista ese archivo, aparecerá automáticamente reemplazando el
+"HD" tanto en el login como en el menú lateral del sistema — no hace
+falta tocar ningún archivo de código ni volver a compilar.
+
+Recomendaciones para el archivo:
+- Formato PNG con fondo transparente (se ve mejor sobre el círculo blanco).
+- Cuadrado o casi cuadrado (se recorta/ajusta dentro de un contenedor
+  redondeado, así que un logo muy alargado se verá pequeño).
+- Con que tenga unos 200x200px de resolución alcanza de sobra.
+
+Si prefieres usar otro nombre de archivo o formato (por ejemplo un SVG),
+avísame y ajusto la referencia en el código.
