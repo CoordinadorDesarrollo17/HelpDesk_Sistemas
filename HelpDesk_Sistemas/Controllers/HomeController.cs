@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HelpDesk_Sistemas.Controllers
 {
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Soporte")]
     public class HomeController : Controller
     {
         private readonly ITicketsService ticketsService;
