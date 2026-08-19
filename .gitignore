@@ -23,3 +23,8 @@ obj/
 
 # Archivos subidos por usuarios (contenido generado en tiempo de ejecución)
 wwwroot/uploads/
+
+# Configuración con credenciales reales (cadena de conexión con usuario/contraseña
+# de BD). Se sigue necesitando localmente para correr la app: crea tu propia copia
+# a partir de appsettings.example.json.
+HelpDesk_Sistemas/appsettings.json
