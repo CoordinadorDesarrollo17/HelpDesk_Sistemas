@@ -158,8 +158,34 @@
                 });
         }
 
+        // Administrador y Soporte solo pueden estar en un área de soporte (TI/Sistemas/
+        // Desarrollo, marcadas con data-sistemas="1"); Supervisor y Usuario, en cualquiera.
+        // Si el área ya elegida deja de ser válida para el nuevo rol, se limpia la selección.
+        function filtrarAreasPorRol(idSelectRol, idSelectArea) {
+            const selRol = document.getElementById(idSelectRol);
+            const selArea = document.getElementById(idSelectArea);
+            if (!selRol || !selArea) return;
+
+            const nombreRol = selRol.selectedOptions[0]?.dataset.nombre;
+            const soloSistemas = nombreRol === "Administrador" || nombreRol === "Soporte";
+            const aviso = selArea.parentElement.querySelector("small");
+
+            let seleccionSigueValida = false;
+
+            Array.from(selArea.options).forEach(opt => {
+                if (!opt.value) return; // "Selecciona..."
+                const visible = !soloSistemas || opt.dataset.sistemas === "1";
+                opt.hidden = !visible;
+                if (opt.selected && visible) seleccionSigueValida = true;
+            });
+
+            if (!seleccionSigueValida) selArea.value = "";
+            aviso?.classList.toggle("d-none", !soloSistemas);
+        }
+
         function inicializarFormularioUsuario() {
             const form = document.getElementById("formCrearUsuario");
+            filtrarAreasPorRol("selRolCrear", "selAreaCrear");
 
             form.addEventListener("submit", function (e) {
                 e.preventDefault();

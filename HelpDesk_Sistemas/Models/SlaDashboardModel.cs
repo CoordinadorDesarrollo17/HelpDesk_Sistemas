@@ -46,5 +46,13 @@ namespace HelpDesk_Sistemas.Models
         public DateTime FechaObjetivo { get; set; }
         public bool Incumplido { get; set; }
         public bool AdvertenciaActiva { get; set; }
+
+        /// <summary>Etapa del SLA: "EnCurso"/"Pausado" (todavía corriendo) o "Completado" (ya terminó).</summary>
+        public string Etapa { get; set; } = string.Empty;
+
+        /// <summary>"en-riesgo" | "incumplido-activo" | "incumplido-finalizado" — para filtrar y pintar la fila.</summary>
+        public string Categoria => Etapa == "Completado"
+            ? "incumplido-finalizado"
+            : Incumplido ? "incumplido-activo" : "en-riesgo";
     }
 }

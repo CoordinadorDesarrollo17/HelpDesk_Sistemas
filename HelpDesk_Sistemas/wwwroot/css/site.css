@@ -419,6 +419,63 @@ a:hover {
 }
 
 /* ============================================================
+   FILAS DE TICKETS — tinte suave para diferenciar de un vistazo
+   los que esperan confirmación del solicitante (amarillo) de los
+   ya cerrados (verde). Mismos tonos que las badges de arriba,
+   fijados vía --bs-table-bg para que sigan funcionando con
+   table-hover/table-striped en vez de pisarlos con !important.
+   ============================================================ */
+
+.fila-en-validacion {
+    --bs-table-bg: #FEF3E0;
+    --bs-table-hover-bg: #FBE7C4;
+}
+
+.fila-cerrado {
+    --bs-table-bg: #E4F6E6;
+    --bs-table-hover-bg: #CDEFD1;
+}
+
+/* ============================================================
+   FILAS DE GRUPO — definiciones de SLA y otras tablas plegables
+   ============================================================ */
+
+.fila-grupo-definicion {
+    --bs-table-bg: #FAFAFA;
+    cursor: pointer;
+}
+
+.grupo-chevron {
+    display: inline-block;
+    transition: transform .15s ease;
+}
+
+.grupo-chevron.rotada {
+    transform: rotate(90deg);
+}
+
+/* ============================================================
+   KPI-BOTÓN — tarjetas KPI que además funcionan como filtro
+   (Dashboard de cumplimiento SLA)
+   ============================================================ */
+
+.btn-filtro-kpi {
+    background: #fff;
+    border-color: var(--card-border);
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+.btn-filtro-kpi:hover {
+    border-color: var(--brand-green-500);
+}
+
+.btn-filtro-kpi.kpi-activo {
+    border-color: var(--brand-green-700);
+    border-width: 2px;
+    background: var(--brand-green-50);
+}
+
+/* ============================================================
    LOGIN
    ============================================================ */
 

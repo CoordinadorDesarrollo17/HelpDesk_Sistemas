@@ -109,7 +109,6 @@ namespace HelpDesk_Sistemas.Controllers
             ViewBag.Areas = await usuariosService.ObtenerTodasLasAreas();
             ViewBag.Supervisores = await usuariosService.ObtenerPosiblesSupervisores();
             ViewBag.Sociedades = await usuariosService.ObtenerSociedades();
-            ViewBag.Sociedades = await usuariosService.ObtenerSociedades();
         }
     }
 }

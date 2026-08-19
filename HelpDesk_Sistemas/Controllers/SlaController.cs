@@ -133,6 +133,20 @@ namespace HelpDesk_Sistemas.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> ActualizarHorario(int id, int idCalendario, int diaSemana, TimeSpan horaInicio, TimeSpan horaFin)
+        {
+            var (exito, mensaje) = await slaService.ActualizarHorario(id, new SlaHorarioRequest
+            {
+                IdCalendario = idCalendario,
+                DiaSemana = diaSemana,
+                HoraInicio = horaInicio,
+                HoraFin = horaFin
+            });
+
+            return Json(new { exito, mensaje });
+        }
+
+        [HttpPost]
         public async Task<IActionResult> EliminarHorario(int id)
         {
             var exito = await slaService.EliminarHorario(id);
@@ -148,6 +162,19 @@ namespace HelpDesk_Sistemas.Controllers
                 Fecha = fecha,
                 Descripcion = descripcion
             }, SesionTemporal.UsuarioActualTemporal.ToString());
+
+            return Json(new { exito, mensaje });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ActualizarFeriado(int id, int idCalendario, DateTime fecha, string? descripcion)
+        {
+            var (exito, mensaje) = await slaService.ActualizarFeriado(id, new SlaFeriadoRequest
+            {
+                IdCalendario = idCalendario,
+                Fecha = fecha,
+                Descripcion = descripcion
+            });
 
             return Json(new { exito, mensaje });
         }

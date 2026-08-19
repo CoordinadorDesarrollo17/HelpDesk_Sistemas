@@ -15,7 +15,7 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<(bool Exito, string? Mensaje)> EliminarUsuario(int id, int idUsuarioActual);
 
         Task<List<CatalogoModel>> ObtenerRoles();
-        Task<List<CatalogoModel>> ObtenerTodasLasAreas();
+        Task<List<AreaModel>> ObtenerTodasLasAreas();
         Task<List<CatalogoModel>> ObtenerPosiblesSupervisores();
         Task<List<CatalogoModel>> ObtenerSociedades();
     }

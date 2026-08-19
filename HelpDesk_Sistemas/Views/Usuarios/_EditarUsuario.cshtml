@@ -1,6 +1,16 @@
 @using HelpDesk_Sistemas.Models
 @model EditarUsuarioModel
 
+@{
+    // El Rol no se edita aquí, así que el área se filtra server-side contra el
+    // Rol ya guardado (a diferencia de Crear, donde el Rol se elige en el mismo
+    // formulario y el filtrado se hace en vivo con JS).
+    var soloAreasSistemas = Model.Rol is "Administrador" or "Soporte";
+    var areasDisponibles = ((List<AreaModel>)ViewBag.Areas)
+        .Where(a => !soloAreasSistemas || a.EsAreaSistemas)
+        .ToList();
+}
+
 <form id="formEditarUsuario" method="post">
     <input type="hidden" name="Id" value="@Model.Id" />
 
@@ -27,11 +37,15 @@
             <label class="form-label">Área <span class="text-danger">*</span></label>
             <select name="IdArea" class="form-select" required>
                 <option value="">Selecciona...</option>
-                @foreach (var area in (List<CatalogoModel>)ViewBag.Areas)
+                @foreach (var area in areasDisponibles)
                 {
                     <option value="@area.Id" selected="@(Model.IdArea == area.Id)">@area.Nombre</option>
                 }
             </select>
+            @if (soloAreasSistemas)
+            {
+                <small class="text-muted">Administrador y Soporte solo pueden ser de un área de soporte (TI, Sistemas o Desarrollo).</small>
+            }
         </div>
         <div class="col-12">
             <label class="form-label">Sociedades <span class="text-danger">*</span></label>
@@ -70,8 +84,8 @@
         <div class="col-12">
             <small class="text-muted">
                 <i class="bi bi-info-circle"></i>
-                El rol, el usuario y la contraseña no se editan aquí — cambiar el rol rompería la
-                convención de usuario/contraseña generada al crear la cuenta.
+                El rol, el usuario y la contraseña no se editan aquí. El usuario ya generado no
+                cambia aunque cambies el Área — el prefijo solo se usa una vez, al crear la cuenta.
             </small>
         </div>
 
