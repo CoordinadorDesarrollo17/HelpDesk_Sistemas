@@ -183,7 +183,7 @@
                             </button>
                         }
 
-                        @if (u.Estado == "En validación")
+                        @if (u.Estado == "En validación" && u.Solicitante == ViewBag.Usuario )
                         {
                             <button type="button" class="btn btn-sm btn-outline-success" title="Ver solución y confirmar" onclick="abrirConfirmarSolucion(@u.IdTicket)">
                                 <i class="bi bi-check-circle"></i>
