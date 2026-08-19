@@ -53,9 +53,18 @@
                 <th>Área</th>
                 <th>Categoría</th>
                 <th>Estado</th>
-                <th>Prioridad</th>
-                <th>SLA</th>
-                <th>Orden</th>
+                @if (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte")
+                {
+                    <th>Prioridad</th>
+                }
+                @if (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte")
+                {
+                    <th>SLA</th>
+                }
+                @if (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte")
+                {
+                    <th>Orden</th>
+                }
                 <th>Solicitante</th>
                 <th>Personal Asignado</th>
                 <th>Fecha Creación</th>
