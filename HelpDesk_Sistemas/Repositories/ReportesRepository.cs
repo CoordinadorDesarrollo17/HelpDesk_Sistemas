@@ -91,6 +91,7 @@ namespace HelpDesk_Sistemas.Repositories
                 INNER JOIN Usuarios u ON u.Id = t.Id_Usuario_Asignado
                 INNER JOIN Estado e ON e.Id = t.Id_Estado
                 WHERE t.Fecha_Creacion >= @FechaInicio AND t.Fecha_Creacion < @FechaFinExclusiva
+                  AND (@IdAreaAgente IS NULL OR t.Id_Area = @IdAreaAgente)
                 GROUP BY u.Id, u.Nombre, u.Apellido
                 ORDER BY Cerrados DESC, Asignados DESC;
             ";
@@ -98,7 +99,8 @@ namespace HelpDesk_Sistemas.Repositories
             var parametros = new
             {
                 filtro.FechaInicio,
-                FechaFinExclusiva = filtro.FechaFin.Date.AddDays(1)
+                FechaFinExclusiva = filtro.FechaFin.Date.AddDays(1),
+                filtro.IdAreaAgente
             };
 
             using var multi = await xCon.QueryMultipleAsync(sql, parametros);

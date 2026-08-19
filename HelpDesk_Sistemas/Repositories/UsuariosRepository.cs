@@ -59,11 +59,33 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
-        public async Task<int> ObtenerSiguienteNumeroSecuencial(int idRol)
+        public async Task<string?> ObtenerRolUsuario(int idUsuario)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
-            var sql = "SELECT ISNULL(MAX(Numero_Secuencial), 0) + 1 FROM Usuarios WHERE IdRol = @IdRol";
-            return await xCon.ExecuteScalarAsync<int>(sql, new { IdRol = idRol });
+            var sql = "SELECT r.Nombre FROM Usuarios u INNER JOIN Rol r ON r.Id = u.IdRol WHERE u.Id = @IdUsuario";
+            return await xCon.QueryFirstOrDefaultAsync<string>(sql, new { IdUsuario = idUsuario });
+        }
+
+        public async Task<AreaModel?> ObtenerAreaPorId(int idArea)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Id, Nombre, Prefijo, Es_Area_Sistemas AS EsAreaSistemas FROM Area WHERE Id = @IdArea";
+            return await xCon.QueryFirstOrDefaultAsync<AreaModel>(sql, new { IdArea = idArea });
+        }
+
+        // El correlativo es por Prefijo (no por Id de área): varias áreas pueden
+        // compartir un mismo prefijo (ej. las 3 áreas de soporte comparten
+        // "MANAGER"), y todas deben repartirse un único conteo continuo.
+        public async Task<int> ObtenerSiguienteNumeroSecuencial(string prefijo)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = @"
+                SELECT ISNULL(MAX(u.Numero_Secuencial), 0) + 1
+                FROM Usuarios u
+                INNER JOIN Area a ON a.Id = u.Id_Area
+                WHERE a.Prefijo = @Prefijo
+            ";
+            return await xCon.ExecuteScalarAsync<int>(sql, new { Prefijo = prefijo });
         }
 
         public async Task<int> CrearUsuario(CrearUsuarioModel model, string usuario, string passwordHash, int numeroSecuencial, string usuarioCreacion)
@@ -135,9 +157,10 @@ namespace HelpDesk_Sistemas.Repositories
 
             var sql = @"
                 SELECT
-                    u.Id, u.Nombre, u.Apellido, u.Correo, u.Nro_Contacto AS NroContacto,
+                    u.Id, r.Nombre AS Rol, u.Nombre, u.Apellido, u.Correo, u.Nro_Contacto AS NroContacto,
                     u.Id_Area AS IdArea, u.Es_Coordinador AS EsCoordinador, u.Id_Sup_Usuario AS IdSupUsuario
                 FROM Usuarios u
+                INNER JOIN Rol r ON r.Id = u.IdRol
                 WHERE u.Id = @Id;
 
                 SELECT Id_Sociedad FROM Usuario_Sociedad WHERE Id_Usuario = @Id;
@@ -238,14 +261,16 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
-        public async Task<List<CatalogoModel>> ObtenerTodasLasAreas()
+        public async Task<List<AreaModel>> ObtenerTodasLasAreas()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
-            var sql = "SELECT Id, Nombre FROM Area WHERE Activo = 1 ORDER BY Nombre";
-            var result = await xCon.QueryAsync<CatalogoModel>(sql);
+            var sql = "SELECT Id, Nombre, Prefijo, Es_Area_Sistemas AS EsAreaSistemas FROM Area WHERE Activo = 1 ORDER BY Nombre";
+            var result = await xCon.QueryAsync<AreaModel>(sql);
             return result.ToList();
         }
 
+        // Solo usuarios con Rol = "Supervisor": el combo de Supervisor no debe
+        // ofrecer a cualquier usuario activo, solo a quienes de verdad supervisan.
         public async Task<List<CatalogoModel>> ObtenerPosiblesSupervisores()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
@@ -253,7 +278,8 @@ namespace HelpDesk_Sistemas.Repositories
             var sql = @"
                 SELECT u.Id AS Id, CONCAT(u.Nombre, ' ', u.Apellido) AS Nombre
                 FROM Usuarios u
-                WHERE u.Activo = 1
+                INNER JOIN Rol r ON r.Id = u.IdRol
+                WHERE u.Activo = 1 AND r.Nombre = 'Supervisor'
                 ORDER BY u.Nombre, u.Apellido
             ";
 

@@ -40,12 +40,30 @@ namespace HelpDesk_Sistemas.Services
             return (true, null);
         }
 
+        public async Task<(bool Exito, string? Mensaje)> ActualizarHorario(int id, SlaHorarioRequest model)
+        {
+            if (model.DiaSemana < 1 || model.DiaSemana > 7)
+                return (false, "El día de la semana debe estar entre 1 (Domingo) y 7 (Sábado).");
+
+            if (model.HoraInicio >= model.HoraFin)
+                return (false, "La hora de inicio debe ser menor a la hora de fin.");
+
+            var actualizado = await slaRepository.ActualizarHorario(id, model);
+            return actualizado ? (true, null) : (false, "No se encontró el horario a actualizar.");
+        }
+
         public async Task<bool> EliminarHorario(int id) => await slaRepository.EliminarHorario(id);
 
         public async Task<(bool Exito, string? Mensaje)> AgregarFeriado(SlaFeriadoRequest model, string usuarioCreacion)
         {
             await slaRepository.AgregarFeriado(model, usuarioCreacion);
             return (true, null);
+        }
+
+        public async Task<(bool Exito, string? Mensaje)> ActualizarFeriado(int id, SlaFeriadoRequest model)
+        {
+            var actualizado = await slaRepository.ActualizarFeriado(id, model);
+            return actualizado ? (true, null) : (false, "No se encontró el feriado a actualizar.");
         }
 
         public async Task<bool> EliminarFeriado(int id) => await slaRepository.EliminarFeriado(id);

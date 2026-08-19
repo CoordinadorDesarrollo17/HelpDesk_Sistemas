@@ -15,9 +15,11 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<bool> CambiarActivoCalendario(int id, bool activo);
 
         Task<int> AgregarHorario(SlaHorarioRequest model);
+        Task<bool> ActualizarHorario(int id, SlaHorarioRequest model);
         Task<bool> EliminarHorario(int id);
 
         Task<int> AgregarFeriado(SlaFeriadoRequest model, string usuarioCreacion);
+        Task<bool> ActualizarFeriado(int id, SlaFeriadoRequest model);
         Task<bool> EliminarFeriado(int id);
 
         // ============================================================

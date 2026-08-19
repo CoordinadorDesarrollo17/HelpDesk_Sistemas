@@ -9,16 +9,19 @@ namespace HelpDesk_Sistemas.Controllers
     public class ReportesController : Controller
     {
         private readonly IReportesService reportesService;
+        private readonly ITicketsService ticketsService;
 
-        public ReportesController(IReportesService reportesService)
+        public ReportesController(IReportesService reportesService, ITicketsService ticketsService)
         {
             this.reportesService = reportesService;
+            this.ticketsService = ticketsService;
         }
 
         public async Task<IActionResult> Index(ReporteFiltroModel filtro)
         {
             var reporte = await reportesService.ObtenerReporteGeneral(filtro);
             ViewBag.Filtro = filtro;
+            ViewBag.AreasSoporte = await ticketsService.ObtenerAreasSistemas();
             return View(reporte);
         }
 

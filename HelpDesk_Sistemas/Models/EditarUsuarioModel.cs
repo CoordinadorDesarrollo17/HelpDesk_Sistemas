@@ -6,6 +6,9 @@ namespace HelpDesk_Sistemas.Models
     {
         public int Id { get; set; }
 
+        /// <summary>Rol actual del usuario (no editable aquí, solo para filtrar el combo de Área).</summary>
+        public string Rol { get; set; } = string.Empty;
+
         [Required(ErrorMessage = "El nombre es obligatorio.")]
         public string Nombre { get; set; } = string.Empty;
 

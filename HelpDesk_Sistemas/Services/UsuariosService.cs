@@ -6,6 +6,11 @@ namespace HelpDesk_Sistemas.Services
 {
     public class UsuariosService : IUsuariosService
     {
+        // Administrador y Soporte quedan restringidos a las áreas de soporte
+        // (TI/Sistemas/Desarrollo); Supervisor y Usuario pueden ser de cualquier
+        // área de la empresa.
+        private static readonly string[] RolesSoloAreasSistemas = { "Administrador", "Soporte" };
+
         private readonly IUsuariosRepository usuariosRepository;
 
         public UsuariosService(IUsuariosRepository usuariosRepository)
@@ -37,6 +42,21 @@ namespace HelpDesk_Sistemas.Services
                 return (false, "El rol seleccionado no es válido.", null, null);
             }
 
+            // El Usuario/Password se generan a partir del Área (su Prefijo), no del
+            // Rol: el Rol solo define permisos dentro de HelpDesk, mientras que el
+            // Prefijo replica la convención real de la empresa (ej. "manager3").
+            var area = await usuariosRepository.ObtenerAreaPorId(model.IdArea);
+
+            if (area is null || string.IsNullOrWhiteSpace(area.Prefijo))
+            {
+                return (false, "El área seleccionada no tiene un prefijo configurado para generar el usuario.", null, null);
+            }
+
+            if (RolesSoloAreasSistemas.Contains(rol.Nombre) && !area.EsAreaSistemas)
+            {
+                return (false, "Para Administrador o Soporte, selecciona una de las 3 áreas de soporte (TI, Sistemas o Desarrollo).", null, null);
+            }
+
             model.IdSociedades = model.IdSociedades.Distinct().ToList();
 
             if (model.IdSociedades.Count == 0)
@@ -44,8 +64,8 @@ namespace HelpDesk_Sistemas.Services
                 return (false, "Selecciona al menos una sociedad.", null, null);
             }
 
-            var numeroSecuencial = await usuariosRepository.ObtenerSiguienteNumeroSecuencial(model.IdRol);
-            var usuarioGenerado = GeneradorCredenciales.GenerarUsuario(rol.Nombre, numeroSecuencial);
+            var numeroSecuencial = await usuariosRepository.ObtenerSiguienteNumeroSecuencial(area.Prefijo);
+            var usuarioGenerado = GeneradorCredenciales.GenerarUsuario(area.Prefijo, numeroSecuencial);
             var passwordGenerada = GeneradorCredenciales.GenerarPassword(model.Nombre, model.Apellido, numeroSecuencial);
             var passwordHash = PasswordHasher.Hash(passwordGenerada);
 
@@ -69,6 +89,20 @@ namespace HelpDesk_Sistemas.Services
             if (model.IdSupUsuario == model.Id)
             {
                 return (false, "Un usuario no puede ser su propio supervisor.");
+            }
+
+            // El Rol no se edita en este formulario, así que se valida contra el Rol
+            // real ya guardado (no contra model.Rol, que el cliente podría alterar).
+            var rolActual = await usuariosRepository.ObtenerRolUsuario(model.Id);
+
+            if (rolActual is not null && RolesSoloAreasSistemas.Contains(rolActual))
+            {
+                var area = await usuariosRepository.ObtenerAreaPorId(model.IdArea);
+
+                if (area is null || !area.EsAreaSistemas)
+                {
+                    return (false, "Para Administrador o Soporte, selecciona una de las 3 áreas de soporte (TI, Sistemas o Desarrollo).");
+                }
             }
 
             model.IdSociedades = model.IdSociedades.Distinct().ToList();
@@ -100,7 +134,7 @@ namespace HelpDesk_Sistemas.Services
             return await usuariosRepository.ObtenerRoles();
         }
 
-        public async Task<List<CatalogoModel>> ObtenerTodasLasAreas()
+        public async Task<List<AreaModel>> ObtenerTodasLasAreas()
         {
             return await usuariosRepository.ObtenerTodasLasAreas();
         }
