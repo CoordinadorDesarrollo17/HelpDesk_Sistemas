@@ -306,7 +306,17 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpPost]
         public async Task<IActionResult> AsignarOrdenAtencion(int id, int orden)
         {
-            var (exito, mensaje) = await ticketsService.AsignarOrdenAtencion(id, orden);
+            // El orden de atención lo define quien trabaja la cola (Soporte/Administrador),
+            // nunca quien solicitó el ticket (ver también la validación de "solicitante propio"
+            // dentro del servicio, misma regla que el resto de acciones sobre tickets).
+            var puedeAsignarOrden = SesionTemporal.RolActual == "Administrador" || SesionTemporal.RolActual == "Soporte";
+
+            if (!puedeAsignarOrden)
+            {
+                return Json(new { exito = false, mensaje = "Solo Soporte o un administrador puede definir el orden de atención." });
+            }
+
+            var (exito, mensaje) = await ticketsService.AsignarOrdenAtencion(id, orden, SesionTemporal.UsuarioActualTemporal, SesionTemporal.IdAreaActual);
             return Json(new { exito, mensaje });
         }
 

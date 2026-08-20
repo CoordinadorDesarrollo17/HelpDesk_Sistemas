@@ -291,9 +291,9 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.AsignarPrioridad(idTicket, idPrioridad);
         }
 
-        public async Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden)
+        public async Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden, int idUsuarioActual, int idAreaUsuarioActual)
         {
-            return await ticketsRepository.AsignarOrdenAtencion(idTicket, orden);
+            return await ticketsRepository.AsignarOrdenAtencion(idTicket, orden, idUsuarioActual, idAreaUsuarioActual);
         }
 
         public async Task<List<CatalogoModel>> ObtenerMisTicketsPropios(int idUsuario, int idTicketActual)

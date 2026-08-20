@@ -888,18 +888,26 @@ namespace HelpDesk_Sistemas.Repositories
         /// "en curso" (equivalente a En atención en cada flujo), o si el número de
         /// orden ya está usado por otro ticket del mismo grupo.
         /// </summary>
-        public async Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden)
+        public async Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden, int idUsuarioActual, int idAreaUsuarioActual)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
             var sqlInfo = @"
-                SELECT t.Id_Usuario_Asignado AS IdUsuarioAsignado, t.Id_Prioridad AS IdPrioridad, e.Nombre AS Estado
+                SELECT t.Id_Usuario_Asignado AS IdUsuarioAsignado, t.Id_Prioridad AS IdPrioridad, e.Nombre AS Estado,
+                       t.Id_Usuario_Solicita AS IdUsuarioSolicita, t.Id_Area AS IdArea
                 FROM Tickets t
                 INNER JOIN Estado e ON e.Id = t.Id_Estado
                 WHERE t.Id = @IdTicket
             ";
 
-            var info = await xCon.QueryFirstOrDefaultAsync<(int? IdUsuarioAsignado, int? IdPrioridad, string Estado)>(sqlInfo, new { IdTicket = idTicket });
+            var info = await xCon.QueryFirstOrDefaultAsync<(int? IdUsuarioAsignado, int? IdPrioridad, string Estado, int IdUsuarioSolicita, int IdArea)>(sqlInfo, new { IdTicket = idTicket });
+
+            // Mismo criterio que el resto de acciones sobre tickets: quien solicitó el
+            // ticket no puede accionarlo, salvo que sea para su propia área de trabajo.
+            if (info.IdUsuarioSolicita == idUsuarioActual && info.IdArea != idAreaUsuarioActual)
+            {
+                return (false, "No puedes definir el orden de atención de un ticket que tú mismo solicitaste.");
+            }
 
             // Estados donde el ticket ya está "en curso" y no debe reordenarse:
             // En atención (Soporte) y Desarrollo en adelante (Implementación/Mejora).
