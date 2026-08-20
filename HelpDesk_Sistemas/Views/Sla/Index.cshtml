@@ -103,7 +103,7 @@
                                     <span class="badge bg-primary ms-1">@totalResolucion Resolución</span>
                                 }
                                 <span class="text-muted small ms-2">
-                                    @g.Definiciones.Count definición@(g.Definiciones.Count == 1 ? "" : "es")
+                                    @g.Definiciones.Count @(g.Definiciones.Count == 1 ? "definición" : "definiciones")
                                     @if (activos < g.Definiciones.Count)
                                     {
                                         @:· @activos activa@(activos == 1 ? "" : "s")
