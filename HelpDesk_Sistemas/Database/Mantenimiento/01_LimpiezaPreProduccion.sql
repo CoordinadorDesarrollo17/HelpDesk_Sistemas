@@ -24,6 +24,7 @@ DELETE FROM Ticket_SLA;
 DELETE FROM Tickets;
 
 -- 2) Usuarios (excepto el que se conserva) y sus sociedades
+-- Esto no debería ejecutarse en produccion ya que se tendría que volver a crear los usuarios
 DELETE FROM Usuario_Sociedad WHERE Id_Usuario <> @IdUsuarioConservar;
 DELETE FROM Usuarios WHERE Id <> @IdUsuarioConservar;
 
