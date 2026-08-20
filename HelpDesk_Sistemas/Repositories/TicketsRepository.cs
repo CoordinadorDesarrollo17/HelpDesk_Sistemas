@@ -711,7 +711,7 @@ namespace HelpDesk_Sistemas.Repositories
         }
 
         /// <summary>En pausa → En atención. Cierra la pausa abierta (Fecha_Fin = ahora).</summary>
-        public async Task<bool> ReanudarTicket(int idTicket, int idUsuarioAccion)
+        public async Task<bool> ReanudarTicket(int idTicket, int idUsuarioAccion, string comentario = "Ticket reanudado")
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
@@ -735,14 +735,37 @@ namespace HelpDesk_Sistemas.Repositories
                     EXEC sp_SLA_Reanudar @IdTicket = @IdTicket;
 
                     INSERT INTO Ticket_Historial (Id_Ticket, Id_Estado_Anterior, Id_Estado_Nuevo, Id_Usuario_Accion, Comentario)
-                    VALUES (@IdTicket, @IdEstadoAnterior, @IdEstadoNuevo, @IdUsuarioAccion, 'Ticket reanudado');
+                    VALUES (@IdTicket, @IdEstadoAnterior, @IdEstadoNuevo, @IdUsuarioAccion, @Comentario);
                 END
 
                 SELECT @FilasActualizadas;
             ";
 
-            var filasAfectadas = await xCon.ExecuteScalarAsync<int>(sql, new { IdTicket = idTicket, IdUsuarioAccion = idUsuarioAccion });
+            var filasAfectadas = await xCon.ExecuteScalarAsync<int>(sql, new { IdTicket = idTicket, IdUsuarioAccion = idUsuarioAccion, Comentario = comentario });
             return filasAfectadas > 0;
+        }
+
+        /// <summary>
+        /// Pausas por refrigerio abiertas hace más de 1 hora, para reanudarlas
+        /// automáticamente (ver SlaEngineBackgroundService).
+        /// </summary>
+        public async Task<List<PausaVencidaModel>> ObtenerPausasRefrigerioVencidas()
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sql = @"
+                SELECT tp.Id_Ticket AS IdTicket, tp.Id_Usuario_Accion AS IdUsuarioAccion
+                FROM Ticket_Pausas tp
+                INNER JOIN Tickets t ON t.Id = tp.Id_Ticket
+                INNER JOIN Estado e ON e.Id = t.Id_Estado
+                WHERE tp.Tipo_Motivo = 'Refrigerio'
+                  AND tp.Fecha_Fin IS NULL
+                  AND tp.Fecha_Inicio <= DATEADD(HOUR, -1, GETDATE())
+                  AND e.Nombre = 'En pausa';
+            ";
+
+            var resultado = await xCon.QueryAsync<PausaVencidaModel>(sql);
+            return resultado.ToList();
         }
 
         /// <summary>En atención → En validación. Registra la solución redactada por Soporte.</summary>

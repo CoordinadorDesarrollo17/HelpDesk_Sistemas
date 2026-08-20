@@ -247,9 +247,14 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.PausarTicket(idTicket, idUsuarioAccion, tipoMotivo, idTicketRelacionado);
         }
 
-        public async Task<bool> ReanudarTicket(int idTicket, int idUsuarioAccion)
+        public async Task<bool> ReanudarTicket(int idTicket, int idUsuarioAccion, string comentario = "Ticket reanudado")
         {
-            return await ticketsRepository.ReanudarTicket(idTicket, idUsuarioAccion);
+            return await ticketsRepository.ReanudarTicket(idTicket, idUsuarioAccion, comentario);
+        }
+
+        public async Task<List<PausaVencidaModel>> ObtenerPausasRefrigerioVencidas()
+        {
+            return await ticketsRepository.ObtenerPausasRefrigerioVencidas();
         }
 
         public async Task<bool> ValidarTicket(int idTicket, int idUsuarioAccion, string solucion)
