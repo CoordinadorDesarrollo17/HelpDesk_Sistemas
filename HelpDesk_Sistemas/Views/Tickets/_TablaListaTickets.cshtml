@@ -78,7 +78,10 @@
                 // Quien solicitó el ticket no debe operarlo (tomar/atender/pausar/anular/etc.):
                 // esas acciones son de quien lo trabaja (Soporte/Supervisor/Administrador). El
                 // solicitante solo ve el detalle y, si corresponde, confirmar/devolver la solución.
-                var esSolicitante = u.Solicitante == ViewBag.Usuario;
+                // Excepción: si el ticket es para la propia área de trabajo del solicitante
+                // (ej. un agente de Soporte TI reporta algo para Soporte TI), sí puede
+                // accionarlo — no tiene sentido obligar a otro compañero a atenderlo.
+                var esSolicitante = u.Solicitante == ViewBag.Usuario && u.IdArea != (int)ViewBag.IdAreaUsuario;
                 <tr class="@(u.Estado == "En validación" ? "fila-en-validacion" : u.Estado == "Cerrado" ? "fila-cerrado" : "")">
                     <td data-label="Código Ticket">@u?.CodigoTicket</td>
                     <td data-label="Sociedad">@(u?.Sociedad ?? "-")</td>
