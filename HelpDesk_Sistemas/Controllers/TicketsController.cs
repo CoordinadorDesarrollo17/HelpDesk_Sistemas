@@ -202,7 +202,7 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpPost]
         public async Task<IActionResult> PausarTicket(int id, string tipoMotivo, int? idTicketRelacionado)
         {
-            if (tipoMotivo != "Reunion" && tipoMotivo != "AtencionOtroTicket")
+            if (tipoMotivo != "Reunion" && tipoMotivo != "AtencionOtroTicket" && tipoMotivo != "Refrigerio")
             {
                 return Json(new { exito = false, mensaje = "Motivo inválido." });
             }
