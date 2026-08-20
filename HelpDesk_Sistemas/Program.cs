@@ -117,5 +117,7 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+//para generar una contraseña hashcodeada:
+//Console.WriteLine(PasswordHasher.Hash("marrom1"));
 
 app.Run();
