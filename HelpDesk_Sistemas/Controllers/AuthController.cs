@@ -51,7 +51,8 @@ namespace HelpDesk_Sistemas.Controllers
                 new(ClaimTypes.Name, usuario.Usuario),
                 new(ClaimTypes.Role, usuario.Rol),
                 new("NombreCompleto", usuario.NombreCompleto),
-                new("IdArea", usuario.IdArea.ToString())
+                new("IdArea", usuario.IdArea.ToString()),
+                new("EsCoordinador", usuario.EsCoordinador.ToString())
             };
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
