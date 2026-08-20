@@ -36,6 +36,7 @@ namespace HelpDesk_Sistemas.Controllers
             ViewBag.Rol = SesionTemporal.RolActual;
             ViewBag.Usuario = SesionTemporal.NombreCompletoActual;
             ViewBag.IdAreaUsuario = SesionTemporal.IdAreaActual;
+            ViewBag.EsCoordinador = SesionTemporal.EsCoordinadorActual;
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
@@ -365,6 +366,16 @@ namespace HelpDesk_Sistemas.Controllers
             if (idNuevoUsuario <= 0)
             {
                 return Json(new { exito = false, mensaje = "Selecciona a quién reasignar el ticket." });
+            }
+
+            // Reasignar es una acción de coordinación: solo Administrador o un Soporte
+            // marcado como coordinador de su área pueden mover un ticket a otro agente.
+            var puedeReasignar = SesionTemporal.RolActual == "Administrador"
+                || (SesionTemporal.RolActual == "Soporte" && SesionTemporal.EsCoordinadorActual);
+
+            if (!puedeReasignar)
+            {
+                return Json(new { exito = false, mensaje = "Solo un coordinador de área o un administrador puede reasignar tickets." });
             }
 
             var exito = await ticketsService.ReasignarTicket(id, idNuevoUsuario, SesionTemporal.UsuarioActualTemporal);

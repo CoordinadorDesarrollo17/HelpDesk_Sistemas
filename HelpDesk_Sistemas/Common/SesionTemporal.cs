@@ -39,6 +39,15 @@ namespace HelpDesk_Sistemas.Common
             }
         }
 
+        public static bool EsCoordinadorActual
+        {
+            get
+            {
+                var claim = httpContextAccessor?.HttpContext?.User.FindFirst("EsCoordinador");
+                return claim != null && bool.TryParse(claim.Value, out var esCoordinador) && esCoordinador;
+            }
+        }
+
         public static string UsuarioActual =>
             httpContextAccessor?.HttpContext?.User.Identity?.Name ?? string.Empty;
     }

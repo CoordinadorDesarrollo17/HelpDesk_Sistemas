@@ -9,6 +9,7 @@ namespace HelpDesk_Sistemas.Models
         public string NombreCompleto { get; set; } = string.Empty;
         public string Rol { get; set; } = string.Empty;
         public int IdArea { get; set; }
+        public bool EsCoordinador { get; set; }
         public bool Activo { get; set; }
     }
 }

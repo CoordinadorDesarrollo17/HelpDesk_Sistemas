@@ -240,7 +240,7 @@
                         @{
                             var estadosNoReasignables = new[] { "Cerrado", "Anulado", "Cierre" };
                         }
-                        @if (u.Asignado != null && !estadosNoReasignables.Contains(u.Estado) && (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte") && !esSolicitante)
+                        @if (u.Asignado != null && !estadosNoReasignables.Contains(u.Estado) && (ViewBag.Rol == "Administrador" || (ViewBag.Rol == "Soporte" && ViewBag.EsCoordinador)) && !esSolicitante)
                         {
                             <button type="button" class="btn btn-sm btn-outline-secondary" title="Reasignar" onclick="abrirReasignarTicket(@u.IdTicket, @u.IdArea)">
                                 <i class="bi bi-people"></i>
