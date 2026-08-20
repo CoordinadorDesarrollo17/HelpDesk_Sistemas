@@ -8,18 +8,23 @@
 
 <div class="login-page">
 
+    <!-- Fondos decorativos -->
     <div class="auth-blob auth-blob-1"></div>
     <div class="auth-blob auth-blob-2"></div>
 
+    <!-- Tarjeta de login -->
     <div class="auth-card">
 
+        <!-- Línea superior -->
         <div class="auth-card-accent"></div>
 
         <!-- Branding -->
         <div class="auth-brand">
 
             <span class="sidebar-brand-mark auth-brand-mark">
-                <img src="~/img/logo.png" alt="Logo" onerror="this.style.display='none'" />
+                <img src="~/img/logo.png"
+                     alt="Logo"
+                     onerror="this.style.display='none'" />
             </span>
 
             <div>
@@ -47,6 +52,7 @@
         </div>
 
 
+        <!-- Formulario -->
         <form method="post"
               asp-controller="Auth"
               asp-action="Login"
@@ -90,7 +96,7 @@
 
 
             <!-- Contraseña -->
-            <div class="login-field password-field">
+            <div class="login-field">
 
                 <label asp-for="Password">
                     Contraseña
@@ -167,9 +173,9 @@
 
 <style>
 
-    /* =========================================
+    /* =========================================================
            CONTENEDOR
-           ========================================= */
+           ========================================================= */
 
     .login-page {
         width: 100%;
@@ -184,53 +190,60 @@
     }
 
 
-    /* =========================================
+    /* =========================================================
            FONDO DECORATIVO
-           ========================================= */
+           ========================================================= */
 
     .auth-blob {
         position: absolute;
         border-radius: 50%;
         filter: blur(60px);
-        opacity: .35;
+        opacity: .30;
         pointer-events: none;
         z-index: 0;
     }
 
+
     .auth-blob-1 {
-        width: 420px;
-        height: 420px;
-        top: -160px;
-        left: -140px;
-        background: radial-gradient(circle, var(--brand-green-400), transparent 70%);
+        width: 300px;
+        height: 300px;
+        top: -120px;
+        left: -100px;
+        background: radial-gradient( circle, var(--brand-green-400), transparent 70% );
     }
+
 
     .auth-blob-2 {
-        width: 380px;
-        height: 380px;
-        bottom: -180px;
-        right: -120px;
-        background: radial-gradient(circle, var(--brand-green-500), transparent 70%);
+        width: 280px;
+        height: 280px;
+        bottom: -120px;
+        right: -100px;
+        background: radial-gradient( circle, var(--brand-green-500), transparent 70% );
     }
 
 
-    /* =========================================
-           CARD
-           ========================================= */
+    /* =========================================================
+           TARJETA
+           ========================================================= */
 
     .auth-card {
         position: relative;
         z-index: 1;
         width: 100%;
-        max-width: 470px;
-        padding: 48px 48px 36px;
+        max-width: 430px;
+        padding: 38px 40px 30px;
         background: #fff;
-        border-radius: 20px;
+        border-radius: 18px;
         border: 1px solid rgba(0, 0, 0, .05);
-        box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 25px 55px -15px rgba(28, 147, 47, .18), 0 10px 25px -10px rgba(0, 0, 0, .08);
+        box-shadow: 0 10px 35px rgba(28, 147, 47, .12), 0 4px 12px rgba(0, 0, 0, .05);
         overflow: hidden;
         animation: loginCard .4s cubic-bezier(.16, 1, .3, 1);
     }
+
+
+    /* =========================================================
+           LÍNEA VERDE SUPERIOR
+           ========================================================= */
 
     .auth-card-accent {
         position: absolute;
@@ -238,20 +251,21 @@
         left: 0;
         right: 0;
         height: 5px;
-        background: linear-gradient(90deg, var(--brand-green-400), var(--brand-green-700));
+        background: linear-gradient( 90deg, var(--brand-green-400), var(--brand-green-700) );
     }
 
 
-    /* =========================================
-           BRAND
-           ========================================= */
+    /* =========================================================
+           BRANDING
+           ========================================================= */
 
     .auth-brand {
         display: flex;
         align-items: center;
         gap: 15px;
-        margin-bottom: 38px;
+        margin-bottom: 30px;
     }
+
 
     .auth-brand-mark {
         width: 58px;
@@ -263,101 +277,112 @@
         flex-shrink: 0;
         font-size: 1rem;
         font-weight: 700;
-        box-shadow: 0 8px 20px -6px rgba(28, 147, 47, .55);
         background: linear-gradient( 135deg, var(--brand-green-500), var(--brand-green-700) );
+        box-shadow: 0 8px 20px -6px rgba(28, 147, 47, .45);
+        overflow: hidden;
     }
+
+
+        /*
+           El logo ocupa todo el contenedor.
+           Se mantiene transparente para que se
+           vea el fondo verde del contenedor.
+        */
+
+        .auth-brand-mark img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: transparent;
+            padding: 3px;
+        }
+
 
     .auth-brand-title {
         font-size: 24px;
         font-weight: 700;
         line-height: 1.1;
         letter-spacing: -.2px;
+        color: var(--brand-950);
     }
+
 
     .auth-brand-sub {
         margin-top: 4px;
         font-size: 13px;
-        opacity: .6;
+        color: #6b7280;
     }
 
 
-    /* =========================================
+    /* =========================================================
            BIENVENIDA
-           ========================================= */
+           ========================================================= */
 
     .auth-welcome {
-        margin-bottom: 30px;
+        margin-bottom: 25px;
     }
+
 
         .auth-welcome h1 {
             margin: 0 0 6px;
             font-size: 29px;
             font-weight: 700;
             letter-spacing: -.3px;
+            color: var(--brand-950);
         }
+
 
         .auth-welcome p {
             margin: 0;
             font-size: 15px;
-            opacity: .6;
+            color: #6b7280;
         }
 
 
-    /* =========================================
+    /* =========================================================
            CAMPOS
-           ========================================= */
+           ========================================================= */
 
     .login-field {
-        margin-bottom: 22px;
+        margin-bottom: 18px;
     }
+
 
         .login-field label {
             display: block;
             margin-bottom: 8px;
             font-size: 14px;
             font-weight: 600;
+            color: var(--brand-950);
         }
+
 
     .login-input-group {
         height: 52px;
         border-radius: 10px;
         overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, .1);
         transition: box-shadow .15s ease;
     }
 
+        .login-input-group:focus-within {
+            border-color: var(--brand-green-500);
+            border-radius: 10px;
+            box-shadow: 0 0 0 3px var(--brand-green-50);
+        }
+
         .login-input-group .input-group-text,
         .login-input-group .form-control {
-            border-radius: 0;
+            border: none;
         }
+
+            .login-input-group .form-control:focus {
+                box-shadow: none;
+            }
 
         .login-input-group .input-group-text {
             background: #fbfbfb;
-            border-right: 0;
-            border-color: rgba(0, 0, 0, .1);
-            padding-left: 15px;
-            padding-right: 10px;
             color: #6b7280;
-            transition: color .15s ease, background .15s ease;
-        }
-
-            .login-input-group .input-group-text i {
-                font-size: 17px;
-            }
-
-        .login-input-group .form-control {
-            border-left: 0;
-            border-color: rgba(0, 0, 0, .1);
-            box-shadow: none;
-            font-size: 15px;
-        }
-
-        .login-input-group:focus-within {
-            box-shadow: 0 0 0 4px var(--brand-green-50);
-        }
-
-        .login-input-group:focus-within .input-group-text,
-        .login-input-group:focus-within .form-control {
-            border-color: var(--brand-green-500);
         }
 
         .login-input-group:focus-within .input-group-text {
@@ -365,44 +390,43 @@
             color: var(--brand-green-700);
         }
 
-        .login-input-group .form-control:focus {
-            box-shadow: none;
-        }
 
-
-    /* =========================================
+    /* =========================================================
            PASSWORD
-           ========================================= */
+           ========================================================= */
 
     .password-button {
         cursor: pointer;
         background: #fbfbfb;
         border-color: rgba(0, 0, 0, .1);
         color: #6b7280;
-        transition: color .15s ease;
+        transition: color .15s ease, background .15s ease;
     }
+
 
         .password-button:hover {
             color: var(--brand-green-700);
+            background: var(--brand-green-50);
         }
 
 
-    /* =========================================
+    /* =========================================================
            VALIDACIÓN
-           ========================================= */
+           ========================================================= */
 
     .login-validation {
         margin-bottom: 18px;
     }
+
 
         .login-validation:empty {
             display: none;
         }
 
 
-    /* =========================================
+    /* =========================================================
            BOTÓN
-           ========================================= */
+           ========================================================= */
 
     .login-button {
         height: 52px;
@@ -411,41 +435,50 @@
         font-size: 15px;
         font-weight: 600;
         letter-spacing: .2px;
-        background: linear-gradient(135deg, var(--brand-green-600), var(--brand-green-700));
+        background: linear-gradient( 135deg, var(--brand-green-600), var(--brand-green-700) );
         border: none;
         transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
     }
 
+
         .login-button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 10px 22px -6px rgba(28, 147, 47, .5);
+            box-shadow: 0 10px 22px -6px rgba(28, 147, 47, .45);
             filter: brightness(1.03);
         }
+
 
         .login-button:active {
             transform: translateY(0);
         }
 
 
-    /* =========================================
+        .login-button:disabled {
+            cursor: not-allowed;
+            opacity: .8;
+        }
+
+
+    /* =========================================================
            FOOTER
-           ========================================= */
+           ========================================================= */
 
     .auth-footer {
-        margin-top: 25px;
-        padding-top: 18px;
+        margin-top: 22px;
+        padding-top: 16px;
         border-top: 1px solid rgba(0, 0, 0, .06);
         text-align: center;
         font-size: 11px;
         letter-spacing: .3px;
         text-transform: uppercase;
-        opacity: .4;
+        color: #6b7280;
+        opacity: .65;
     }
 
 
-    /* =========================================
+    /* =========================================================
            ANIMACIÓN
-           ========================================= */
+           ========================================================= */
 
     @@keyframes loginCard {
 
@@ -461,9 +494,9 @@
     }
 
 
-    /* =========================================
+    /* =========================================================
            RESPONSIVE
-           ========================================= */
+           ========================================================= */
 
     @@media (max-width: 480px) {
 
@@ -471,17 +504,38 @@
             padding: 15px;
         }
 
+
         .auth-card {
+            max-width: 100%;
             padding: 30px 24px 25px;
             border-radius: 14px;
         }
 
+
         .auth-brand {
-            margin-bottom: 28px;
+            margin-bottom: 26px;
         }
 
+
+        .auth-brand-mark {
+            width: 52px;
+            height: 52px;
+            border-radius: 13px;
+        }
+
+
+        .auth-brand-title {
+            font-size: 21px;
+        }
+
+
         .auth-welcome h1 {
-            font-size: 24px;
+            font-size: 25px;
+        }
+
+
+        .auth-welcome p {
+            font-size: 14px;
         }
     }
 
@@ -494,72 +548,105 @@
 
     <script>
 
-        document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
 
-            const passwordInput =
-                document.getElementById("txtPassword");
+                const passwordInput =
+                    document.getElementById(
+                        "txtPassword"
+                    );
 
-            const passwordButton =
-                document.getElementById("btnMostrarPassword");
+                const passwordButton =
+                    document.getElementById(
+                        "btnMostrarPassword"
+                    );
 
-            const passwordIcon =
-                document.getElementById("iconoMostrarPassword");
+                const passwordIcon =
+                    document.getElementById(
+                        "iconoMostrarPassword"
+                    );
 
-            const loginForm =
-                document.getElementById("loginForm");
+                const loginForm =
+                    document.getElementById(
+                        "loginForm"
+                    );
 
-            const loginButton =
-                document.getElementById("btnLogin");
+                const loginButton =
+                    document.getElementById(
+                        "btnLogin"
+                    );
 
-            const loginNormal =
-                document.getElementById("loginNormal");
+                const loginNormal =
+                    document.getElementById(
+                        "loginNormal"
+                    );
 
-            const loginLoading =
-                document.getElementById("loginLoading");
+                const loginLoading =
+                    document.getElementById(
+                        "loginLoading"
+                    );
 
 
-            /* Mostrar / ocultar contraseña */
+                /* =========================================
+                   MOSTRAR / OCULTAR CONTRASEÑA
+                   ========================================= */
 
-            passwordButton.addEventListener("click", function () {
+                passwordButton.addEventListener(
+                    "click",
+                    function () {
 
-                const mostrar =
-                    passwordInput.type === "password";
+                        const mostrar =
+                            passwordInput.type === "password";
 
-                passwordInput.type =
-                    mostrar ? "text" : "password";
+                        passwordInput.type =
+                            mostrar
+                                ? "text"
+                                : "password";
 
-                passwordIcon.className =
-                    mostrar
-                        ? "bi bi-eye-slash"
-                        : "bi bi-eye";
+                        passwordIcon.className =
+                            mostrar
+                                ? "bi bi-eye-slash"
+                                : "bi bi-eye";
 
-                passwordButton.setAttribute(
-                    "aria-label",
-                    mostrar
-                        ? "Ocultar contraseña"
-                        : "Mostrar contraseña"
+                        passwordButton.setAttribute(
+                            "aria-label",
+                            mostrar
+                                ? "Ocultar contraseña"
+                                : "Mostrar contraseña"
+                        );
+
+                    }
                 );
 
-            });
 
+                /* =========================================
+                   ESTADO DE CARGA
+                   ========================================= */
 
-            /* Estado de carga */
+                loginForm.addEventListener(
+                    "submit",
+                    function () {
 
-            loginForm.addEventListener("submit", function () {
+                        if (!loginForm.checkValidity()) {
+                            return;
+                        }
 
-                if (!loginForm.checkValidity()) {
-                    return;
-                }
+                        loginButton.disabled = true;
 
-                loginButton.disabled = true;
+                        loginNormal.classList.add(
+                            "d-none"
+                        );
 
-                loginNormal.classList.add("d-none");
+                        loginLoading.classList.remove(
+                            "d-none"
+                        );
 
-                loginLoading.classList.remove("d-none");
+                    }
+                );
 
-            });
-
-        });
+            }
+        );
 
     </script>
 
