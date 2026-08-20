@@ -167,6 +167,16 @@
 								<input class="form-check-input" type="radio" name="tipoMotivoPausa" id="motivoOtroTicket" value="AtencionOtroTicket">
 								<label class="form-check-label" for="motivoOtroTicket">Por atención de otro ticket</label>
 							</div>
+
+							<div class="form-check">
+								<input class="form-check-input" type="radio" name="tipoMotivoPausa" id="motivoRefrigerio" value="Refrigerio">
+								<label class="form-check-label" for="motivoRefrigerio">Por refrigerio</label>
+							</div>
+						</div>
+
+						<div class="alert alert-info small py-2 mb-0" id="avisoRefrigerio" style="display: none;">
+							<i class="bi bi-info-circle"></i>
+							El ticket se reanudará automáticamente en 1 hora si no lo reanudas antes.
 						</div>
 
 						<div class="mb-3" id="contenedorOtroTicket" style="display: none;">
@@ -338,7 +348,11 @@
 		// LISTADO, FILTROS Y BÚSQUEDA
 		// ============================================================
 
+		let paginaActual = 1;
+
 		function cargarTabla(page = 1) {
+			paginaActual = page;
+
 			const params = new URLSearchParams({
 				"Buscar": txtBuscar.value,
 				"IdEstado": document.getElementById("filtroEstado").value,
@@ -363,6 +377,20 @@
 				tablaTickets.innerHTML = html;
 			});
 		}
+
+		// ============================================================
+		// ACTUALIZACIÓN AUTOMÁTICA
+		// ============================================================
+
+		// Refresca la tabla sola cada cierto tiempo, sin necesidad de F5. Se
+		// salta el refresco mientras hay un modal abierto (crear/detalle/pausar/etc.)
+		// para no interrumpir lo que el usuario está haciendo.
+		const INTERVALO_AUTOREFRESH_MS = 30000;
+
+		setInterval(function () {
+			if (document.querySelector(".modal.show")) return;
+			cargarTabla(paginaActual);
+		}, INTERVALO_AUTOREFRESH_MS);
 
 		["filtroEstado", "filtroArea", "filtroTipo", "filtroPrioridad"].forEach(id => {
 			document.getElementById(id).addEventListener("change", () => cargarTabla(1));
@@ -462,21 +490,34 @@
 				.then(r => {
 					if (!r) return;
 
-					if (r.ok) {
-						bootstrap.Modal.getInstance(document.getElementById("modalCrearTicket")).hide();
-						mostrarToast("Ticket creado correctamente", "success");
-						cargarTabla(1);
-					} else {
-						return r.text().then(html => {
-							document.getElementById("contenidoCrearTicket").innerHTML = html;
-							inicializarValidacionArchivos();
-							inicializarComboCategoria();
-							inicializarComboTipoRequerimiento();
-							inicializarFormularioCrearTicket();
-							inicializarPrioridadEstimada();
-							inicializarContadorDetalle();
-						});
-					}
+					return r.text().then(texto => {
+						// Éxito real: la acción devuelve el texto plano "OK" con status 200.
+						if (r.ok && texto.trim() === "OK") {
+							bootstrap.Modal.getInstance(document.getElementById("modalCrearTicket")).hide();
+							mostrarToast("Ticket creado correctamente", "success");
+							cargarTabla(1);
+							return;
+						}
+
+						// El middleware global también responde 200 ante un error no controlado
+						// (para que el fetch pueda leer el JSON), así que "r.ok" solo no basta
+						// para saber si de verdad se creó el ticket.
+						let data = null;
+						try { data = JSON.parse(texto); } catch { /* no era JSON: son errores de validación (HTML) */ }
+
+						if (data && data.exito === false) {
+							mostrarToast(data.mensaje || "No se pudo crear el ticket. Intenta nuevamente.", "danger");
+							return;
+						}
+
+						document.getElementById("contenidoCrearTicket").innerHTML = texto;
+						inicializarValidacionArchivos();
+						inicializarComboCategoria();
+						inicializarComboTipoRequerimiento();
+						inicializarFormularioCrearTicket();
+						inicializarPrioridadEstimada();
+						inicializarContadorDetalle();
+					});
 				});
 			});
 		}
@@ -684,6 +725,7 @@
 			document.getElementById("idTicketPausar").value = idTicket;
 			document.getElementById("motivoReunion").checked = true;
 			document.getElementById("contenedorOtroTicket").style.display = "none";
+			document.getElementById("avisoRefrigerio").style.display = "none";
 			document.getElementById("errorPausarTicket").textContent = "";
 
 			const modal = new bootstrap.Modal(document.getElementById("modalPausarTicket"));
@@ -693,12 +735,13 @@
 		document.querySelectorAll('input[name="tipoMotivoPausa"]').forEach(radio => {
 			radio.addEventListener("change", function () {
 				const contenedor = document.getElementById("contenedorOtroTicket");
+				const avisoRefrigerio = document.getElementById("avisoRefrigerio");
+
+				contenedor.style.display = this.value === "AtencionOtroTicket" ? "block" : "none";
+				avisoRefrigerio.style.display = this.value === "Refrigerio" ? "block" : "none";
 
 				if (this.value === "AtencionOtroTicket") {
-					contenedor.style.display = "block";
 					cargarMisTicketsPropios();
-				} else {
-					contenedor.style.display = "none";
 				}
 			});
 		});

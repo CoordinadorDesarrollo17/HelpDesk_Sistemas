@@ -6,7 +6,56 @@
     var calendarios = (List<CatalogoModel>)ViewBag.Calendarios;
     var idSeleccionado = (int?)ViewBag.IdCalendarioSeleccionado;
     var nombresDias = new[] { "Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado" };
+
+    // Orden de semana laboral (Lunes -> Domingo) en vez del orden crudo de Dia_Semana (1=Domingo).
+    var ordenDias = new[] { 2, 3, 4, 5, 6, 7, 1 };
 }
+
+<style>
+    .horario-semanal tr > td {
+        border-top: 1px solid rgba(0, 0, 0, .06);
+    }
+
+    .franja-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--brand-green-50);
+        color: var(--brand-green-700);
+        border: 1px solid rgba(28, 147, 47, .18);
+        border-radius: 999px;
+        padding: 4px 4px 4px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .btn-franja-accion {
+        border: none;
+        background: transparent;
+        color: inherit;
+        opacity: .5;
+        width: 20px;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 11px;
+        padding: 0;
+        transition: opacity .15s ease, background .15s ease;
+    }
+
+        .btn-franja-accion:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, .08);
+        }
+
+        .btn-franja-accion.btn-franja-eliminar:hover {
+            color: var(--bs-danger);
+        }
+</style>
 
 <div class="card shadow-sm mb-4">
     <div class="card-header header-gradient text-black d-flex justify-content-between align-items-center">
@@ -46,21 +95,47 @@
                 else
                 {
                     <h6 class="fw-bold">Horario semanal</h6>
-                    <table class="table table-sm align-middle">
-                        <thead><tr><th>Día</th><th>Inicio</th><th>Fin</th><th></th></tr></thead>
+                    <table class="table table-sm align-middle horario-semanal">
+                        <thead><tr><th style="width:120px">Día</th><th>Franjas horarias</th><th style="width:56px"></th></tr></thead>
                         <tbody>
-                            @foreach (var h in Model.Horarios)
+                            @{
+                                var horariosPorDia = Model.Horarios.ToLookup(h => h.DiaSemana);
+                            }
+                            @foreach (var dia in ordenDias)
                             {
+                                var franjas = horariosPorDia[dia].OrderBy(h => h.HoraInicio).ToList();
                                 <tr>
-                                    <td>@nombresDias[h.DiaSemana - 1]</td>
-                                    <td>@h.HoraInicio.ToString(@"hh\:mm")</td>
-                                    <td>@h.HoraFin.ToString(@"hh\:mm")</td>
-                                    <td class="text-end text-nowrap">
-                                        <button class="btn btn-sm btn-outline-secondary" title="Editar"
-                                                onclick="editarHorario(@h.Id, @h.DiaSemana, '@h.HoraInicio.ToString(@"hh\:mm")', '@h.HoraFin.ToString(@"hh\:mm")')">
-                                            <i class="bi bi-pencil"></i>
+                                    <td class="fw-semibold">@nombresDias[dia - 1]</td>
+                                    <td>
+                                        @if (franjas.Count == 0)
+                                        {
+                                            <span class="text-muted small fst-italic">No laborable</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach (var h in franjas)
+                                                {
+                                                    <span class="franja-badge">
+                                                        @h.HoraInicio.ToString(@"hh\:mm")&nbsp;–&nbsp;@h.HoraFin.ToString(@"hh\:mm")
+                                                        <button type="button" class="btn-franja-accion" title="Editar franja"
+                                                                onclick="editarHorario(@h.Id, @dia, '@h.HoraInicio.ToString(@"hh\:mm")', '@h.HoraFin.ToString(@"hh\:mm")')">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button type="button" class="btn-franja-accion btn-franja-eliminar" title="Eliminar franja"
+                                                                onclick="eliminarHorario(@h.Id)">
+                                                            <i class="bi bi-x-lg"></i>
+                                                        </button>
+                                                    </span>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" title="Agregar franja a @nombresDias[dia - 1]"
+                                                onclick="agregarFranjaRapida(@dia)">
+                                            <i class="bi bi-plus-lg"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="eliminarHorario(@h.Id)"><i class="bi bi-trash"></i></button>
                                     </td>
                                 </tr>
                             }
@@ -189,6 +264,13 @@
             document.getElementById("txtHoraFin").value = horaFin;
             document.getElementById("btnGuardarHorario").textContent = "Guardar cambios";
             document.getElementById("btnCancelarHorario").classList.remove("d-none");
+        }
+
+        function agregarFranjaRapida(diaSemana) {
+            cancelarEdicionHorario();
+            document.getElementById("selDiaSemana").value = diaSemana;
+            document.getElementById("txtHoraInicio").scrollIntoView({ behavior: "smooth", block: "center" });
+            document.getElementById("txtHoraInicio").focus();
         }
 
         function cancelarEdicionHorario() {
