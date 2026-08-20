@@ -5,19 +5,23 @@
    ============================================================ */
 
 :root {
-    --brand-950: #1D1D1B;   /* neutro oscuro corporativo — sidebar */
+    --brand-950: #1D1D1B;
     --brand-900: #2A2A27;
-    --brand-green-700: #1C932F; /* verde primario (acciones, enlaces) */
-    --brand-green-600: #27A528; /* hover / énfasis */
-    --brand-green-500: #32B91E; /* acentos */
-    --brand-green-400: #36C21B; /* acentos claros */
-    --brand-green-300: #47E20B; /* solo detalles puntuales, no texto/fondo grandes */
-    --brand-green-50: #EAF7EA;  /* fondo tenue (hover, chips, activos suaves) */
-
+    --brand-green-700: #1C932F;
+    --brand-green-600: #27A528;
+    --brand-green-500: #32B91E;
+    --brand-green-400: #36C21B;
+    --brand-green-300: #47E20B;
+    --brand-green-50: #EAF7EA;
     --page-bg: #F4F5F6;
     --card-border: rgba(0, 0, 0, .08);
     --sidebar-width: 248px;
 }
+
+
+/* ============================================================
+   BASE
+   ============================================================ */
 
 html {
     font-size: 14px;
@@ -29,7 +33,8 @@ html {
     }
 }
 
-html, body {
+html,
+body {
     position: relative;
     min-height: 100%;
 }
@@ -38,26 +43,41 @@ body {
     background-color: var(--page-bg);
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+
+/* ============================================================
+   FORMULARIOS BOOTSTRAP
+   ============================================================ */
+
+.form-floating > .form-control-plaintext::placeholder,
+.form-floating > .form-control::placeholder {
     color: var(--bs-secondary-color);
     text-align: end;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+.form-floating > .form-control-plaintext:focus::placeholder,
+.form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
 
+
 /* ============================================================
-   COLOR DE MARCA — sobreescribe los componentes de Bootstrap que
-   usan azul por defecto (los botones/paginación de Bootstrap 5.3
-   fijan su color por variante, así que se sobreescriben directo).
+   COLOR DE MARCA
    ============================================================ */
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus,
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus,
 .form-select:focus {
     box-shadow: 0 0 0 0.1rem #fff, 0 0 0 0.25rem rgba(28, 147, 47, .35);
     border-color: var(--brand-green-600);
 }
+
+
+/* ============================================================
+   BOTONES
+   ============================================================ */
 
 .btn-primary {
     --bs-btn-color: #fff;
@@ -81,6 +101,11 @@ body {
     --bs-btn-active-border-color: var(--brand-green-700);
 }
 
+
+/* ============================================================
+   COLORES DE TEXTO / FONDO / BORDE
+   ============================================================ */
+
 .text-primary {
     color: var(--brand-green-700) !important;
 }
@@ -93,13 +118,23 @@ body {
     border-color: var(--brand-green-700) !important;
 }
 
+
+/* ============================================================
+   ENLACES
+   ============================================================ */
+
 a {
     color: var(--brand-green-700);
 }
 
-a:hover {
-    color: var(--brand-green-600);
-}
+    a:hover {
+        color: var(--brand-green-600);
+    }
+
+
+/* ============================================================
+   PAGINACIÓN BOOTSTRAP
+   ============================================================ */
 
 .page-item.active .page-link {
     background-color: var(--brand-green-700);
@@ -110,18 +145,24 @@ a:hover {
     color: var(--brand-green-700);
 }
 
-.page-link:hover {
-    color: var(--brand-green-600);
-}
+    .page-link:hover {
+        color: var(--brand-green-600);
+    }
+
 
 /* ============================================================
-   LAYOUT — sidebar fijo + contenido
+   LAYOUT — SIDEBAR FIJO + CONTENIDO
    ============================================================ */
 
 .app-shell {
     display: flex;
     min-height: 100vh;
 }
+
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
 
 .sidebar {
     width: var(--sidebar-width);
@@ -137,6 +178,11 @@ a:hover {
     transition: transform .2s ease;
 }
 
+
+/* ============================================================
+   BRAND DEL SIDEBAR
+   ============================================================ */
+
 .sidebar-brand {
     display: flex;
     align-items: center;
@@ -147,16 +193,21 @@ a:hover {
     border-bottom: 1px solid rgba(255, 255, 255, .08);
 }
 
-.sidebar-brand:hover {
-    color: #fff;
-}
+    .sidebar-brand:hover {
+        color: #fff;
+    }
+
+
+/* ============================================================
+   LOGO DEL SIDEBAR
+   ============================================================ */
 
 .sidebar-brand-mark {
     position: relative;
     width: 34px;
     height: 34px;
     border-radius: 9px;
-    background: linear-gradient(135deg, var(--brand-green-500), var(--brand-green-700));
+    background: linear-gradient( 135deg, var(--brand-green-500), var(--brand-green-700) );
     display: flex;
     align-items: center;
     justify-content: center;
@@ -167,18 +218,30 @@ a:hover {
     overflow: hidden;
 }
 
-/* Logo real: se cubre encima del "HD" en cuanto exista wwwroot/img/logo.png.
-   Si el archivo no existe, el onerror lo oculta y queda visible el "HD" de
-   siempre — no hace falta tocar código para poner el logo definitivo. */
-.sidebar-brand-mark img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: #fff;
-    padding: 3px;
-}
+
+    /*
+   Logo real.
+
+   IMPORTANTE:
+   No se define background aquí.
+   De esta manera se puede ver el fondo verde
+   del .sidebar-brand-mark / .auth-brand-mark.
+*/
+
+    .sidebar-brand-mark img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 3px;
+        background: transparent;
+    }
+
+
+/* ============================================================
+   TEXTO DEL BRAND DEL SIDEBAR
+   ============================================================ */
 
 .sidebar-brand-text {
     font-weight: 600;
@@ -186,12 +249,17 @@ a:hover {
     line-height: 1.1;
 }
 
-.sidebar-brand-text small {
-    display: block;
-    font-weight: 400;
-    font-size: .7rem;
-    color: #9a9d9e;
-}
+    .sidebar-brand-text small {
+        display: block;
+        font-weight: 400;
+        font-size: .7rem;
+        color: #9a9d9e;
+    }
+
+
+/* ============================================================
+   NAVEGACIÓN DEL SIDEBAR
+   ============================================================ */
 
 .sidebar-nav {
     padding: .85rem .6rem;
@@ -208,6 +276,11 @@ a:hover {
     padding: 1.1rem .75rem .4rem;
 }
 
+
+/* ============================================================
+   LINKS DEL SIDEBAR
+   ============================================================ */
+
 .sidebar-link {
     display: flex;
     align-items: center;
@@ -220,27 +293,32 @@ a:hover {
     margin-bottom: .1rem;
 }
 
-.sidebar-link i {
-    font-size: 1.05rem;
-    width: 1.1rem;
-    text-align: center;
-    flex-shrink: 0;
-}
+    .sidebar-link i {
+        font-size: 1.05rem;
+        width: 1.1rem;
+        text-align: center;
+        flex-shrink: 0;
+    }
 
-.sidebar-link:hover {
-    background: rgba(255, 255, 255, .07);
-    color: #fff;
-}
+    .sidebar-link:hover {
+        background: rgba(255, 255, 255, .07);
+        color: #fff;
+    }
 
-.sidebar-link.active {
-    background: var(--brand-green-700);
-    color: #fff;
-}
+    .sidebar-link.active {
+        background: var(--brand-green-700);
+        color: #fff;
+    }
 
 .sidebar-link-sub {
     padding-left: 1.15rem;
     font-size: .87rem;
 }
+
+
+/* ============================================================
+   USUARIO DEL SIDEBAR
+   ============================================================ */
 
 .sidebar-user {
     display: flex;
@@ -271,6 +349,11 @@ a:hover {
     letter-spacing: .04em;
 }
 
+
+/* ============================================================
+   CONTENIDO PRINCIPAL
+   ============================================================ */
+
 .app-main {
     flex: 1;
     min-width: 0;
@@ -278,6 +361,11 @@ a:hover {
     flex-direction: column;
     margin-left: var(--sidebar-width);
 }
+
+
+/* ============================================================
+   TOPBAR
+   ============================================================ */
 
 .app-topbar {
     display: flex;
@@ -292,23 +380,34 @@ a:hover {
     font-weight: 600;
 }
 
+
+/* ============================================================
+   CONTENIDO
+   ============================================================ */
+
 .app-content {
     padding: 1.25rem;
     flex: 1;
 }
+
+
+/* ============================================================
+   SIDEBAR RESPONSIVE
+   ============================================================ */
 
 .sidebar-backdrop {
     display: none;
 }
 
 @media (max-width: 767.98px) {
+
     .sidebar {
         transform: translateX(-100%);
     }
 
-    .sidebar.show {
-        transform: translateX(0);
-    }
+        .sidebar.show {
+            transform: translateX(0);
+        }
 
     .app-main {
         margin-left: 0;
@@ -323,14 +422,20 @@ a:hover {
     }
 }
 
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
 .app-footer {
     padding: 1rem 1.25rem;
     color: var(--bs-secondary-color);
     font-size: .85rem;
 }
 
+
 /* ============================================================
-   TARJETAS — encabezado limpio en vez del banner de color sólido
+   TARJETAS
    ============================================================ */
 
 .card {
@@ -349,14 +454,15 @@ a:hover {
     padding-bottom: .9rem;
 }
 
-.header-gradient h5 {
-    font-weight: 600;
-    letter-spacing: -.01em;
-}
+    .header-gradient h5 {
+        font-weight: 600;
+        letter-spacing: -.01em;
+    }
 
 .shadow-sm {
     box-shadow: 0 1px 2px rgba(16, 24, 40, .05) !important;
 }
+
 
 /* ============================================================
    KPIs DEL HOME
@@ -370,20 +476,21 @@ a:hover {
     background: #fff;
 }
 
-.kpi-card .kpi-valor {
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1.1;
-    color: var(--brand-950);
-}
+    .kpi-card .kpi-valor {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1.1;
+        color: var(--brand-950);
+    }
 
-.kpi-card .kpi-etiqueta {
-    color: var(--bs-secondary-color);
-    font-size: .85rem;
-}
+    .kpi-card .kpi-etiqueta {
+        color: var(--bs-secondary-color);
+        font-size: .85rem;
+    }
+
 
 /* ============================================================
-   BADGES — versión "pill" suave en vez de colores sólidos
+   BADGES
    ============================================================ */
 
 .badge {
@@ -393,52 +500,49 @@ a:hover {
     border-radius: 999px;
 }
 
-.badge.bg-success {
-    background-color: #E4F6E6 !important;
-    color: #157025 !important;
-}
+    .badge.bg-success {
+        background-color: #E4F6E6 !important;
+        color: #157025 !important;
+    }
 
-.badge.bg-danger {
-    background-color: #FBE8E8 !important;
-    color: #B42318 !important;
-}
+    .badge.bg-danger {
+        background-color: #FBE8E8 !important;
+        color: #B42318 !important;
+    }
 
-.badge.bg-warning {
-    background-color: #FEF3E0 !important;
-    color: #B25E09 !important;
-}
+    .badge.bg-warning {
+        background-color: #FEF3E0 !important;
+        color: #B25E09 !important;
+    }
 
-.badge.bg-info {
-    background-color: #E5F3FB !important;
-    color: #0B5C87 !important;
-}
+    .badge.bg-info {
+        background-color: #E5F3FB !important;
+        color: #0B5C87 !important;
+    }
 
-.badge.bg-secondary {
-    background-color: #EEF0F1 !important;
-    color: #495057 !important;
-}
+    .badge.bg-secondary {
+        background-color: #EEF0F1 !important;
+        color: #495057 !important;
+    }
 
-.badge.bg-primary {
-    background-color: var(--brand-green-50) !important;
-    color: var(--brand-green-700) !important;
-}
+    .badge.bg-primary {
+        background-color: var(--brand-green-50) !important;
+        color: var(--brand-green-700) !important;
+    }
 
-.badge.bg-dark {
-    background-color: #E4E4E3 !important;
-    color: var(--brand-950) !important;
-}
+    .badge.bg-dark {
+        background-color: #E4E4E3 !important;
+        color: var(--brand-950) !important;
+    }
 
-.badge.bg-primary-subtle {
-    background-color: var(--brand-green-50) !important;
-    color: var(--brand-green-700) !important;
-}
+    .badge.bg-primary-subtle {
+        background-color: var(--brand-green-50) !important;
+        color: var(--brand-green-700) !important;
+    }
+
 
 /* ============================================================
-   FILAS DE TICKETS — tinte suave para diferenciar de un vistazo
-   los que esperan confirmación del solicitante (amarillo) de los
-   ya cerrados (verde). Mismos tonos que las badges de arriba,
-   fijados vía --bs-table-bg para que sigan funcionando con
-   table-hover/table-striped en vez de pisarlos con !important.
+   FILAS DE TICKETS
    ============================================================ */
 
 .fila-en-validacion {
@@ -451,8 +555,9 @@ a:hover {
     --bs-table-hover-bg: #CDEFD1;
 }
 
+
 /* ============================================================
-   FILAS DE GRUPO — definiciones de SLA y otras tablas plegables
+   FILAS DE GRUPO
    ============================================================ */
 
 .fila-grupo-definicion {
@@ -465,13 +570,13 @@ a:hover {
     transition: transform .15s ease;
 }
 
-.grupo-chevron.rotada {
-    transform: rotate(90deg);
-}
+    .grupo-chevron.rotada {
+        transform: rotate(90deg);
+    }
+
 
 /* ============================================================
-   KPI-BOTÓN — tarjetas KPI que además funcionan como filtro
-   (Dashboard de cumplimiento SLA)
+   KPI-BOTÓN
    ============================================================ */
 
 .btn-filtro-kpi {
@@ -480,71 +585,41 @@ a:hover {
     transition: border-color .15s ease, background-color .15s ease;
 }
 
-.btn-filtro-kpi:hover {
-    border-color: var(--brand-green-500);
-}
+    .btn-filtro-kpi:hover {
+        border-color: var(--brand-green-500);
+    }
 
-.btn-filtro-kpi.kpi-activo {
-    border-color: var(--brand-green-700);
-    border-width: 2px;
-    background: var(--brand-green-50);
-}
+    .btn-filtro-kpi.kpi-activo {
+        border-color: var(--brand-green-700);
+        border-width: 2px;
+        background: var(--brand-green-50);
+    }
+
 
 /* ============================================================
    LOGIN
-   ============================================================ */
+   ============================================================
 
-.auth-body {
-    background: linear-gradient(160deg, var(--brand-green-50) 0%, #ffffff 55%);
-    min-height: 100vh;
-}
+   IMPORTANTE:
+   Los estilos específicos del Login están en Login.cshtml.
 
-.auth-shell {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-}
+   Aquí NO definimos:
+       .auth-card
+       .auth-brand
+       .auth-brand-mark
+       .auth-welcome
+       .login-field
+       .login-input-group
+       .login-button
+       .auth-blob
 
-.auth-card {
-    width: 100%;
-    max-width: 380px;
-    background: #fff;
-    border: 1px solid var(--card-border);
-    border-radius: .75rem;
-    box-shadow: 0 10px 30px rgba(29, 29, 27, .08);
-    padding: 2rem;
-}
+   Esto evita conflictos entre el CSS global y el CSS específico
+   de la pantalla de login.
+*/
 
-.auth-brand {
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-    margin-bottom: 1.75rem;
-}
-
-.auth-brand-mark {
-    width: 44px;
-    height: 44px;
-    font-size: 1rem;
-    border-radius: 12px;
-}
-
-.auth-brand-title {
-    font-weight: 700;
-    font-size: 1.15rem;
-    color: var(--brand-950);
-    line-height: 1.1;
-}
-
-.auth-brand-sub {
-    font-size: .8rem;
-    color: var(--bs-secondary-color);
-}
 
 /* ============================================================
-   PAGINACION
+   PAGINACIÓN
    ============================================================ */
 
 .paginacion {
@@ -553,6 +628,7 @@ a:hover {
 }
 
 @media (max-width: 576px) {
+
     .pagination li:first-child,
     .pagination li:last-child {
         display: none;
