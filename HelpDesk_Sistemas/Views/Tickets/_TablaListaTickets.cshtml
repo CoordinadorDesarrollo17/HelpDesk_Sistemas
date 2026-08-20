@@ -131,8 +131,12 @@
                     <td data-label="Orden">
                         @{
                             var estadosNoEditablesOrden = new[] { "En atención", "Desarrollo", "Pruebas", "Pase a producción", "Cierre", "Cerrado", "Anulado" };
+                            // El orden de atención lo define quien trabaja la cola (Soporte/Administrador),
+                            // nunca quien solicitó el ticket — para el solicitante siempre es de solo lectura:
+                            // "-" hasta que Soporte lo tome y le asigne un orden, y luego el valor que haya puesto.
+                            var puedeEditarOrden = (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte") && !esSolicitante;
                         }
-                        @if (!estadosNoEditablesOrden.Contains(u.Estado) && u.CantidadMismaAsignadoPrioridad > 1)
+                        @if (puedeEditarOrden && !estadosNoEditablesOrden.Contains(u.Estado) && u.CantidadMismaAsignadoPrioridad > 1)
                         {
                             <input type="number"
                                    min="1"
