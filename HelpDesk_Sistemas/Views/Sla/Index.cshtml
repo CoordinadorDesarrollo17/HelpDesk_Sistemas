@@ -25,23 +25,25 @@
 }
 
 @{
-    // Se agrupa por todo lo que define "a qué aplica" (tipo/categoría/sociedad),
-    // EXCEPTO la prioridad: las 4 prioridades de un mismo grupo se muestran juntas,
-    // plegadas bajo una sola fila resumen, en vez de una fila larga por cada una.
+    // Se agrupa solo por lo que define "a qué aplica" (tipo/categoría/sociedad):
+    // Respuesta y Resolución de una misma condición van en el mismo grupo/línea,
+    // en vez de salir como dos filas separadas. Dentro del grupo, Respuesta va
+    // antes que Resolución, y cada una ordenada por prioridad.
     var grupos = Model
         .Select((d, idx) => (Definicion: d, Indice: idx))
-        .GroupBy(x => new { x.Definicion.TipoSla, x.Definicion.TipoRequerimiento, x.Definicion.Categoria, x.Definicion.Sociedad })
+        .GroupBy(x => new { x.Definicion.TipoRequerimiento, x.Definicion.Categoria, x.Definicion.Sociedad })
         .Select(g => new
         {
             Clave = $"grupo{g.First().Indice}",
-            g.Key.TipoSla,
             g.Key.TipoRequerimiento,
             g.Key.Categoria,
             g.Key.Sociedad,
-            Definiciones = g.Select(x => x.Definicion).OrderBy(d => OrdenPrioridad(d.Prioridad)).ToList()
+            Definiciones = g.Select(x => x.Definicion)
+                .OrderBy(d => d.TipoSla == "Respuesta" ? 0 : 1)
+                .ThenBy(d => OrdenPrioridad(d.Prioridad))
+                .ToList()
         })
-        .OrderBy(g => g.TipoSla)
-        .ThenBy(g => g.TipoRequerimiento ?? "")
+        .OrderBy(g => g.TipoRequerimiento ?? "")
         .ThenBy(g => g.Categoria ?? "")
         .ThenBy(g => g.Sociedad ?? "")
         .ToList();
@@ -86,13 +88,22 @@
                         var condicionesGrupo = new[] { g.TipoRequerimiento, g.Categoria, g.Sociedad }.Where(c => c != null);
                         var textoCondicionGrupo = condicionesGrupo.Any() ? string.Join(" · ", condicionesGrupo) : "Cualquier ticket";
                         var activos = g.Definiciones.Count(d => d.Activo);
+                        var totalRespuesta = g.Definiciones.Count(d => d.TipoSla == "Respuesta");
+                        var totalResolucion = g.Definiciones.Count - totalRespuesta;
                         <tr class="fila-grupo-definicion" role="button" onclick="toggleGrupoDefinicion(this, '@g.Clave')">
                             <td colspan="9">
                                 <i class="bi bi-chevron-right grupo-chevron me-2"></i>
                                 <span class="fw-semibold">@textoCondicionGrupo</span>
-                                <span class="badge @(g.TipoSla == "Respuesta" ? "bg-info text-dark" : "bg-primary") ms-2">@g.TipoSla</span>
+                                @if (totalRespuesta > 0)
+                                {
+                                    <span class="badge bg-info text-dark ms-2">@totalRespuesta Respuesta</span>
+                                }
+                                @if (totalResolucion > 0)
+                                {
+                                    <span class="badge bg-primary ms-1">@totalResolucion Resolución</span>
+                                }
                                 <span class="text-muted small ms-2">
-                                    @g.Definiciones.Count prioridad@(g.Definiciones.Count == 1 ? "" : "es")
+                                    @g.Definiciones.Count definición@(g.Definiciones.Count == 1 ? "" : "es")
                                     @if (activos < g.Definiciones.Count)
                                     {
                                         @:· @activos activa@(activos == 1 ? "" : "s")
@@ -107,7 +118,9 @@
                                     <i class="bi bi-arrow-return-right text-muted small"></i>
                                     @(d.Prioridad ?? "Cualquier prioridad")
                                 </td>
-                                <td></td>
+                                <td>
+                                    <span class="badge @(d.TipoSla == "Respuesta" ? "bg-info text-dark" : "bg-primary")">@d.TipoSla</span>
+                                </td>
                                 <td></td>
                                 <td>@d.Calendario</td>
                                 <td>@FormatearDuracion(d.DuracionMinutos)</td>
