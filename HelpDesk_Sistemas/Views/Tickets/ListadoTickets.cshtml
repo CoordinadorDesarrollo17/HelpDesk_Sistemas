@@ -462,21 +462,34 @@
 				.then(r => {
 					if (!r) return;
 
-					if (r.ok) {
-						bootstrap.Modal.getInstance(document.getElementById("modalCrearTicket")).hide();
-						mostrarToast("Ticket creado correctamente", "success");
-						cargarTabla(1);
-					} else {
-						return r.text().then(html => {
-							document.getElementById("contenidoCrearTicket").innerHTML = html;
-							inicializarValidacionArchivos();
-							inicializarComboCategoria();
-							inicializarComboTipoRequerimiento();
-							inicializarFormularioCrearTicket();
-							inicializarPrioridadEstimada();
-							inicializarContadorDetalle();
-						});
-					}
+					return r.text().then(texto => {
+						// Éxito real: la acción devuelve el texto plano "OK" con status 200.
+						if (r.ok && texto.trim() === "OK") {
+							bootstrap.Modal.getInstance(document.getElementById("modalCrearTicket")).hide();
+							mostrarToast("Ticket creado correctamente", "success");
+							cargarTabla(1);
+							return;
+						}
+
+						// El middleware global también responde 200 ante un error no controlado
+						// (para que el fetch pueda leer el JSON), así que "r.ok" solo no basta
+						// para saber si de verdad se creó el ticket.
+						let data = null;
+						try { data = JSON.parse(texto); } catch { /* no era JSON: son errores de validación (HTML) */ }
+
+						if (data && data.exito === false) {
+							mostrarToast(data.mensaje || "No se pudo crear el ticket. Intenta nuevamente.", "danger");
+							return;
+						}
+
+						document.getElementById("contenidoCrearTicket").innerHTML = texto;
+						inicializarValidacionArchivos();
+						inicializarComboCategoria();
+						inicializarComboTipoRequerimiento();
+						inicializarFormularioCrearTicket();
+						inicializarPrioridadEstimada();
+						inicializarContadorDetalle();
+					});
 				});
 			});
 		}
