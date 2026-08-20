@@ -8,13 +8,17 @@
 
 <div class="login-page">
 
+    <div class="auth-blob auth-blob-1"></div>
+    <div class="auth-blob auth-blob-2"></div>
+
     <div class="auth-card">
+
+        <div class="auth-card-accent"></div>
 
         <!-- Branding -->
         <div class="auth-brand">
 
             <span class="sidebar-brand-mark auth-brand-mark">
-                HD
                 <img src="~/img/logo.png" alt="Logo" onerror="this.style.display='none'" />
             </span>
 
@@ -168,11 +172,45 @@
            ========================================= */
 
     .login-page {
+        width: 100%;
         min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 25px;
+        position: relative;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+
+    /* =========================================
+           FONDO DECORATIVO
+           ========================================= */
+
+    .auth-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(60px);
+        opacity: .35;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .auth-blob-1 {
+        width: 420px;
+        height: 420px;
+        top: -160px;
+        left: -140px;
+        background: radial-gradient(circle, var(--brand-green-400), transparent 70%);
+    }
+
+    .auth-blob-2 {
+        width: 380px;
+        height: 380px;
+        bottom: -180px;
+        right: -120px;
+        background: radial-gradient(circle, var(--brand-green-500), transparent 70%);
     }
 
 
@@ -181,14 +219,26 @@
            ========================================= */
 
     .auth-card {
+        position: relative;
+        z-index: 1;
         width: 100%;
         max-width: 470px;
-        padding: 46px 48px 36px;
+        padding: 48px 48px 36px;
         background: #fff;
-        border-radius: 18px;
-        border: 1px solid rgba(0, 0, 0, .06);
-        box-shadow: 0 15px 40px rgba(0, 0, 0, .08);
-        animation: loginCard .35s ease-out;
+        border-radius: 20px;
+        border: 1px solid rgba(0, 0, 0, .05);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 25px 55px -15px rgba(28, 147, 47, .18), 0 10px 25px -10px rgba(0, 0, 0, .08);
+        overflow: hidden;
+        animation: loginCard .4s cubic-bezier(.16, 1, .3, 1);
+    }
+
+    .auth-card-accent {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(90deg, var(--brand-green-400), var(--brand-green-700));
     }
 
 
@@ -209,22 +259,25 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 14px;
+        border-radius: 15px;
         flex-shrink: 0;
         font-size: 1rem;
         font-weight: 700;
+        box-shadow: 0 8px 20px -6px rgba(28, 147, 47, .55);
+        background: linear-gradient( 135deg, var(--brand-green-500), var(--brand-green-700) );
     }
 
     .auth-brand-title {
         font-size: 24px;
         font-weight: 700;
         line-height: 1.1;
+        letter-spacing: -.2px;
     }
 
     .auth-brand-sub {
         margin-top: 4px;
         font-size: 13px;
-        opacity: .7;
+        opacity: .6;
     }
 
 
@@ -240,12 +293,13 @@
             margin: 0 0 6px;
             font-size: 29px;
             font-weight: 700;
+            letter-spacing: -.3px;
         }
 
         .auth-welcome p {
             margin: 0;
             font-size: 15px;
-            opacity: .65;
+            opacity: .6;
         }
 
 
@@ -266,13 +320,24 @@
 
     .login-input-group {
         height: 52px;
+        border-radius: 10px;
+        overflow: hidden;
+        transition: box-shadow .15s ease;
     }
 
+        .login-input-group .input-group-text,
+        .login-input-group .form-control {
+            border-radius: 0;
+        }
+
         .login-input-group .input-group-text {
-            background: #fff;
+            background: #fbfbfb;
             border-right: 0;
+            border-color: rgba(0, 0, 0, .1);
             padding-left: 15px;
             padding-right: 10px;
+            color: #6b7280;
+            transition: color .15s ease, background .15s ease;
         }
 
             .login-input-group .input-group-text i {
@@ -281,12 +346,23 @@
 
         .login-input-group .form-control {
             border-left: 0;
+            border-color: rgba(0, 0, 0, .1);
             box-shadow: none;
+            font-size: 15px;
+        }
+
+        .login-input-group:focus-within {
+            box-shadow: 0 0 0 4px var(--brand-green-50);
         }
 
         .login-input-group:focus-within .input-group-text,
         .login-input-group:focus-within .form-control {
-            border-color: var(--bs-primary);
+            border-color: var(--brand-green-500);
+        }
+
+        .login-input-group:focus-within .input-group-text {
+            background: var(--brand-green-50);
+            color: var(--brand-green-700);
         }
 
         .login-input-group .form-control:focus {
@@ -300,11 +376,14 @@
 
     .password-button {
         cursor: pointer;
-        transition: opacity .15s ease;
+        background: #fbfbfb;
+        border-color: rgba(0, 0, 0, .1);
+        color: #6b7280;
+        transition: color .15s ease;
     }
 
         .password-button:hover {
-            opacity: .7;
+            color: var(--brand-green-700);
         }
 
 
@@ -328,15 +407,19 @@
     .login-button {
         height: 52px;
         margin-top: 6px;
-        border-radius: 9px;
+        border-radius: 10px;
         font-size: 15px;
         font-weight: 600;
-        transition: transform .15s ease, box-shadow .15s ease;
+        letter-spacing: .2px;
+        background: linear-gradient(135deg, var(--brand-green-600), var(--brand-green-700));
+        border: none;
+        transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
     }
 
         .login-button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 5px 14px rgba(0, 0, 0, .12);
+            box-shadow: 0 10px 22px -6px rgba(28, 147, 47, .5);
+            filter: brightness(1.03);
         }
 
         .login-button:active {
@@ -354,7 +437,9 @@
         border-top: 1px solid rgba(0, 0, 0, .06);
         text-align: center;
         font-size: 11px;
-        opacity: .55;
+        letter-spacing: .3px;
+        text-transform: uppercase;
+        opacity: .4;
     }
 
 
