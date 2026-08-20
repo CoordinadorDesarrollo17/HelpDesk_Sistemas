@@ -30,6 +30,15 @@ namespace HelpDesk_Sistemas.Common
         public static string NombreCompletoActual =>
             httpContextAccessor?.HttpContext?.User.FindFirst("NombreCompleto")?.Value ?? string.Empty;
 
+        public static int IdAreaActual
+        {
+            get
+            {
+                var claim = httpContextAccessor?.HttpContext?.User.FindFirst("IdArea");
+                return claim != null && int.TryParse(claim.Value, out var idArea) ? idArea : 0;
+            }
+        }
+
         public static string UsuarioActual =>
             httpContextAccessor?.HttpContext?.User.Identity?.Name ?? string.Empty;
     }

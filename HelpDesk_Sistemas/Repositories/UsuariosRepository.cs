@@ -25,6 +25,7 @@ namespace HelpDesk_Sistemas.Repositories
                     u.Password,
                     CONCAT(u.Nombre, ' ', u.Apellido) AS NombreCompleto,
                     r.Nombre AS Rol,
+                    u.Id_Area AS IdArea,
                     u.Activo
                 FROM Usuarios u
                 INNER JOIN Rol r ON r.Id = u.IdRol

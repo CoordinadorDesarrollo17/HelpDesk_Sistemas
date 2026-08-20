@@ -8,6 +8,7 @@ namespace HelpDesk_Sistemas.Models
         public string Password { get; set; } = string.Empty; // hash
         public string NombreCompleto { get; set; } = string.Empty;
         public string Rol { get; set; } = string.Empty;
+        public int IdArea { get; set; }
         public bool Activo { get; set; }
     }
 }
