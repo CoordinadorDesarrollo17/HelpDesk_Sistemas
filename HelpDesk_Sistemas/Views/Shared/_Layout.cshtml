@@ -6,10 +6,10 @@
     <title>@ViewData["Title"] - HelpDesk_Sistemas</title>
     <script>
         // Se aplica antes de pintar la página (evita el parpadeo del tema
-        // incorrecto). Usa la preferencia guardada, o si no hay ninguna, la
-        // del sistema operativo.
+        // incorrecto). Por defecto claro, salvo que ya se haya guardado una
+        // preferencia explícita (no sigue el tema del sistema operativo).
         (function () {
-            var tema = localStorage.getItem("tema") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+            var tema = localStorage.getItem("tema") || "light";
             document.documentElement.setAttribute("data-bs-theme", tema);
         })();
     </script>

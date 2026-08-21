@@ -170,12 +170,15 @@ a {
 /* :not(.btn) para no pisar el texto blanco de los botones-enlace
    (ej. "Ver tickets" en Home es un <a class="btn btn-primary">) —
    sin esto, esta regla le gana por especificidad al color de Bootstrap
-   y el botón queda con texto verde sobre fondo verde, casi invisible. */
-[data-bs-theme="dark"] a:not(.btn) {
+   y el botón queda con texto verde sobre fondo verde, casi invisible.
+   :not(.sidebar-link) por lo mismo: el sidebar tiene su propia paleta
+   fija (gris claro / blanco en el activo) que no depende del tema, y
+   esta regla también le ganaba por especificidad. */
+[data-bs-theme="dark"] a:not(.btn):not(.sidebar-link) {
     color: var(--brand-green-400);
 }
 
-    [data-bs-theme="dark"] a:not(.btn):hover {
+    [data-bs-theme="dark"] a:not(.btn):not(.sidebar-link):hover {
         color: var(--brand-green-300);
     }
 
