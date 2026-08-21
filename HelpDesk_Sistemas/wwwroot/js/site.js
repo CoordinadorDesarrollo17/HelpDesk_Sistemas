@@ -23,3 +23,30 @@ document.addEventListener("DOMContentLoaded", function () {
     toggleBtn.addEventListener("click", abrirSidebar);
     backdrop.addEventListener("click", cerrarSidebar);
 });
+
+// ============================================================
+// MODO OSCURO
+// ============================================================
+
+document.addEventListener("DOMContentLoaded", function () {
+    const btnToggleTema = document.getElementById("btnToggleTema");
+    const iconoTema = document.getElementById("iconoTema");
+
+    function actualizarIcono(tema) {
+        if (!iconoTema) return;
+        iconoTema.className = tema === "dark" ? "bi bi-sun" : "bi bi-moon-stars";
+    }
+
+    actualizarIcono(document.documentElement.getAttribute("data-bs-theme"));
+
+    if (!btnToggleTema) return;
+
+    btnToggleTema.addEventListener("click", function () {
+        const actual = document.documentElement.getAttribute("data-bs-theme") === "dark" ? "dark" : "light";
+        const nuevo = actual === "dark" ? "light" : "dark";
+
+        document.documentElement.setAttribute("data-bs-theme", nuevo);
+        localStorage.setItem("tema", nuevo);
+        actualizarIcono(nuevo);
+    });
+});

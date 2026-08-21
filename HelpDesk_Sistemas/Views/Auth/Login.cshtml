@@ -8,6 +8,10 @@
 
 <div class="login-page">
 
+    <button type="button" class="btn btn-sm btn-outline-secondary login-theme-toggle" id="btnToggleTema" title="Cambiar tema">
+        <i class="bi bi-moon-stars" id="iconoTema"></i>
+    </button>
+
     <!-- Fondos decorativos -->
     <div class="auth-blob auth-blob-1"></div>
     <div class="auth-blob auth-blob-2"></div>
@@ -187,6 +191,26 @@
         position: relative;
         overflow: hidden;
         box-sizing: border-box;
+        background: linear-gradient( 160deg, var(--brand-green-50) 0%, #ffffff 55% );
+    }
+
+    [data-bs-theme="dark"] .login-page {
+        background: linear-gradient( 160deg, rgba(28, 147, 47, .1) 0%, var(--page-bg) 55% );
+    }
+
+
+    .login-theme-toggle {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 2;
+        border-radius: 50%;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--card-bg);
     }
 
 
@@ -232,9 +256,9 @@
         width: 100%;
         max-width: 430px;
         padding: 38px 40px 30px;
-        background: #fff;
+        background: var(--card-bg);
         border-radius: 18px;
-        border: 1px solid rgba(0, 0, 0, .05);
+        border: 1px solid var(--card-border);
         box-shadow: 0 10px 35px rgba(28, 147, 47, .12), 0 4px 12px rgba(0, 0, 0, .05);
         overflow: hidden;
         animation: loginCard .4s cubic-bezier(.16, 1, .3, 1);
@@ -303,14 +327,14 @@
         font-weight: 700;
         line-height: 1.1;
         letter-spacing: -.2px;
-        color: var(--brand-950);
+        color: var(--ink);
     }
 
 
     .auth-brand-sub {
         margin-top: 4px;
         font-size: 13px;
-        color: #6b7280;
+        color: var(--bs-secondary-color);
     }
 
 
@@ -328,14 +352,14 @@
             font-size: 29px;
             font-weight: 700;
             letter-spacing: -.3px;
-            color: var(--brand-950);
+            color: var(--ink);
         }
 
 
         .auth-welcome p {
             margin: 0;
             font-size: 15px;
-            color: #6b7280;
+            color: var(--bs-secondary-color);
         }
 
 
@@ -353,7 +377,7 @@
             margin-bottom: 8px;
             font-size: 14px;
             font-weight: 600;
-            color: var(--brand-950);
+            color: var(--ink);
         }
 
 
@@ -361,7 +385,7 @@
         height: 52px;
         border-radius: 10px;
         overflow: hidden;
-        border: 1px solid rgba(0, 0, 0, .1);
+        border: 1px solid var(--card-border);
         transition: box-shadow .15s ease;
     }
 
@@ -381,8 +405,8 @@
             }
 
         .login-input-group .input-group-text {
-            background: #fbfbfb;
-            color: #6b7280;
+            background: var(--page-bg);
+            color: var(--bs-secondary-color);
         }
 
         .login-input-group:focus-within .input-group-text {
@@ -397,9 +421,9 @@
 
     .password-button {
         cursor: pointer;
-        background: #fbfbfb;
-        border-color: rgba(0, 0, 0, .1);
-        color: #6b7280;
+        background: var(--page-bg);
+        border-color: var(--card-border);
+        color: var(--bs-secondary-color);
         transition: color .15s ease, background .15s ease;
     }
 
@@ -466,12 +490,12 @@
     .auth-footer {
         margin-top: 22px;
         padding-top: 16px;
-        border-top: 1px solid rgba(0, 0, 0, .06);
+        border-top: 1px solid var(--card-border);
         text-align: center;
         font-size: 11px;
         letter-spacing: .3px;
         text-transform: uppercase;
-        color: #6b7280;
+        color: var(--bs-secondary-color);
         opacity: .65;
     }
 
