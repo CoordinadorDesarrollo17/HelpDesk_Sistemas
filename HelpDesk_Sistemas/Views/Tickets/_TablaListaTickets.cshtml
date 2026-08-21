@@ -91,7 +91,13 @@
                     <td data-label="Estado"><span class="badge @EstadoBadgeClass(u.Estado)">@u?.Estado</span></td>
 
                     <td data-label="Prioridad">
-                        @if (u.Estado == "Pendiente")
+                        @{
+                            // Misma regla que el orden de atención: la prioridad la define quien
+                            // trabaja la cola, nunca el solicitante. Para él siempre es de solo
+                            // lectura: "-" hasta que Soporte la defina, y luego el valor puesto.
+                            var puedeEditarPrioridad = (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte") && !esSolicitante;
+                        }
+                        @if (puedeEditarPrioridad && u.Estado == "Pendiente")
                         {
                             <select class="form-select form-select-sm" onchange="asignarPrioridad(@u.IdTicket, this.value)">
                                 <option value="">Sin definir</option>
@@ -131,8 +137,12 @@
                     <td data-label="Orden">
                         @{
                             var estadosNoEditablesOrden = new[] { "En atención", "Desarrollo", "Pruebas", "Pase a producción", "Cierre", "Cerrado", "Anulado" };
+                            // El orden de atención lo define quien trabaja la cola (Soporte/Administrador),
+                            // nunca quien solicitó el ticket — para el solicitante siempre es de solo lectura:
+                            // "-" hasta que Soporte lo tome y le asigne un orden, y luego el valor que haya puesto.
+                            var puedeEditarOrden = (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte") && !esSolicitante;
                         }
-                        @if (!estadosNoEditablesOrden.Contains(u.Estado) && u.CantidadMismaAsignadoPrioridad > 1)
+                        @if (puedeEditarOrden && !estadosNoEditablesOrden.Contains(u.Estado) && u.CantidadMismaAsignadoPrioridad > 1)
                         {
                             <input type="number"
                                    min="1"

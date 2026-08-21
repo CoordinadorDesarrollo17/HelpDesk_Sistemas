@@ -38,6 +38,13 @@ namespace HelpDesk_Sistemas.Controllers
             ViewBag.IdAreaUsuario = SesionTemporal.IdAreaActual;
             ViewBag.EsCoordinador = SesionTemporal.EsCoordinadorActual;
 
+            // Solo la carga inicial (no el refresco AJAX) necesita esto: para que el filtro
+            // "compuesto" que trae la URL (desde una tarjeta KPI de Home/Reportes) no se
+            // pierda en el primer refresco automático de la tabla (ver cargarTabla en JS).
+            ViewBag.CategoriaInicial = model.Categoria;
+            ViewBag.FechaInicioInicial = model.FechaInicio?.ToString("yyyy-MM-dd");
+            ViewBag.FechaFinInicial = model.FechaFin?.ToString("yyyy-MM-dd");
+
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
                 return PartialView("_TablaListaTickets", listaTickets);
@@ -299,14 +306,33 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpPost]
         public async Task<IActionResult> AsignarPrioridad(int id, int idPrioridad)
         {
-            var exito = await ticketsService.AsignarPrioridad(id, idPrioridad);
-            return Json(new { exito });
+            // La prioridad la define quien trabaja la cola (Soporte/Administrador), nunca
+            // quien solicitó el ticket — misma regla que AsignarOrdenAtencion.
+            var puedeAsignarPrioridad = SesionTemporal.RolActual == "Administrador" || SesionTemporal.RolActual == "Soporte";
+
+            if (!puedeAsignarPrioridad)
+            {
+                return Json(new { exito = false, mensaje = "Solo Soporte o un administrador puede definir la prioridad." });
+            }
+
+            var (exito, mensaje) = await ticketsService.AsignarPrioridad(id, idPrioridad, SesionTemporal.UsuarioActualTemporal, SesionTemporal.IdAreaActual);
+            return Json(new { exito, mensaje });
         }
 
         [HttpPost]
         public async Task<IActionResult> AsignarOrdenAtencion(int id, int orden)
         {
-            var (exito, mensaje) = await ticketsService.AsignarOrdenAtencion(id, orden);
+            // El orden de atención lo define quien trabaja la cola (Soporte/Administrador),
+            // nunca quien solicitó el ticket (ver también la validación de "solicitante propio"
+            // dentro del servicio, misma regla que el resto de acciones sobre tickets).
+            var puedeAsignarOrden = SesionTemporal.RolActual == "Administrador" || SesionTemporal.RolActual == "Soporte";
+
+            if (!puedeAsignarOrden)
+            {
+                return Json(new { exito = false, mensaje = "Solo Soporte o un administrador puede definir el orden de atención." });
+            }
+
+            var (exito, mensaje) = await ticketsService.AsignarOrdenAtencion(id, orden, SesionTemporal.UsuarioActualTemporal, SesionTemporal.IdAreaActual);
             return Json(new { exito, mensaje });
         }
 
