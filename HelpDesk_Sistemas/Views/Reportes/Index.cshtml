@@ -184,6 +184,14 @@
         const colorPorPrioridad = { 'Baja': '#6c757d', 'Media': '#0B5C87', 'Alta': '#B25E09', 'Urgente': '#B42318', 'Sin prioridad': '#adb5bd' };
         const paletaGeneral = ['#1C932F', '#27A528', '#32B91E', '#0B5C87', '#B25E09', '#B42318', '#6c757d', '#495057'];
 
+        // Chart.js no sigue el tema solo — los colores de texto/rejilla por
+        // defecto son grises oscuros, ilegibles sobre fondo oscuro.
+        (function ajustarChartAlTema() {
+            const esOscuro = document.documentElement.getAttribute("data-bs-theme") === "dark";
+            Chart.defaults.color = esOscuro ? "#B7BBC0" : "#495057";
+            Chart.defaults.borderColor = esOscuro ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.1)";
+        })();
+
         @{
             var opcionesJson = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
         }
