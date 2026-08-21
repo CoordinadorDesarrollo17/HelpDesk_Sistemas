@@ -167,11 +167,15 @@ a {
         color: var(--brand-green-600);
     }
 
-[data-bs-theme="dark"] a {
+/* :not(.btn) para no pisar el texto blanco de los botones-enlace
+   (ej. "Ver tickets" en Home es un <a class="btn btn-primary">) —
+   sin esto, esta regla le gana por especificidad al color de Bootstrap
+   y el botón queda con texto verde sobre fondo verde, casi invisible. */
+[data-bs-theme="dark"] a:not(.btn) {
     color: var(--brand-green-400);
 }
 
-    [data-bs-theme="dark"] a:hover {
+    [data-bs-theme="dark"] a:not(.btn):hover {
         color: var(--brand-green-300);
     }
 
@@ -510,6 +514,13 @@ a {
         font-weight: 600;
         letter-spacing: -.01em;
     }
+
+/* .text-black de Bootstrap es negro fijo, no sigue el tema — sobre el
+   fondo oscuro que toma .header-gradient (--card-bg) queda casi
+   invisible. Se usa en todas las cabeceras de tarjeta del sistema. */
+[data-bs-theme="dark"] .text-black {
+    color: #fff !important;
+}
 
 .shadow-sm {
     box-shadow: 0 1px 2px rgba(16, 24, 40, .05) !important;
