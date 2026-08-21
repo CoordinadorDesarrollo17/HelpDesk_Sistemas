@@ -4,12 +4,22 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - HelpDesk_Sistemas</title>
+    <script>
+        // Se aplica antes de pintar la página (evita el parpadeo del tema
+        // incorrecto). Por defecto claro, salvo que ya se haya guardado una
+        // preferencia explícita (no sigue el tema del sistema operativo).
+        (function () {
+            var tema = localStorage.getItem("tema") || "light";
+            document.documentElement.setAttribute("data-bs-theme", tema);
+        })();
+    </script>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/HelpDesk_Sistemas.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.css" asp-append-version="true">
     <link rel="stylesheet" href="~/lib/sweetalert2/sweetalert2.min.css" />
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
     @RenderSection("Styles", required: false)
 </head>
 <body>
@@ -79,11 +89,16 @@
                         <div class="sidebar-user-nombre">@HelpDesk_Sistemas.Common.SesionTemporal.NombreCompletoActual</div>
                         <div class="sidebar-user-rol">@HelpDesk_Sistemas.Common.SesionTemporal.RolActual</div>
                     </div>
-                    <form method="post" asp-controller="Auth" asp-action="Logout">
-                        <button type="submit" class="btn btn-sm btn-outline-light" title="Cerrar sesión">
-                            <i class="bi bi-box-arrow-right"></i>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-light" id="btnToggleTema" title="Cambiar tema">
+                            <i class="bi bi-moon-stars" id="iconoTema"></i>
                         </button>
-                    </form>
+                        <form method="post" asp-controller="Auth" asp-action="Logout">
+                            <button type="submit" class="btn btn-sm btn-outline-light" title="Cerrar sesión">
+                                <i class="bi bi-box-arrow-right"></i>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             }
         </aside>
