@@ -6,7 +6,7 @@
     <title>@ViewData["Title"] - HelpDesk_Sistemas</title>
     <script>
         (function () {
-            var tema = localStorage.getItem("tema") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+            var tema = localStorage.getItem("tema") || "light";
             document.documentElement.setAttribute("data-bs-theme", tema);
         })();
     </script>
