@@ -20,7 +20,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/Auth/Login";
         options.AccessDeniedPath = "/Auth/AccesoDenegado";
-        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.ExpireTimeSpan = TimeSpan.FromHours(8); // este es el tiempo que la sesion se mantiene abierta, 8 por las horas de trabajo.
+                                                        // puede reducirse el tiempo para que se desconecte la sesion automaticamente
         options.SlidingExpiration = true;
     });
 
