@@ -13,6 +13,17 @@
     }
 }
 
+@{
+    // El motivo de devolución ya queda en el historial (Comentario de la transición
+    // "En validación" -> "En atención"), pero perdido entre el resto de la bitácora es
+    // fácil que Soporte no lo note al reabrir el ticket. Se destaca aparte, igual que
+    // la Solución.
+    var ultimaDevolucion = Model.Historial
+        .Where(h => h.EstadoAnterior == "En validación" && h.EstadoNuevo == "En atención" && !string.IsNullOrWhiteSpace(h.Comentario))
+        .OrderByDescending(h => h.FechaCambio)
+        .FirstOrDefault();
+}
+
 <div class="mb-3">
     <h5 class="fw-bold">@Model.CodigoTicket</h5>
 </div>
@@ -92,6 +103,15 @@
 
 <h6 class="fw-bold">Detalle del requerimiento</h6>
 <p>@Model.Detalle</p>
+
+@if (ultimaDevolucion != null)
+{
+    <div class="alert alert-warning">
+        <strong><i class="bi bi-arrow-counterclockwise"></i> Devuelto por @ultimaDevolucion.UsuarioAccion</strong>
+        <span class="text-muted small">— @ultimaDevolucion.FechaCambio.ToString("dd/MM/yyyy HH:mm")</span>
+        <div class="mt-1" style="white-space: pre-wrap;">@ultimaDevolucion.Comentario</div>
+    </div>
+}
 
 @if (!string.IsNullOrWhiteSpace(Model.Solucion))
 {
