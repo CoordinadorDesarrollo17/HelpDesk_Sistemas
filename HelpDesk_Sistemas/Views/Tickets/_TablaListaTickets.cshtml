@@ -91,7 +91,13 @@
                     <td data-label="Estado"><span class="badge @EstadoBadgeClass(u.Estado)">@u?.Estado</span></td>
 
                     <td data-label="Prioridad">
-                        @if (u.Estado == "Pendiente")
+                        @{
+                            // Misma regla que el orden de atención: la prioridad la define quien
+                            // trabaja la cola, nunca el solicitante. Para él siempre es de solo
+                            // lectura: "-" hasta que Soporte la defina, y luego el valor puesto.
+                            var puedeEditarPrioridad = (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte") && !esSolicitante;
+                        }
+                        @if (puedeEditarPrioridad && u.Estado == "Pendiente")
                         {
                             <select class="form-select form-select-sm" onchange="asignarPrioridad(@u.IdTicket, this.value)">
                                 <option value="">Sin definir</option>

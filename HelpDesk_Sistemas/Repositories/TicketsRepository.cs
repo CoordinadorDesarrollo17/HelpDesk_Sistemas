@@ -885,11 +885,21 @@ namespace HelpDesk_Sistemas.Repositories
         /// <summary>
         /// Asigna/corrige la prioridad de un ticket Pendiente. La prioridad automática
         /// que calcula la matriz Impacto × Urgencia es editable manualmente sin
-        /// restricción (Soporte puede corregirla si el triage automático no aplica).
+        /// restricción de valor (Soporte puede corregirla si el triage automático no
+        /// aplica), pero no de quién la cambia: ver validación de "solicitante propio"
+        /// más abajo, misma regla que el resto de acciones sobre tickets.
         /// </summary>
-        public async Task<bool> AsignarPrioridad(int idTicket, int idPrioridad)
+        public async Task<(bool Exito, string? Mensaje)> AsignarPrioridad(int idTicket, int idPrioridad, int idUsuarioActual, int idAreaUsuarioActual)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sqlInfo = "SELECT Id_Usuario_Solicita AS IdUsuarioSolicita, Id_Area AS IdArea FROM Tickets WHERE Id = @IdTicket";
+            var info = await xCon.QueryFirstOrDefaultAsync<(int IdUsuarioSolicita, int IdArea)>(sqlInfo, new { IdTicket = idTicket });
+
+            if (info.IdUsuarioSolicita == idUsuarioActual && info.IdArea != idAreaUsuarioActual)
+            {
+                return (false, "No puedes definir la prioridad de un ticket que tú mismo solicitaste.");
+            }
 
             var sql = @"
                 UPDATE Tickets
@@ -904,7 +914,7 @@ namespace HelpDesk_Sistemas.Repositories
             ";
 
             var filasAfectadas = await xCon.ExecuteAsync(sql, new { IdTicket = idTicket, IdPrioridad = idPrioridad });
-            return filasAfectadas > 0;
+            return (filasAfectadas > 0, null);
         }
 
         /// <summary>

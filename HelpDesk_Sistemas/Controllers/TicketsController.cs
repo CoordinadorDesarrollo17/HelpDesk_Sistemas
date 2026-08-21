@@ -306,8 +306,17 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpPost]
         public async Task<IActionResult> AsignarPrioridad(int id, int idPrioridad)
         {
-            var exito = await ticketsService.AsignarPrioridad(id, idPrioridad);
-            return Json(new { exito });
+            // La prioridad la define quien trabaja la cola (Soporte/Administrador), nunca
+            // quien solicitó el ticket — misma regla que AsignarOrdenAtencion.
+            var puedeAsignarPrioridad = SesionTemporal.RolActual == "Administrador" || SesionTemporal.RolActual == "Soporte";
+
+            if (!puedeAsignarPrioridad)
+            {
+                return Json(new { exito = false, mensaje = "Solo Soporte o un administrador puede definir la prioridad." });
+            }
+
+            var (exito, mensaje) = await ticketsService.AsignarPrioridad(id, idPrioridad, SesionTemporal.UsuarioActualTemporal, SesionTemporal.IdAreaActual);
+            return Json(new { exito, mensaje });
         }
 
         [HttpPost]

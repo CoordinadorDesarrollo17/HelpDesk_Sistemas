@@ -69,7 +69,7 @@ namespace HelpDesk_Sistemas.Interfaces
         // PRIORIDAD Y ORDEN DE ATENCIÓN (ambos flujos)
         // ============================================================
 
-        Task<bool> AsignarPrioridad(int idTicket, int idPrioridad);
+        Task<(bool Exito, string? Mensaje)> AsignarPrioridad(int idTicket, int idPrioridad, int idUsuarioActual, int idAreaUsuarioActual);
         Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden, int idUsuarioActual, int idAreaUsuarioActual);
 
         /// <summary>Tickets del mismo usuario, con prioridad definida, aptos como motivo de pausa.</summary>
