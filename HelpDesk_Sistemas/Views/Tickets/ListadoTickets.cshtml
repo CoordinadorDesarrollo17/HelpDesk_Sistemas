@@ -1070,7 +1070,7 @@
 				.then(data => {
 					if (!data) return;
 					if (!data.exito) {
-						mostrarToast("No se pudo asignar la prioridad. Puede que el ticket ya haya cambiado de estado.", "danger");
+						mostrarToast(data.mensaje || "No se pudo asignar la prioridad. Puede que el ticket ya haya cambiado de estado.", "danger");
 					} else {
 						mostrarToast("Prioridad asignada correctamente", "success");
 					}
