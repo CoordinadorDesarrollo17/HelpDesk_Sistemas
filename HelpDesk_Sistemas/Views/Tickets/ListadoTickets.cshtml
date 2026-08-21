@@ -18,6 +18,14 @@
 
 	<div class="card-body">
 
+		<!--FILTRO "COMPUESTO" QUE LLEGA POR URL (desde una tarjeta KPI de Home/Reportes)-->
+		<div class="alert alert-info small py-2 mb-3 d-none d-flex justify-content-between align-items-center" id="bannerFiltroEspecial">
+			<span id="textoFiltroEspecial"></span>
+			<button type="button" class="btn btn-sm btn-outline-secondary" onclick="quitarFiltroEspecial()">
+				<i class="bi bi-x-lg"></i> Quitar filtro
+			</button>
+		</div>
+
 		<div class="row mb-3 gy-2">
 
 			<!--PAGINACION-->
@@ -320,6 +328,53 @@
 		const tablaTickets = document.getElementById("tablaTickets");
 
 		// ============================================================
+		// FILTRO "COMPUESTO" QUE LLEGA POR URL (tarjetas KPI de Home/Reportes)
+		// ============================================================
+
+		// No se puede expresar con los combos normales (agrupa varios estados, o
+		// cruza con fecha/usuario actual), así que se guarda aparte y se manda en
+		// cada cargarTabla — si no, el primer refresco automático lo perdería.
+		let filtroCategoria = @Html.Raw(ViewBag.CategoriaInicial != null ? $"\"{ViewBag.CategoriaInicial}\"" : "null");
+		let filtroFechaInicio = @Html.Raw(ViewBag.FechaInicioInicial != null ? $"\"{ViewBag.FechaInicioInicial}\"" : "null");
+		let filtroFechaFin = @Html.Raw(ViewBag.FechaFinInicial != null ? $"\"{ViewBag.FechaFinInicial}\"" : "null");
+
+		const etiquetasCategoria = {
+			"pendientes": "Pendientes",
+			"en-pausa": "En pausa",
+			"en-curso": "En curso",
+			"mis-asignados": "Asignados a mí",
+			"cerrados": "Cerrados",
+			"activos": "Activos"
+		};
+
+		function actualizarBannerFiltroEspecial() {
+			const banner = document.getElementById("bannerFiltroEspecial");
+			const texto = document.getElementById("textoFiltroEspecial");
+			const partes = [];
+
+			if (filtroCategoria) partes.push(etiquetasCategoria[filtroCategoria] || filtroCategoria);
+			if (filtroFechaInicio || filtroFechaFin) partes.push(`creados entre ${filtroFechaInicio ?? "…"} y ${filtroFechaFin ?? "…"}`);
+
+			if (partes.length === 0) {
+				banner.classList.add("d-none");
+				return;
+			}
+
+			texto.textContent = "Filtro: " + partes.join(" · ");
+			banner.classList.remove("d-none");
+		}
+
+		function quitarFiltroEspecial() {
+			filtroCategoria = null;
+			filtroFechaInicio = null;
+			filtroFechaFin = null;
+			actualizarBannerFiltroEspecial();
+			cargarTabla(1);
+		}
+
+		actualizarBannerFiltroEspecial();
+
+		// ============================================================
 		// HELPER: fetch con manejo de fallos de conexión
 		// ============================================================
 
@@ -362,6 +417,10 @@
 				"Paginacion.Page": page,
 				"Paginacion.PageSize": cboPageSize.value
 			});
+
+			if (filtroCategoria) params.append("Categoria", filtroCategoria);
+			if (filtroFechaInicio) params.append("FechaInicio", filtroFechaInicio);
+			if (filtroFechaFin) params.append("FechaFin", filtroFechaFin);
 
 			let url = `@Url.Action("ListadoTickets", "Tickets")?${params.toString()}`;
 

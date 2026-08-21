@@ -188,5 +188,15 @@
                 btn.classList.toggle("kpi-activo", btn.dataset.categoria === categoria);
             });
         }
+
+        // Si se llega aquí desde una tarjeta de Home (?categoria=en-riesgo, etc.),
+        // aplica ese filtro solo y lleva la vista directo a la tabla.
+        (function aplicarFiltroDesdeUrl() {
+            const categoria = new URLSearchParams(window.location.search).get("categoria");
+            if (!categoria) return;
+
+            filtrarPorCategoria(categoria);
+            document.getElementById("tablaEnRiesgo")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        })();
     </script>
 }

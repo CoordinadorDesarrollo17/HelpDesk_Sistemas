@@ -38,6 +38,13 @@ namespace HelpDesk_Sistemas.Controllers
             ViewBag.IdAreaUsuario = SesionTemporal.IdAreaActual;
             ViewBag.EsCoordinador = SesionTemporal.EsCoordinadorActual;
 
+            // Solo la carga inicial (no el refresco AJAX) necesita esto: para que el filtro
+            // "compuesto" que trae la URL (desde una tarjeta KPI de Home/Reportes) no se
+            // pierda en el primer refresco automático de la tabla (ver cargarTabla en JS).
+            ViewBag.CategoriaInicial = model.Categoria;
+            ViewBag.FechaInicioInicial = model.FechaInicio?.ToString("yyyy-MM-dd");
+            ViewBag.FechaFinInicial = model.FechaFin?.ToString("yyyy-MM-dd");
+
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
                 return PartialView("_TablaListaTickets", listaTickets);

@@ -93,6 +93,29 @@ namespace HelpDesk_Sistemas.Repositories
             if (model.IdPrioridad.HasValue)
                 condiciones.Add("t.Id_Prioridad = @IdPrioridad");
 
+            // No se reutiliza IdEstado para "Pendientes"/"En pausa" porque ese filtro ya
+            // trae pegada la regla de "si no es Pendiente, solo lo asignado a mí" (ver
+            // arriba), que rompería el conteo real de las tarjetas KPI de Home/Reportes.
+            if (!string.IsNullOrEmpty(model.Categoria))
+            {
+                condiciones.Add(model.Categoria switch
+                {
+                    "pendientes" => "e.Nombre = 'Pendiente'",
+                    "en-pausa" => "e.Nombre = 'En pausa'",
+                    "en-curso" => "e.Nombre IN ('En revisión', 'En atención', 'Levantamiento', 'Desarrollo', 'Pruebas', 'Pase a producción')",
+                    "mis-asignados" => "(t.Id_Usuario_Asignado = @IdUsuarioActual AND e.Nombre NOT IN ('Cerrado', 'Anulado', 'Cierre'))",
+                    "cerrados" => "e.Nombre IN ('Cerrado', 'Cierre')",
+                    "activos" => "e.Nombre NOT IN ('Cerrado', 'Cierre', 'Anulado')",
+                    _ => "1=1"
+                });
+            }
+
+            if (model.FechaInicio.HasValue)
+                condiciones.Add("t.Fecha_Creacion >= @FechaInicio");
+
+            if (model.FechaFin.HasValue)
+                condiciones.Add("t.Fecha_Creacion < @FechaFinExclusiva");
+
             if (rolActual == "Usuario")
             {
                 condiciones.Add("t.Id_Usuario_Solicita = @IdUsuarioActual");
@@ -174,7 +197,9 @@ namespace HelpDesk_Sistemas.Repositories
                     model.IdArea,
                     model.IdTipoRequerimiento,
                     model.IdPrioridad,
-                    IdUsuarioActual = idUsuarioActual
+                    IdUsuarioActual = idUsuarioActual,
+                    model.FechaInicio,
+                    FechaFinExclusiva = model.FechaFin?.AddDays(1)
                 },
                 splitOn: "Id,Id"
             );
