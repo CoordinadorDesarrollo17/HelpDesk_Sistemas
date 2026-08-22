@@ -10,6 +10,10 @@ namespace HelpDesk_Sistemas.Models
         public int? IdTipoReq { get; set; }
         public string? TipoRequerimiento { get; set; }   // NULL = aplica a cualquier tipo (comodín)
 
+        // Área del Tipo de atención (ej. "Capacitación" existe una vez por área) —
+        // solo para agrupar/mostrar en la pantalla de administración, no se guarda.
+        public string? Area { get; set; }
+
         public int? IdCategoria { get; set; }
         public string? Categoria { get; set; }            // NULL = aplica a cualquier categoría
 
