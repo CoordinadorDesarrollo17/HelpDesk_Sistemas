@@ -147,8 +147,11 @@ namespace HelpDesk_Sistemas.Repositories
                     t.Id                                 AS IdTicket,
                     t.Codigo_Ticket                       AS CodigoTicket,
                     tr.Nombre                             AS TipoRequerimiento,
+                    tr.Flujo                              AS Flujo,
                     a.Nombre                              AS Area,
+                    aSol.Nombre                           AS AreaSolicitante,
                     c.Nombre                              AS Categoria,
+                    sis.Nombre                            AS Sistema,
                     e.Nombre                              AS Estado,
                     p.Nombre                              AS Prioridad,
                     CONCAT(us.Nombre, ' ', us.Apellido)   AS Solicitante,
@@ -177,8 +180,10 @@ namespace HelpDesk_Sistemas.Repositories
                 INNER JOIN Estado e              ON e.Id  = t.Id_Estado
                 LEFT  JOIN Prioridad p           ON p.Id  = t.Id_Prioridad
                 INNER JOIN Usuarios us           ON us.Id = t.Id_Usuario_Solicita
+                LEFT  JOIN Area aSol             ON aSol.Id = us.Id_Area
                 LEFT  JOIN Usuarios ua           ON ua.Id = t.Id_Usuario_Asignado
                 LEFT JOIN Sociedad soc           ON soc.Id = t.Id_Sociedad
+                LEFT JOIN Sistema sis            ON sis.Id = t.Id_Sistema
                 {SqlJoinsSla}
                 WHERE {whereClause}
                 ORDER BY
@@ -249,8 +254,10 @@ namespace HelpDesk_Sistemas.Repositories
             t.Id                                 AS IdTicket,
             t.Codigo_Ticket                       AS CodigoTicket,
             tr.Nombre                             AS TipoRequerimiento,
+            tr.Flujo                              AS Flujo,
             a.Nombre                              AS Area,
             c.Nombre                              AS Categoria,
+            sis.Nombre                            AS Sistema,
             e.Nombre                              AS Estado,
             p.Nombre                              AS Prioridad,
             CONCAT(us.Nombre, ' ', us.Apellido)   AS Solicitante,
@@ -265,6 +272,7 @@ namespace HelpDesk_Sistemas.Repositories
         LEFT  JOIN Prioridad p           ON p.Id  = t.Id_Prioridad
         INNER JOIN Usuarios us           ON us.Id = t.Id_Usuario_Solicita
         LEFT  JOIN Usuarios ua           ON ua.Id = t.Id_Usuario_Asignado
+        LEFT JOIN Sistema sis            ON sis.Id = t.Id_Sistema
         {SqlJoinsSla}
         WHERE t.Id = @Id
             ";
@@ -291,8 +299,24 @@ namespace HelpDesk_Sistemas.Repositories
         public async Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimiento()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
-            var sql = "SELECT Id, Nombre, Requiere_Categoria AS RequiereCategoria FROM Tipo_Requerimiento WHERE Activo = 1 ORDER BY Id";
+            var sql = @"
+                SELECT Id, Nombre, Requiere_Categoria AS RequiereCategoria, Flujo, Usa_Impacto_Urgencia AS UsaImpactoUrgencia
+                FROM Tipo_Requerimiento WHERE Activo = 1 ORDER BY Id
+            ";
             var result = await xCon.QueryAsync<TipoRequerimientoModel>(sql);
+            return result.ToList();
+        }
+
+        /// <summary>Tipos de atención de una área específica — para el combo de Crear ticket
+        /// (cada área tiene su propia lista, ver Database/Catalogos/03_TiposAtencionPorArea.sql).</summary>
+        public async Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimientoPorArea(int idArea)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = @"
+                SELECT Id, Nombre, Requiere_Categoria AS RequiereCategoria, Flujo, Usa_Impacto_Urgencia AS UsaImpactoUrgencia
+                FROM Tipo_Requerimiento WHERE Id_Area = @IdArea AND Activo = 1 ORDER BY Id
+            ";
+            var result = await xCon.QueryAsync<TipoRequerimientoModel>(sql, new { IdArea = idArea });
             return result.ToList();
         }
 
@@ -304,11 +328,34 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
-        public async Task<List<CatalogoModel>> ObtenerCategoriasPorArea(int idArea)
+        /// <summary>Las 3 áreas de soporte con Requiere_Sistema — para el combo de Crear ticket
+        /// (decide si se muestra el campo Sistema al elegir esa área).</summary>
+        public async Task<List<AreaModel>> ObtenerAreasParaCrearTicket()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
-            var sql = "SELECT Id, Nombre FROM Categoria WHERE Id_Area = @IdArea AND Activo = 1 ORDER BY Nombre";
-            var result = await xCon.QueryAsync<CatalogoModel>(sql, new { IdArea = idArea });
+            var sql = @"
+                SELECT Id, Nombre, Es_Area_Sistemas AS EsAreaSistemas, Requiere_Sistema AS RequiereSistema
+                FROM Area WHERE Es_Area_Sistemas = 1 AND Activo = 1 ORDER BY Nombre
+            ";
+            var result = await xCon.QueryAsync<AreaModel>(sql);
+            return result.ToList();
+        }
+
+        /// <summary>Categorías de un tipo de atención específico — la categoría ahora depende
+        /// de Área + Tipo, no solo de Área (ver 03_TiposAtencionPorArea.sql).</summary>
+        public async Task<List<CatalogoModel>> ObtenerCategoriasPorTipo(int idTipoReq)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Id, Nombre FROM Categoria WHERE Id_Tipo_Req = @IdTipoReq AND Activo = 1 ORDER BY Nombre";
+            var result = await xCon.QueryAsync<CatalogoModel>(sql, new { IdTipoReq = idTipoReq });
+            return result.ToList();
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerSistemas()
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Id, Nombre FROM Sistema WHERE Activo = 1 ORDER BY Nombre";
+            var result = await xCon.QueryAsync<CatalogoModel>(sql);
             return result.ToList();
         }
 
@@ -327,6 +374,27 @@ namespace HelpDesk_Sistemas.Repositories
             using var xCon = new SqlConnection(dapperContext.connectionString);
             var sql = "SELECT Requiere_Categoria FROM Tipo_Requerimiento WHERE Id = @Id";
             return await xCon.ExecuteScalarAsync<bool>(sql, new { Id = idTipoRequerimiento });
+        }
+
+        /// <summary>Detalle completo de un tipo de atención (Flujo, si usa Impacto/Urgencia,
+        /// etc.) — usado al validar la creación de un ticket en el servidor.</summary>
+        public async Task<TipoRequerimientoModel?> ObtenerTipoRequerimientoPorId(int idTipoRequerimiento)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = @"
+                SELECT Id, Nombre, Requiere_Categoria AS RequiereCategoria, Flujo, Usa_Impacto_Urgencia AS UsaImpactoUrgencia
+                FROM Tipo_Requerimiento WHERE Id = @Id
+            ";
+            return await xCon.QueryFirstOrDefaultAsync<TipoRequerimientoModel>(sql, new { Id = idTipoRequerimiento });
+        }
+
+        /// <summary>True si el área exige elegir Sistema al crear un ticket (Soporte Sistemas /
+        /// Soporte Desarrollo). Revalidado en el servidor, no solo confiado del formulario.</summary>
+        public async Task<bool> AreaRequiereSistema(int idArea)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Requiere_Sistema FROM Area WHERE Id = @Id";
+            return await xCon.ExecuteScalarAsync<bool>(sql, new { Id = idArea });
         }
 
         /// <summary>Combo de Impacto para Soporte (parte de la matriz de prioridad).</summary>
@@ -432,6 +500,7 @@ namespace HelpDesk_Sistemas.Repositories
                     t.Codigo_Ticket                       AS CodigoTicket,
                     tr.Nombre                             AS TipoRequerimiento,
                     a.Nombre                              AS Area,
+                    sis.Nombre                            AS Sistema,
                     c.Nombre                              AS Categoria,
                     t.Detalle                             AS Detalle,
                     t.Solucion                            AS Solucion,
@@ -449,6 +518,7 @@ namespace HelpDesk_Sistemas.Repositories
                 LEFT  JOIN Impacto imp           ON imp.Id = t.Id_Impacto
                 LEFT  JOIN Urgencia urg          ON urg.Id = t.Id_Urgencia
                 LEFT JOIN Sociedad soc           ON soc.Id = t.Id_Sociedad
+                LEFT JOIN Sistema sis            ON sis.Id = t.Id_Sistema
                 {SqlJoinsSla}
                 WHERE t.Id = @IdTicket
             ";
@@ -516,7 +586,7 @@ namespace HelpDesk_Sistemas.Repositories
         /// Para Implementación/Mejora la prioridad queda en NULL hasta que Soporte
         /// la asigne manualmente, igual que antes.
         /// </summary>
-        public async Task<int> CrearTicket(CrearTicketModel model, int idUsuarioSolicita, bool requiereCategoria)
+        public async Task<int> CrearTicket(CrearTicketModel model, int idUsuarioSolicita)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
@@ -529,16 +599,20 @@ namespace HelpDesk_Sistemas.Repositories
                     );
                 DECLARE @Codigo VARCHAR(20) = 'TK' + @Anio + RIGHT('000000' + CAST(@Siguiente AS VARCHAR), 6);
                 DECLARE @IdEstadoPendiente INT = (SELECT Id FROM Estado WHERE Nombre = 'Pendiente');
+                -- La prioridad automática por matriz solo aplica a los tipos que la usan
+                -- (Usa_Impacto_Urgencia) — los de flujo largo (Mejoras/Implementación) no
+                -- tienen filas en Matriz_Prioridad, así que la prioridad queda manual.
+                DECLARE @UsaImpactoUrgencia BIT = (SELECT Usa_Impacto_Urgencia FROM Tipo_Requerimiento WHERE Id = @IdTipoReq);
                 DECLARE @IdPrioridad INT = (
-                    CASE WHEN @RequiereCategoria = 0 THEN NULL ELSE (
+                    CASE WHEN @UsaImpactoUrgencia = 0 THEN NULL ELSE (
                         SELECT Id_Prioridad FROM Matriz_Prioridad
                         WHERE Id_Tipo_Req = @IdTipoReq AND Id_Impacto = @IdImpacto AND Id_Urgencia = @IdUrgencia
                     ) END
                 );
                 DECLARE @IdTicketNuevo INT;
 
-                INSERT INTO Tickets (Codigo_Ticket, Id_Tipo_Req, Id_Categoria, Id_Area, Id_Usuario_Solicita, Detalle, Id_Estado, Id_Impacto, Id_Urgencia, Id_Prioridad, Id_Sociedad)
-                VALUES (@Codigo, @IdTipoReq, @IdCategoria, @IdArea, @IdUsuarioSolicita, @Detalle, @IdEstadoPendiente, @IdImpacto, @IdUrgencia, @IdPrioridad, @IdSociedad);
+                INSERT INTO Tickets (Codigo_Ticket, Id_Tipo_Req, Id_Categoria, Id_Area, Id_Sistema, Id_Usuario_Solicita, Detalle, Id_Estado, Id_Impacto, Id_Urgencia, Id_Prioridad, Id_Sociedad)
+                VALUES (@Codigo, @IdTipoReq, @IdCategoria, @IdArea, @IdSistema, @IdUsuarioSolicita, @Detalle, @IdEstadoPendiente, @IdImpacto, @IdUrgencia, @IdPrioridad, @IdSociedad);
 
                 SET @IdTicketNuevo = SCOPE_IDENTITY();
 
@@ -555,11 +629,11 @@ namespace HelpDesk_Sistemas.Repositories
                 IdTipoReq = model.IdTipoRequerimiento,
                 IdCategoria = model.IdCategoria,
                 IdArea = model.IdArea,
+                IdSistema = model.IdSistema,
                 IdUsuarioSolicita = idUsuarioSolicita,
                 Detalle = model.Detalle,
                 IdImpacto = model.IdImpacto,
                 IdUrgencia = model.IdUrgencia,
-                RequiereCategoria = requiereCategoria,
                 IdSociedad = model.IdSociedad
             });
 

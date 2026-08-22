@@ -14,5 +14,8 @@ namespace HelpDesk_Sistemas.Models
 
         /// <summary>True para las 3 áreas de soporte (TI/Sistemas/Desarrollo) que enrutan tickets.</summary>
         public bool EsAreaSistemas { get; set; }
+
+        /// <summary>True solo para Soporte Sistemas / Soporte Desarrollo — piden el campo Sistema al crear ticket.</summary>
+        public bool RequiereSistema { get; set; }
     }
 }

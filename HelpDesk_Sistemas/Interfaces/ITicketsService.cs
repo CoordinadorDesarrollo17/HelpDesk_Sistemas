@@ -21,10 +21,15 @@ namespace HelpDesk_Sistemas.Interfaces
 
         Task<List<CatalogoModel>> ObtenerEstados();
         Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimiento();
+        Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimientoPorArea(int idArea);
         Task<List<CatalogoModel>> ObtenerAreasSistemas();
-        Task<List<CatalogoModel>> ObtenerCategoriasPorArea(int idArea);
+        Task<List<AreaModel>> ObtenerAreasParaCrearTicket();
+        Task<List<CatalogoModel>> ObtenerCategoriasPorTipo(int idTipoReq);
+        Task<List<CatalogoModel>> ObtenerSistemas();
         Task<List<CatalogoModel>> ObtenerPrioridades();
         Task<bool> TipoRequiereCategoria(int idTipoRequerimiento);
+        Task<TipoRequerimientoModel?> ObtenerTipoRequerimientoPorId(int idTipoRequerimiento);
+        Task<bool> AreaRequiereSistema(int idArea);
         Task<List<CatalogoModel>> ObtenerSociedadesPorUsuario(int idUsuario);
         Task<List<CatalogoModel>> ObtenerImpactos();
         Task<List<CatalogoModel>> ObtenerUrgencias();
@@ -43,7 +48,7 @@ namespace HelpDesk_Sistemas.Interfaces
         // CREACIÓN
         // ============================================================
 
-        Task<(int IdTicket, List<string> Errores)> CrearTicket(CrearTicketModel model, int idUsuarioSolicita, bool requiereCategoria);
+        Task<(int IdTicket, List<string> Errores)> CrearTicket(CrearTicketModel model, int idUsuarioSolicita);
 
         // ============================================================
         // FLUJO CONSULTA / SOPORTE
