@@ -7,6 +7,7 @@
         public string CodigoTicket { get; set; }
         public string TipoRequerimiento { get; set; }
         public string Area { get; set; }
+        public string? Sistema { get; set; }
         public string? Categoria { get; set; }
         public string Detalle { get; set; }
 

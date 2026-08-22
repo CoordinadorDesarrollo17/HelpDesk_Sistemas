@@ -526,7 +526,7 @@
 					if (!html) return;
 					contenido.innerHTML = html;
 					inicializarValidacionArchivos();
-					inicializarComboCategoria();
+					inicializarComboArea();
 					inicializarComboTipoRequerimiento();
 					inicializarFormularioCrearTicket();
 					inicializarPrioridadEstimada();
@@ -571,7 +571,7 @@
 
 						document.getElementById("contenidoCrearTicket").innerHTML = texto;
 						inicializarValidacionArchivos();
-						inicializarComboCategoria();
+						inicializarComboArea();
 						inicializarComboTipoRequerimiento();
 						inicializarFormularioCrearTicket();
 						inicializarPrioridadEstimada();
@@ -581,29 +581,96 @@
 			});
 		}
 
-		function inicializarComboCategoria() {
+		// El Área decide dos cosas: qué Tipos de atención aparecen (AJAX) y si se
+		// muestra el campo Sistema (Soporte Sistemas / Soporte Desarrollo).
+		function inicializarComboArea() {
 			const cboArea = document.getElementById("cboArea");
 
 			cboArea.addEventListener("change", function () {
-				cargarCategorias(this.value, null);
+				actualizarVisibilidadSistema();
+				cargarTiposPorArea(this.value, null);
 			});
 
+			actualizarVisibilidadSistema();
+
 			if (cboArea.value) {
-				cargarCategorias(cboArea.value, cboArea.dataset.categoriaSeleccionada);
+				cargarTiposPorArea(cboArea.value, cboArea.dataset.tipoSeleccionado);
 			}
 		}
 
-		function cargarCategorias(idArea, idCategoriaSeleccionada) {
-			const cboCategoria = document.getElementById("cboCategoria");
+		function actualizarVisibilidadSistema() {
+			const cboArea = document.getElementById("cboArea");
+			const opcionSeleccionada = cboArea.options[cboArea.selectedIndex];
+			const requiereSistema = opcionSeleccionada?.dataset.requiereSistema === "true";
+			const grupoSistema = document.getElementById("grupoSistema");
+
+			grupoSistema.classList.toggle("d-none", !requiereSistema);
+
+			if (!requiereSistema) {
+				document.getElementById("cboSistema").value = "";
+			}
+		}
+
+		function cargarTiposPorArea(idArea, idTipoSeleccionado) {
+			const cboTipo = document.getElementById("cboTipoRequerimiento");
 
 			if (!idArea) {
-				cboCategoria.innerHTML = '<option value="">Selecciona un área primero...</option>';
+				cboTipo.innerHTML = '<option value="">Selecciona un área primero...</option>';
+				cboTipo.disabled = true;
+				cargarCategoriasPorTipo(null, null);
+				return;
+			}
+
+			cboTipo.innerHTML = '<option value="">Cargando...</option>';
+			cboTipo.disabled = true;
+
+			fetchConManejo(`@Url.Action("TiposPorArea")?idArea=${idArea}`)
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					cboTipo.innerHTML = '<option value="">Selecciona...</option>';
+					cboTipo.disabled = false;
+
+					data.forEach(tipo => {
+						const opt = document.createElement("option");
+						opt.value = tipo.id;
+						opt.textContent = tipo.nombre;
+						opt.dataset.usaImpactoUrgencia = String(tipo.usaImpactoUrgencia).toLowerCase();
+
+						if (idTipoSeleccionado && tipo.id == idTipoSeleccionado) {
+							opt.selected = true;
+						}
+
+						cboTipo.appendChild(opt);
+					});
+
+					actualizarVisibilidadPorTipo();
+
+					if (idTipoSeleccionado) {
+						const idCategoriaSeleccionada = document.getElementById("cboArea").dataset.categoriaSeleccionada;
+						cargarCategoriasPorTipo(idTipoSeleccionado, idCategoriaSeleccionada);
+					} else {
+						cargarCategoriasPorTipo(null, null);
+					}
+				});
+		}
+
+		function cargarCategoriasPorTipo(idTipoReq, idCategoriaSeleccionada) {
+			const cboCategoria = document.getElementById("cboCategoria");
+
+			if (!idTipoReq) {
+				cboCategoria.innerHTML = '<option value="">Selecciona un tipo de atención primero...</option>';
+				cboCategoria.disabled = true;
 				return;
 			}
 
 			cboCategoria.innerHTML = '<option value="">Cargando...</option>';
+			cboCategoria.disabled = true;
 
-			fetchConManejo(`@Url.Action("CategoriasPorArea")?idArea=${idArea}`)
+			fetchConManejo(`@Url.Action("CategoriasPorTipo")?idTipoReq=${idTipoReq}`)
 				.then(r => {
 					if (!r) return;
 					return r.json();
@@ -611,6 +678,8 @@
 				.then(data => {
 					if (!data) return;
 					cboCategoria.innerHTML = '<option value="">Selecciona...</option>';
+					cboCategoria.disabled = false;
+
 					data.forEach(cat => {
 						const opt = document.createElement("option");
 						opt.value = cat.id;
@@ -630,24 +699,20 @@
 
 			cboTipo.addEventListener("change", function () {
 				actualizarVisibilidadPorTipo();
+				cargarCategoriasPorTipo(this.value, null);
 			});
-
-			actualizarVisibilidadPorTipo();
 		}
 
 		function actualizarVisibilidadPorTipo() {
 			const cboTipo = document.getElementById("cboTipoRequerimiento");
 			const opcionSeleccionada = cboTipo.options[cboTipo.selectedIndex];
-			const requiereCategoria = opcionSeleccionada.dataset.requiereCategoria === "true";
+			const usaImpactoUrgencia = opcionSeleccionada?.dataset.usaImpactoUrgencia === "true";
 
-			const grupoCategoria = document.getElementById("grupoCategoria");
 			const grupoImpactoUrgencia = document.getElementById("grupoImpactoUrgencia");
 
-			grupoCategoria.style.display = requiereCategoria ? "block" : "none";
-			grupoImpactoUrgencia.style.display = requiereCategoria ? "block" : "none";
+			grupoImpactoUrgencia.classList.toggle("d-none", !usaImpactoUrgencia);
 
-			if (!requiereCategoria) {
-				document.getElementById("cboCategoria").value = "";
+			if (!usaImpactoUrgencia) {
 				document.querySelector('select[name="IdImpacto"]').value = "";
 				document.querySelector('select[name="IdUrgencia"]').value = "";
 			}

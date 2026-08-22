@@ -13,6 +13,9 @@ namespace HelpDesk_Sistemas.Models
         [Required(ErrorMessage = "Selecciona un área.")]
         public int? IdArea { get; set; }
 
+        //obligatorio solo si el área lo requiere (Soporte Sistemas / Soporte Desarrollo)
+        public int? IdSistema { get; set; }
+
         //no es obligatorio para implementacion y mejora
         public int? IdCategoria { get; set; }
 
