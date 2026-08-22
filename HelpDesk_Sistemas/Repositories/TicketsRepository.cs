@@ -93,6 +93,29 @@ namespace HelpDesk_Sistemas.Repositories
             if (model.IdPrioridad.HasValue)
                 condiciones.Add("t.Id_Prioridad = @IdPrioridad");
 
+            // No se reutiliza IdEstado para "Pendientes"/"En pausa" porque ese filtro ya
+            // trae pegada la regla de "si no es Pendiente, solo lo asignado a mí" (ver
+            // arriba), que rompería el conteo real de las tarjetas KPI de Home/Reportes.
+            if (!string.IsNullOrEmpty(model.Categoria))
+            {
+                condiciones.Add(model.Categoria switch
+                {
+                    "pendientes" => "e.Nombre = 'Pendiente'",
+                    "en-pausa" => "e.Nombre = 'En pausa'",
+                    "en-curso" => "e.Nombre IN ('En revisión', 'En atención', 'Levantamiento', 'Desarrollo', 'Pruebas', 'Pase a producción')",
+                    "mis-asignados" => "(t.Id_Usuario_Asignado = @IdUsuarioActual AND e.Nombre NOT IN ('Cerrado', 'Anulado', 'Cierre'))",
+                    "cerrados" => "e.Nombre IN ('Cerrado', 'Cierre')",
+                    "activos" => "e.Nombre NOT IN ('Cerrado', 'Cierre', 'Anulado')",
+                    _ => "1=1"
+                });
+            }
+
+            if (model.FechaInicio.HasValue)
+                condiciones.Add("t.Fecha_Creacion >= @FechaInicio");
+
+            if (model.FechaFin.HasValue)
+                condiciones.Add("t.Fecha_Creacion < @FechaFinExclusiva");
+
             if (rolActual == "Usuario")
             {
                 condiciones.Add("t.Id_Usuario_Solicita = @IdUsuarioActual");
@@ -174,7 +197,9 @@ namespace HelpDesk_Sistemas.Repositories
                     model.IdArea,
                     model.IdTipoRequerimiento,
                     model.IdPrioridad,
-                    IdUsuarioActual = idUsuarioActual
+                    IdUsuarioActual = idUsuarioActual,
+                    model.FechaInicio,
+                    FechaFinExclusiva = model.FechaFin?.AddDays(1)
                 },
                 splitOn: "Id,Id"
             );
@@ -860,11 +885,21 @@ namespace HelpDesk_Sistemas.Repositories
         /// <summary>
         /// Asigna/corrige la prioridad de un ticket Pendiente. La prioridad automática
         /// que calcula la matriz Impacto × Urgencia es editable manualmente sin
-        /// restricción (Soporte puede corregirla si el triage automático no aplica).
+        /// restricción de valor (Soporte puede corregirla si el triage automático no
+        /// aplica), pero no de quién la cambia: ver validación de "solicitante propio"
+        /// más abajo, misma regla que el resto de acciones sobre tickets.
         /// </summary>
-        public async Task<bool> AsignarPrioridad(int idTicket, int idPrioridad)
+        public async Task<(bool Exito, string? Mensaje)> AsignarPrioridad(int idTicket, int idPrioridad, int idUsuarioActual, int idAreaUsuarioActual)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sqlInfo = "SELECT Id_Usuario_Solicita AS IdUsuarioSolicita, Id_Area AS IdArea FROM Tickets WHERE Id = @IdTicket";
+            var info = await xCon.QueryFirstOrDefaultAsync<(int IdUsuarioSolicita, int IdArea)>(sqlInfo, new { IdTicket = idTicket });
+
+            if (info.IdUsuarioSolicita == idUsuarioActual && info.IdArea != idAreaUsuarioActual)
+            {
+                return (false, "No puedes definir la prioridad de un ticket que tú mismo solicitaste.");
+            }
 
             var sql = @"
                 UPDATE Tickets
@@ -879,7 +914,7 @@ namespace HelpDesk_Sistemas.Repositories
             ";
 
             var filasAfectadas = await xCon.ExecuteAsync(sql, new { IdTicket = idTicket, IdPrioridad = idPrioridad });
-            return filasAfectadas > 0;
+            return (filasAfectadas > 0, null);
         }
 
         /// <summary>
@@ -888,18 +923,26 @@ namespace HelpDesk_Sistemas.Repositories
         /// "en curso" (equivalente a En atención en cada flujo), o si el número de
         /// orden ya está usado por otro ticket del mismo grupo.
         /// </summary>
-        public async Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden)
+        public async Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden, int idUsuarioActual, int idAreaUsuarioActual)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
             var sqlInfo = @"
-                SELECT t.Id_Usuario_Asignado AS IdUsuarioAsignado, t.Id_Prioridad AS IdPrioridad, e.Nombre AS Estado
+                SELECT t.Id_Usuario_Asignado AS IdUsuarioAsignado, t.Id_Prioridad AS IdPrioridad, e.Nombre AS Estado,
+                       t.Id_Usuario_Solicita AS IdUsuarioSolicita, t.Id_Area AS IdArea
                 FROM Tickets t
                 INNER JOIN Estado e ON e.Id = t.Id_Estado
                 WHERE t.Id = @IdTicket
             ";
 
-            var info = await xCon.QueryFirstOrDefaultAsync<(int? IdUsuarioAsignado, int? IdPrioridad, string Estado)>(sqlInfo, new { IdTicket = idTicket });
+            var info = await xCon.QueryFirstOrDefaultAsync<(int? IdUsuarioAsignado, int? IdPrioridad, string Estado, int IdUsuarioSolicita, int IdArea)>(sqlInfo, new { IdTicket = idTicket });
+
+            // Mismo criterio que el resto de acciones sobre tickets: quien solicitó el
+            // ticket no puede accionarlo, salvo que sea para su propia área de trabajo.
+            if (info.IdUsuarioSolicita == idUsuarioActual && info.IdArea != idAreaUsuarioActual)
+            {
+                return (false, "No puedes definir el orden de atención de un ticket que tú mismo solicitaste.");
+            }
 
             // Estados donde el ticket ya está "en curso" y no debe reordenarse:
             // En atención (Soporte) y Desarrollo en adelante (Implementación/Mejora).

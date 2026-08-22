@@ -133,11 +133,20 @@ namespace HelpDesk_Sistemas.Controllers
                 return BadRequest(new { mensaje = "El ticket no cuenta con prioridad." });
             }
 
-            var exito = await ticketsService.AsignarPrioridad(id, request.IdPrioridad);
+            // La prioridad la define quien trabaja la cola (Soporte/Administrador), nunca
+            // quien solicitó el ticket — misma regla que en TicketsController.
+            var puedeAsignarPrioridad = SesionTemporal.RolActual == "Administrador" || SesionTemporal.RolActual == "Soporte";
+
+            if (!puedeAsignarPrioridad)
+            {
+                return StatusCode(403, new { mensaje = "Solo Soporte o un administrador puede definir la prioridad." });
+            }
+
+            var (exito, mensaje) = await ticketsService.AsignarPrioridad(id, request.IdPrioridad, SesionTemporal.UsuarioActualTemporal, SesionTemporal.IdAreaActual);
 
             if (!exito)
             {
-                return BadRequest(new { mensaje = "El ticket no está disponible para asignar prioridad o ya tiene una asignada." });
+                return BadRequest(new { mensaje = mensaje ?? "El ticket no está disponible para asignar prioridad o ya tiene una asignada." });
             }
 
             return Ok(new { mensaje = "Prioridad asignada." });

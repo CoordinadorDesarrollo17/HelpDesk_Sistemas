@@ -15,7 +15,27 @@
     --brand-green-50: #EAF7EA;
     --page-bg: #F4F5F6;
     --card-border: rgba(0, 0, 0, .08);
+    --card-bg: #fff;
+    --ink: var(--brand-950);
+    --focus-ring-bg: #fff;
     --sidebar-width: 248px;
+}
+
+/* ============================================================
+   MODO OSCURO
+   El sidebar ya es oscuro siempre (por diseño, en ambos temas), así
+   que --brand-950 se queda como está (es su fondo). Lo que cambia
+   con el tema es el resto: fondo de página, tarjetas y texto fuerte,
+   a través de estas variables — el resto del archivo ya las usa.
+   ============================================================ */
+
+[data-bs-theme="dark"] {
+    --page-bg: #16181C;
+    --card-border: rgba(255, 255, 255, .09);
+    --card-bg: #1E2025;
+    --ink: #F2F3F4;
+    --focus-ring-bg: #1E2025;
+    --brand-green-50: rgba(28, 147, 47, .16);
 }
 
 
@@ -70,7 +90,7 @@ body {
 .form-control:focus,
 .form-check-input:focus,
 .form-select:focus {
-    box-shadow: 0 0 0 0.1rem #fff, 0 0 0 0.25rem rgba(28, 147, 47, .35);
+    box-shadow: 0 0 0 0.1rem var(--focus-ring-bg), 0 0 0 0.25rem rgba(28, 147, 47, .35);
     border-color: var(--brand-green-600);
 }
 
@@ -101,6 +121,18 @@ body {
     --bs-btn-active-border-color: var(--brand-green-700);
 }
 
+/* Verde base (--brand-green-700) pierde contraste como TEXTO sobre fondo
+   oscuro — se usa una variante más clara solo donde es texto/borde, no
+   donde es relleno sólido (ahí el blanco encima ya contrasta bien). */
+[data-bs-theme="dark"] .btn-outline-primary {
+    --bs-btn-color: var(--brand-green-400);
+    --bs-btn-border-color: var(--brand-green-400);
+    --bs-btn-hover-bg: var(--brand-green-600);
+    --bs-btn-hover-border-color: var(--brand-green-600);
+    --bs-btn-active-bg: var(--brand-green-600);
+    --bs-btn-active-border-color: var(--brand-green-600);
+}
+
 
 /* ============================================================
    COLORES DE TEXTO / FONDO / BORDE
@@ -108,6 +140,10 @@ body {
 
 .text-primary {
     color: var(--brand-green-700) !important;
+}
+
+[data-bs-theme="dark"] .text-primary {
+    color: var(--brand-green-400) !important;
 }
 
 .bg-primary {
@@ -131,6 +167,21 @@ a {
         color: var(--brand-green-600);
     }
 
+/* :not(.btn) para no pisar el texto blanco de los botones-enlace
+   (ej. "Ver tickets" en Home es un <a class="btn btn-primary">) —
+   sin esto, esta regla le gana por especificidad al color de Bootstrap
+   y el botón queda con texto verde sobre fondo verde, casi invisible.
+   :not(.sidebar-link) por lo mismo: el sidebar tiene su propia paleta
+   fija (gris claro / blanco en el activo) que no depende del tema, y
+   esta regla también le ganaba por especificidad. */
+[data-bs-theme="dark"] a:not(.btn):not(.sidebar-link) {
+    color: var(--brand-green-400);
+}
+
+    [data-bs-theme="dark"] a:not(.btn):not(.sidebar-link):hover {
+        color: var(--brand-green-300);
+    }
+
 
 /* ============================================================
    PAGINACIÓN BOOTSTRAP
@@ -147,6 +198,14 @@ a {
 
     .page-link:hover {
         color: var(--brand-green-600);
+    }
+
+[data-bs-theme="dark"] .page-link {
+    color: var(--brand-green-400);
+}
+
+    [data-bs-theme="dark"] .page-link:hover {
+        color: var(--brand-green-300);
     }
 
 
@@ -372,7 +431,7 @@ a {
     align-items: center;
     gap: .75rem;
     padding: .6rem 1rem;
-    background: #fff;
+    background: var(--card-bg);
     border-bottom: 1px solid var(--card-border);
 }
 
@@ -444,11 +503,11 @@ a {
 }
 
 .card-header {
-    background: #fff;
+    background: var(--card-bg);
 }
 
 .header-gradient {
-    background: #fff;
+    background: var(--card-bg);
     border-bottom: 1px solid var(--card-border);
     padding-top: .9rem;
     padding-bottom: .9rem;
@@ -458,6 +517,13 @@ a {
         font-weight: 600;
         letter-spacing: -.01em;
     }
+
+/* .text-black de Bootstrap es negro fijo, no sigue el tema — sobre el
+   fondo oscuro que toma .header-gradient (--card-bg) queda casi
+   invisible. Se usa en todas las cabeceras de tarjeta del sistema. */
+[data-bs-theme="dark"] .text-black {
+    color: #fff !important;
+}
 
 .shadow-sm {
     box-shadow: 0 1px 2px rgba(16, 24, 40, .05) !important;
@@ -473,19 +539,32 @@ a {
     border-radius: .6rem;
     padding: 1rem;
     height: 100%;
-    background: #fff;
+    background: var(--card-bg);
 }
 
     .kpi-card .kpi-valor {
         font-size: 2rem;
         font-weight: 700;
         line-height: 1.1;
-        color: var(--brand-950);
+        color: var(--ink);
     }
 
     .kpi-card .kpi-etiqueta {
         color: var(--bs-secondary-color);
         font-size: .85rem;
+    }
+
+/* Tarjeta KPI que también funciona como filtro (enlaza al listado ya filtrado) */
+a.kpi-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+    a.kpi-card:hover {
+        border-color: var(--brand-green-500);
+        box-shadow: 0 2px 8px rgba(28, 147, 47, .12);
     }
 
 
@@ -532,13 +611,47 @@ a {
 
     .badge.bg-dark {
         background-color: #E4E4E3 !important;
-        color: var(--brand-950) !important;
+        color: var(--ink) !important;
     }
 
     .badge.bg-primary-subtle {
         background-color: var(--brand-green-50) !important;
         color: var(--brand-green-700) !important;
     }
+
+[data-bs-theme="dark"] .badge.bg-success {
+    background-color: rgba(40, 167, 69, .18) !important;
+    color: #6EE7A0 !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-danger {
+    background-color: rgba(220, 53, 69, .18) !important;
+    color: #FF9B9B !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-warning {
+    background-color: rgba(255, 193, 7, .18) !important;
+    color: #FFD873 !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-info {
+    background-color: rgba(13, 110, 253, .18) !important;
+    color: #8EC9FF !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-secondary {
+    background-color: rgba(173, 181, 189, .18) !important;
+    color: #CBD3DA !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-dark {
+    background-color: rgba(255, 255, 255, .12) !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-primary,
+[data-bs-theme="dark"] .badge.bg-primary-subtle {
+    color: var(--brand-green-400) !important;
+}
 
 
 /* ============================================================
@@ -555,6 +668,16 @@ a {
     --bs-table-hover-bg: #CDEFD1;
 }
 
+[data-bs-theme="dark"] .fila-en-validacion {
+    --bs-table-bg: rgba(255, 193, 7, .12);
+    --bs-table-hover-bg: rgba(255, 193, 7, .2);
+}
+
+[data-bs-theme="dark"] .fila-cerrado {
+    --bs-table-bg: rgba(40, 167, 69, .12);
+    --bs-table-hover-bg: rgba(40, 167, 69, .2);
+}
+
 
 /* ============================================================
    FILAS DE GRUPO
@@ -563,6 +686,10 @@ a {
 .fila-grupo-definicion {
     --bs-table-bg: #FAFAFA;
     cursor: pointer;
+}
+
+[data-bs-theme="dark"] .fila-grupo-definicion {
+    --bs-table-bg: rgba(255, 255, 255, .04);
 }
 
 .grupo-chevron {
@@ -580,7 +707,7 @@ a {
    ============================================================ */
 
 .btn-filtro-kpi {
-    background: #fff;
+    background: var(--card-bg);
     border-color: var(--card-border);
     transition: border-color .15s ease, background-color .15s ease;
 }

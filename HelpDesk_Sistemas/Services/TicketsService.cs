@@ -286,14 +286,14 @@ namespace HelpDesk_Sistemas.Services
         // PRIORIDAD Y ORDEN DE ATENCIÓN (ambos flujos)
         // ============================================================
 
-        public async Task<bool> AsignarPrioridad(int idTicket, int idPrioridad)
+        public async Task<(bool Exito, string? Mensaje)> AsignarPrioridad(int idTicket, int idPrioridad, int idUsuarioActual, int idAreaUsuarioActual)
         {
-            return await ticketsRepository.AsignarPrioridad(idTicket, idPrioridad);
+            return await ticketsRepository.AsignarPrioridad(idTicket, idPrioridad, idUsuarioActual, idAreaUsuarioActual);
         }
 
-        public async Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden)
+        public async Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden, int idUsuarioActual, int idAreaUsuarioActual)
         {
-            return await ticketsRepository.AsignarOrdenAtencion(idTicket, orden);
+            return await ticketsRepository.AsignarOrdenAtencion(idTicket, orden, idUsuarioActual, idAreaUsuarioActual);
         }
 
         public async Task<List<CatalogoModel>> ObtenerMisTicketsPropios(int idUsuario, int idTicketActual)

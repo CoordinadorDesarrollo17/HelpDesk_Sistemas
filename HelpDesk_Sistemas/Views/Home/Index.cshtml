@@ -19,33 +19,39 @@
     </div>
 
     <div class="card-body">
+        <!-- Estas 4 tarjetas, igual que en Cumplimiento de SLA, funcionan como filtro:
+             llevan al listado de tickets ya filtrado por esa categoría. -->
         <div class="row g-3 mb-4">
             <div class="col-6 col-lg-3">
-                <div class="kpi-card">
+                <a class="kpi-card" asp-controller="Tickets" asp-action="ListadoTickets" asp-route-Categoria="pendientes">
                     <div class="kpi-valor">@Model.Tickets.Pendientes</div>
                     <div class="kpi-etiqueta">Tickets pendientes</div>
-                </div>
+                </a>
             </div>
             <div class="col-6 col-lg-3">
-                <div class="kpi-card">
+                <a class="kpi-card" asp-controller="Tickets" asp-action="ListadoTickets" asp-route-Categoria="en-curso">
                     <div class="kpi-valor">@Model.Tickets.EnCurso</div>
                     <div class="kpi-etiqueta">En curso</div>
-                </div>
+                </a>
             </div>
             <div class="col-6 col-lg-3">
-                <div class="kpi-card">
+                <a class="kpi-card" asp-controller="Tickets" asp-action="ListadoTickets" asp-route-Categoria="en-pausa">
                     <div class="kpi-valor">@Model.Tickets.EnPausa</div>
                     <div class="kpi-etiqueta">En pausa</div>
-                </div>
+                </a>
             </div>
             <div class="col-6 col-lg-3">
-                <div class="kpi-card">
+                <a class="kpi-card" asp-controller="Tickets" asp-action="ListadoTickets" asp-route-Categoria="mis-asignados">
                     <div class="kpi-valor">@Model.Tickets.MisAsignados</div>
                     <div class="kpi-etiqueta">Asignados a mí</div>
-                </div>
+                </a>
             </div>
         </div>
 
+        <!--  -->
+        <!-- El % de cumplimiento histórico es un promedio, no un grupo de tickets
+             puntual, así que esa tarjeta se queda informativa (igual que en el propio
+             Dashboard de SLA). Las otras 3 sí filtran, llevando a esa misma pantalla. -->
         <div class="row g-3">
             <div class="col-6 col-lg-3">
                 <div class="kpi-card">
@@ -54,22 +60,22 @@
                 </div>
             </div>
             <div class="col-6 col-lg-3">
-                <div class="kpi-card">
+                <a class="kpi-card" asp-controller="Sla" asp-action="Dashboard" asp-route-categoria="en-riesgo">
                     <div class="kpi-valor text-warning">@Model.Sla.EnRiesgo</div>
                     <div class="kpi-etiqueta">SLA en riesgo</div>
-                </div>
+                </a>
             </div>
             <div class="col-6 col-lg-3">
-                <div class="kpi-card">
+                <a class="kpi-card" asp-controller="Sla" asp-action="Dashboard" asp-route-categoria="incumplido-activo">
                     <div class="kpi-valor text-danger">@Model.Sla.IncumplidosEnCurso</div>
                     <div class="kpi-etiqueta">SLA incumplidos (abiertos)</div>
-                </div>
+                </a>
             </div>
             <div class="col-6 col-lg-3">
-                <div class="kpi-card">
+                <a class="kpi-card" asp-controller="Sla" asp-action="Dashboard" asp-route-categoria="incumplido-finalizado">
                     <div class="kpi-valor text-danger">@Model.Sla.IncumplidosCompletados</div>
                     <div class="kpi-etiqueta">SLA incumplidos (cerrados)</div>
-                </div>
+                </a>
             </div>
         </div>
     </div>

@@ -29,25 +29,30 @@
     </div>
 
     <div class="card-body">
-        <!-- KPIs -->
+        <!-- KPIs: los 3 primeros son conteos de tickets del período -> sí pueden filtrar
+             (llevan al listado ya acotado a las mismas fechas y condición). El de horas
+             promedio es un promedio, no un grupo de tickets, así que se queda informativo. -->
         <div class="row g-3 mb-4">
             <div class="col-6 col-lg-3">
-                <div class="kpi-card">
+                <a class="kpi-card" asp-controller="Tickets" asp-action="ListadoTickets"
+                   asp-route-FechaInicio="@filtro.FechaInicio.ToString("yyyy-MM-dd")" asp-route-FechaFin="@filtro.FechaFin.ToString("yyyy-MM-dd")">
                     <div class="kpi-valor">@Model.Resumen.TotalCreados</div>
                     <div class="kpi-etiqueta">Tickets creados</div>
-                </div>
+                </a>
             </div>
             <div class="col-6 col-lg-3">
-                <div class="kpi-card">
+                <a class="kpi-card" asp-controller="Tickets" asp-action="ListadoTickets"
+                   asp-route-FechaInicio="@filtro.FechaInicio.ToString("yyyy-MM-dd")" asp-route-FechaFin="@filtro.FechaFin.ToString("yyyy-MM-dd")" asp-route-Categoria="cerrados">
                     <div class="kpi-valor">@Model.Resumen.TotalCerrados</div>
                     <div class="kpi-etiqueta">Tickets cerrados</div>
-                </div>
+                </a>
             </div>
             <div class="col-6 col-lg-3">
-                <div class="kpi-card">
+                <a class="kpi-card" asp-controller="Tickets" asp-action="ListadoTickets"
+                   asp-route-FechaInicio="@filtro.FechaInicio.ToString("yyyy-MM-dd")" asp-route-FechaFin="@filtro.FechaFin.ToString("yyyy-MM-dd")" asp-route-Categoria="activos">
                     <div class="kpi-valor">@Model.Resumen.TicketsActivos</div>
                     <div class="kpi-etiqueta">Tickets activos</div>
-                </div>
+                </a>
             </div>
             <div class="col-6 col-lg-3">
                 <div class="kpi-card">
@@ -178,6 +183,14 @@
         const brandGreen = '#1C932F';
         const colorPorPrioridad = { 'Baja': '#6c757d', 'Media': '#0B5C87', 'Alta': '#B25E09', 'Urgente': '#B42318', 'Sin prioridad': '#adb5bd' };
         const paletaGeneral = ['#1C932F', '#27A528', '#32B91E', '#0B5C87', '#B25E09', '#B42318', '#6c757d', '#495057'];
+
+        // Chart.js no sigue el tema solo — los colores de texto/rejilla por
+        // defecto son grises oscuros, ilegibles sobre fondo oscuro.
+        (function ajustarChartAlTema() {
+            const esOscuro = document.documentElement.getAttribute("data-bs-theme") === "dark";
+            Chart.defaults.color = esOscuro ? "#B7BBC0" : "#495057";
+            Chart.defaults.borderColor = esOscuro ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.1)";
+        })();
 
         @{
             var opcionesJson = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
