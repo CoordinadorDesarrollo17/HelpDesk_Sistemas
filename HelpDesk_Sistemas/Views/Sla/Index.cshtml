@@ -25,16 +25,20 @@
 }
 
 @{
-    // Se agrupa solo por lo que define "a qué aplica" (tipo/categoría/sociedad):
-    // Respuesta y Resolución de una misma condición van en el mismo grupo/línea,
-    // en vez de salir como dos filas separadas. Dentro del grupo, Respuesta va
-    // antes que Resolución, y cada una ordenada por prioridad.
-    var grupos = Model
+    // Desde que "Tipo de atención" pasó a ser por área (varias áreas tienen un tipo
+    // con el mismo nombre, ej. "Capacitación" existe para TI/Sistemas/Desarrollo),
+    // agrupar solo por tipo ya no alcanza — quedaban indistinguibles. Ahora se
+    // agrupa primero por Área y, dentro de cada una, por lo que define "a qué
+    // aplica" (tipo/categoría/sociedad): Respuesta y Resolución de una misma
+    // condición van en el mismo grupo/línea. Dentro del grupo, Respuesta va antes
+    // que Resolución, y cada una ordenada por prioridad.
+    var subgrupos = Model
         .Select((d, idx) => (Definicion: d, Indice: idx))
-        .GroupBy(x => new { x.Definicion.TipoRequerimiento, x.Definicion.Categoria, x.Definicion.Sociedad })
+        .GroupBy(x => new { x.Definicion.Area, x.Definicion.TipoRequerimiento, x.Definicion.Categoria, x.Definicion.Sociedad })
         .Select(g => new
         {
             Clave = $"grupo{g.First().Indice}",
+            g.Key.Area,
             g.Key.TipoRequerimiento,
             g.Key.Categoria,
             g.Key.Sociedad,
@@ -43,9 +47,21 @@
                 .ThenBy(d => OrdenPrioridad(d.Prioridad))
                 .ToList()
         })
-        .OrderBy(g => g.TipoRequerimiento ?? "")
-        .ThenBy(g => g.Categoria ?? "")
-        .ThenBy(g => g.Sociedad ?? "")
+        .ToList();
+
+    // Segundo nivel: las áreas de soporte en su orden natural (TI -> Sistemas ->
+    // Desarrollo); las definiciones "comodín" (sin área, aplican a cualquier tipo)
+    // quedan en un bloque final aparte.
+    var ordenArea = new[] { "SOPORTE TI Y SEGUR. INFORMATICA", "AREA DE SISTEMAS", "DESARROLLO DE PROYECTOS" };
+    var areas = subgrupos
+        .GroupBy(g => g.Area)
+        .Select(g => new
+        {
+            Area = g.Key,
+            Grupos = g.OrderBy(x => x.TipoRequerimiento ?? "").ThenBy(x => x.Categoria ?? "").ThenBy(x => x.Sociedad ?? "").ToList()
+        })
+        .OrderBy(g => g.Area is null ? int.MaxValue : Array.IndexOf(ordenArea, g.Area))
+        .ThenBy(g => g.Area ?? "")
         .ToList();
 }
 
@@ -83,62 +99,76 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var g in grupos)
+                    @foreach (var bloqueArea in areas)
                     {
-                        var condicionesGrupo = new[] { g.TipoRequerimiento, g.Categoria, g.Sociedad }.Where(c => c != null);
-                        var textoCondicionGrupo = condicionesGrupo.Any() ? string.Join(" · ", condicionesGrupo) : "Cualquier ticket";
-                        var activos = g.Definiciones.Count(d => d.Activo);
-                        var totalRespuesta = g.Definiciones.Count(d => d.TipoSla == "Respuesta");
-                        var totalResolucion = g.Definiciones.Count - totalRespuesta;
-                        <tr class="fila-grupo-definicion" role="button" onclick="toggleGrupoDefinicion(this, '@g.Clave')">
+                        var totalDefsArea = bloqueArea.Grupos.Sum(g => g.Definiciones.Count);
+                        <tr class="fila-area-definicion">
                             <td colspan="9">
-                                <i class="bi bi-chevron-right grupo-chevron me-2"></i>
-                                <span class="fw-semibold">@textoCondicionGrupo</span>
-                                @if (totalRespuesta > 0)
-                                {
-                                    <span class="badge bg-info text-dark ms-2">@totalRespuesta Respuesta</span>
-                                }
-                                @if (totalResolucion > 0)
-                                {
-                                    <span class="badge bg-primary ms-1">@totalResolucion Resolución</span>
-                                }
+                                <i class="bi bi-diagram-3 me-2"></i>
+                                <span class="fw-bold text-uppercase">@(bloqueArea.Area ?? "Aplican a cualquier tipo")</span>
                                 <span class="text-muted small ms-2">
-                                    @g.Definiciones.Count @(g.Definiciones.Count == 1 ? "definición" : "definiciones")
-                                    @if (activos < g.Definiciones.Count)
-                                    {
-                                        @:· @activos activa@(activos == 1 ? "" : "s")
-                                    }
+                                    @bloqueArea.Grupos.Count @(bloqueArea.Grupos.Count == 1 ? "tipo" : "tipos") ·
+                                    @totalDefsArea @(totalDefsArea == 1 ? "definición" : "definiciones")
                                 </span>
                             </td>
                         </tr>
-                        @foreach (var d in g.Definiciones)
+                        @foreach (var g in bloqueArea.Grupos)
                         {
-                            <tr class="fila-definicion-hija d-none" data-grupo="@g.Clave">
-                                <td class="ps-4">
-                                    <i class="bi bi-arrow-return-right text-muted small"></i>
-                                    @(d.Prioridad ?? "Cualquier prioridad")
-                                </td>
-                                <td>
-                                    <span class="badge @(d.TipoSla == "Respuesta" ? "bg-info text-dark" : "bg-primary")">@d.TipoSla</span>
-                                </td>
-                                <td></td>
-                                <td>@d.Calendario</td>
-                                <td>@FormatearDuracion(d.DuracionMinutos)</td>
-                                <td>@d.PorcentajeAdvertencia%</td>
-                                <td>@(d.Reactivable ? "Sí" : "No")</td>
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" role="switch"
-                                               @(d.Activo ? "checked" : "")
-                                               onchange="cambiarActivoDefinicion(@d.Id, this.checked)">
-                                    </div>
-                                </td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Editar" onclick="abrirCrearEditarDefinicion(@d.Id)">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
+                            var condicionesGrupo = new[] { g.TipoRequerimiento, g.Categoria, g.Sociedad }.Where(c => c != null);
+                            var textoCondicionGrupo = condicionesGrupo.Any() ? string.Join(" · ", condicionesGrupo) : "Cualquier ticket";
+                            var activos = g.Definiciones.Count(d => d.Activo);
+                            var totalRespuesta = g.Definiciones.Count(d => d.TipoSla == "Respuesta");
+                            var totalResolucion = g.Definiciones.Count - totalRespuesta;
+                            <tr class="fila-grupo-definicion" role="button" onclick="toggleGrupoDefinicion(this, '@g.Clave')">
+                                <td colspan="9" class="ps-4">
+                                    <i class="bi bi-chevron-right grupo-chevron me-2"></i>
+                                    <span class="fw-semibold">@textoCondicionGrupo</span>
+                                    @if (totalRespuesta > 0)
+                                    {
+                                        <span class="badge bg-info text-dark ms-2">@totalRespuesta Respuesta</span>
+                                    }
+                                    @if (totalResolucion > 0)
+                                    {
+                                        <span class="badge bg-primary ms-1">@totalResolucion Resolución</span>
+                                    }
+                                    <span class="text-muted small ms-2">
+                                        @g.Definiciones.Count @(g.Definiciones.Count == 1 ? "definición" : "definiciones")
+                                        @if (activos < g.Definiciones.Count)
+                                        {
+                                            @:· @activos activa@(activos == 1 ? "" : "s")
+                                        }
+                                    </span>
                                 </td>
                             </tr>
+                            @foreach (var d in g.Definiciones)
+                            {
+                                <tr class="fila-definicion-hija d-none" data-grupo="@g.Clave">
+                                    <td class="ps-5">
+                                        <i class="bi bi-arrow-return-right text-muted small"></i>
+                                        @(d.Prioridad ?? "Cualquier prioridad")
+                                    </td>
+                                    <td>
+                                        <span class="badge @(d.TipoSla == "Respuesta" ? "bg-info text-dark" : "bg-primary")">@d.TipoSla</span>
+                                    </td>
+                                    <td></td>
+                                    <td>@d.Calendario</td>
+                                    <td>@FormatearDuracion(d.DuracionMinutos)</td>
+                                    <td>@d.PorcentajeAdvertencia%</td>
+                                    <td>@(d.Reactivable ? "Sí" : "No")</td>
+                                    <td>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch"
+                                                   @(d.Activo ? "checked" : "")
+                                                   onchange="cambiarActivoDefinicion(@d.Id, this.checked)">
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" title="Editar" onclick="abrirCrearEditarDefinicion(@d.Id)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
                         }
                     }
                 </tbody>

@@ -683,6 +683,16 @@ a.kpi-card {
    FILAS DE GRUPO
    ============================================================ */
 
+.fila-area-definicion {
+    --bs-table-bg: #EEF2FF;
+    border-top: 2px solid #C7D2FE;
+}
+
+[data-bs-theme="dark"] .fila-area-definicion {
+    --bs-table-bg: rgba(99, 102, 241, .12);
+    border-top-color: rgba(99, 102, 241, .3);
+}
+
 .fila-grupo-definicion {
     --bs-table-bg: #FAFAFA;
     cursor: pointer;
