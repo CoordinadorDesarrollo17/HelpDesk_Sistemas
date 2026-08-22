@@ -2,16 +2,19 @@
 @model EditarUsuarioModel
 
 @{
-    // El Rol no se edita aquí, así que el área se filtra server-side contra el
-    // Rol ya guardado (a diferencia de Crear, donde el Rol se elige en el mismo
-    // formulario y el filtrado se hace en vivo con JS).
+    // El Rol no se edita aquí. Si es Administrador/Soporte, el área se limita a
+    // las 3 áreas de soporte (igual que hoy); si no, se arma el cascade
+    // Departamento -> Área, precargado con el departamento actual del usuario.
     var soloAreasSistemas = Model.Rol is "Administrador" or "Soporte";
-    var areasDisponibles = ((List<AreaModel>)ViewBag.Areas)
-        .Where(a => !soloAreasSistemas || a.EsAreaSistemas)
-        .ToList();
+    var areasSistemasJson = System.Text.Json.JsonSerializer.Serialize(
+        ((List<AreaModel>)ViewBag.AreasSistemas).Select(a => new { id = a.Id, nombre = a.Nombre }));
 }
 
-<form id="formEditarUsuario" method="post">
+<form id="formEditarUsuario" method="post"
+      data-areas-sistemas='@Html.Raw(areasSistemasJson)'
+      data-solo-areas-sistemas="@soloAreasSistemas.ToString().ToLower()"
+      data-departamento-actual="@Model.IdDepartamentoActual"
+      data-area-actual="@Model.IdArea">
     <input type="hidden" name="Id" value="@Model.Id" />
 
     <div class="row g-3">
@@ -33,14 +36,20 @@
             <input type="text" name="NroContacto" class="form-control" value="@Model.NroContacto" />
         </div>
 
+        <div class="col-sm-6 d-none" id="grupoDepartamentoEditar">
+            <label class="form-label">Departamento <span class="text-danger">*</span></label>
+            <select id="selDepartamentoEditar" class="form-select">
+                <option value="">Selecciona...</option>
+                @foreach (var dep in (List<CatalogoModel>)ViewBag.Departamentos)
+                {
+                    <option value="@dep.Id">@dep.Nombre</option>
+                }
+            </select>
+        </div>
         <div class="col-sm-6">
             <label class="form-label">Área <span class="text-danger">*</span></label>
-            <select name="IdArea" class="form-select" required>
+            <select name="IdArea" id="selAreaEditar" class="form-select" required>
                 <option value="">Selecciona...</option>
-                @foreach (var area in areasDisponibles)
-                {
-                    <option value="@area.Id" selected="@(Model.IdArea == area.Id)">@area.Nombre</option>
-                }
             </select>
             @if (soloAreasSistemas)
             {
@@ -74,7 +83,7 @@
             </select>
         </div>
 
-        <div class="col-sm-6 d-flex align-items-end">
+        <div class="col-sm-6 d-flex align-items-end d-none" id="grupoCoordinadorEditar">
             <div class="form-check">
                 <input type="checkbox" name="EsCoordinador" value="true" class="form-check-input" id="chkCoordinadorEditar" checked="@Model.EsCoordinador" />
                 <label class="form-check-label" for="chkCoordinadorEditar">Es coordinador</label>
