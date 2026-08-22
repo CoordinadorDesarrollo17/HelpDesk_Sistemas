@@ -48,10 +48,11 @@ namespace HelpDesk_Sistemas.Services
             ws.Cell(1, 5).Value = "Estado";
             ws.Cell(1, 6).Value = "Prioridad";
             ws.Cell(1, 7).Value = "Solicitante";
-            ws.Cell(1, 8).Value = "Asignado";
-            ws.Cell(1, 9).Value = "Fecha Creación";
+            ws.Cell(1, 8).Value = "Área Solicitante";
+            ws.Cell(1, 9).Value = "Asignado";
+            ws.Cell(1, 10).Value = "Fecha Creación";
 
-            ws.Range("A1:I1").Style.Font.Bold = true;
+            ws.Range("A1:J1").Style.Font.Bold = true;
 
             int row = 2;
             foreach (var ticket in lista)
@@ -63,8 +64,9 @@ namespace HelpDesk_Sistemas.Services
                 ws.Cell(row, 5).Value = ticket.Estado;
                 ws.Cell(row, 6).Value = ticket.Prioridad;
                 ws.Cell(row, 7).Value = ticket.Solicitante;
-                ws.Cell(row, 8).Value = ticket.Asignado;
-                ws.Cell(row, 9).Value = ticket.FechaCreacion.ToString("dd/MM/yyyy HH:mm:ss");
+                ws.Cell(row, 8).Value = ticket.AreaSolicitante;
+                ws.Cell(row, 9).Value = ticket.Asignado;
+                ws.Cell(row, 10).Value = ticket.FechaCreacion.ToString("dd/MM/yyyy HH:mm:ss");
                 row++;
             }
 

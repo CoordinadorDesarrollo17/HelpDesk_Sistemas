@@ -66,6 +66,7 @@
                     <th>Orden</th>
                 }
                 <th>Solicitante</th>
+                <th>Área Solicitante</th>
                 <th>Personal Asignado</th>
                 <th>Fecha Creación</th>
                 <th class="text-center">Acciones</th>
@@ -158,6 +159,7 @@
                     </td>
 
                     <td data-label="Solicitante">@u?.Solicitante</td>
+                    <td data-label="Área Solicitante">@(u?.AreaSolicitante ?? "-")</td>
                     <td data-label="Personal Asignado">@u?.Asignado</td>
                     <td data-label="Fecha Creación">@u?.FechaCreacion.ToString("dd/MM/yyyy")</td>
 

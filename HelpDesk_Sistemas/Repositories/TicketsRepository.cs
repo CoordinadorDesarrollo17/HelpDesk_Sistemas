@@ -149,6 +149,7 @@ namespace HelpDesk_Sistemas.Repositories
                     tr.Nombre                             AS TipoRequerimiento,
                     tr.Flujo                              AS Flujo,
                     a.Nombre                              AS Area,
+                    aSol.Nombre                           AS AreaSolicitante,
                     c.Nombre                              AS Categoria,
                     sis.Nombre                            AS Sistema,
                     e.Nombre                              AS Estado,
@@ -179,6 +180,7 @@ namespace HelpDesk_Sistemas.Repositories
                 INNER JOIN Estado e              ON e.Id  = t.Id_Estado
                 LEFT  JOIN Prioridad p           ON p.Id  = t.Id_Prioridad
                 INNER JOIN Usuarios us           ON us.Id = t.Id_Usuario_Solicita
+                LEFT  JOIN Area aSol             ON aSol.Id = us.Id_Area
                 LEFT  JOIN Usuarios ua           ON ua.Id = t.Id_Usuario_Asignado
                 LEFT JOIN Sociedad soc           ON soc.Id = t.Id_Sociedad
                 LEFT JOIN Sistema sis            ON sis.Id = t.Id_Sistema
