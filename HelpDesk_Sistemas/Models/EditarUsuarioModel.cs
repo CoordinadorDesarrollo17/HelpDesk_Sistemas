@@ -21,6 +21,9 @@ namespace HelpDesk_Sistemas.Models
         [Required(ErrorMessage = "Selecciona un área.")]
         public int IdArea { get; set; }
 
+        /// <summary>Departamento del área actual (solo para precargar el combo al editar, no se guarda).</summary>
+        public int? IdDepartamentoActual { get; set; }
+
         // Un usuario pertenece a una o más sociedades (mínimo una).
         [MinLength(1, ErrorMessage = "Selecciona al menos una sociedad.")]
         public List<int> IdSociedades { get; set; } = new();

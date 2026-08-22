@@ -23,7 +23,11 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<(bool Exito, string? Mensaje)> EliminarUsuario(int id);
 
         Task<List<CatalogoModel>> ObtenerRoles();
-        Task<List<AreaModel>> ObtenerTodasLasAreas();
+
+        /// <summary>Las 3 áreas de soporte (TI/Sistemas/Desarrollo) — únicas válidas para Administrador/Soporte.</summary>
+        Task<List<AreaModel>> ObtenerAreasSistemas();
+        Task<List<CatalogoModel>> ObtenerDepartamentos();
+        Task<List<CatalogoModel>> ObtenerAreasPorDepartamento(int idDepartamento);
         Task<List<CatalogoModel>> ObtenerPosiblesSupervisores();
         Task<List<CatalogoModel>> ObtenerSociedades();
     }

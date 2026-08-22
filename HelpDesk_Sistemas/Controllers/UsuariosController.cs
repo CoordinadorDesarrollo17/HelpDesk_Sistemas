@@ -103,10 +103,18 @@ namespace HelpDesk_Sistemas.Controllers
             return Json(new { exito, mensaje });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> AreasPorDepartamento(int idDepartamento)
+        {
+            var areas = await usuariosService.ObtenerAreasPorDepartamento(idDepartamento);
+            return Json(areas);
+        }
+
         private async Task CargarCatalogos()
         {
             ViewBag.Roles = await usuariosService.ObtenerRoles();
-            ViewBag.Areas = await usuariosService.ObtenerTodasLasAreas();
+            ViewBag.AreasSistemas = await usuariosService.ObtenerAreasSistemas();
+            ViewBag.Departamentos = await usuariosService.ObtenerDepartamentos();
             ViewBag.Supervisores = await usuariosService.ObtenerPosiblesSupervisores();
             ViewBag.Sociedades = await usuariosService.ObtenerSociedades();
         }
