@@ -288,7 +288,7 @@ namespace HelpDesk_Sistemas.Repositories
         public async Task<List<CatalogoModel>> ObtenerDepartamentos()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
-            var sql = "SELECT Id, Nombre FROM Departamento WHERE Activo = 1 AND Nombre != 'DEP. DE SISTEMAS' ORDER BY Nombre";
+            var sql = "SELECT Id, Nombre FROM Departamento WHERE Activo = 1 ORDER BY Nombre";
             var result = await xCon.QueryAsync<CatalogoModel>(sql);
             return result.ToList();
         }
