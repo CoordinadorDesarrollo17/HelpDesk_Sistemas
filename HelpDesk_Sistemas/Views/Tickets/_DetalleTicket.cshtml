@@ -32,11 +32,17 @@
     <dt class="col-sm-4">Sociedad</dt>
     <dd class="col-sm-8">@(Model.Sociedad ?? "-")</dd>
 
-    <dt class="col-sm-4">Tipo de requerimiento</dt>
-    <dd class="col-sm-8">@Model.TipoRequerimiento</dd>
-
     <dt class="col-sm-4">Área</dt>
     <dd class="col-sm-8">@Model.Area</dd>
+
+    <dt class="col-sm-4">Tipo de atención</dt>
+    <dd class="col-sm-8">@Model.TipoRequerimiento</dd>
+
+    @if (Model.Sistema != null)
+    {
+        <dt class="col-sm-4">Sistema</dt>
+        <dd class="col-sm-8">@Model.Sistema</dd>
+    }
 
     <dt class="col-sm-4">Categoría</dt>
     <dd class="col-sm-8">@(Model.Categoria ?? "-")</dd>

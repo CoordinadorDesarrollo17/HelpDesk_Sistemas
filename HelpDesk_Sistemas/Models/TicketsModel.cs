@@ -5,8 +5,12 @@
         public int IdTicket { get; set; }
         public string CodigoTicket { get; set; }
         public string TipoRequerimiento { get; set; }
+        // 'Soporte' (flujo corto) o 'ImplementacionMejora' (flujo largo) — reemplaza
+        // el viejo chequeo por nombre "TipoRequerimiento == 'Soporte'" en la vista.
+        public string Flujo { get; set; }
         public string Area { get; set; }
         public string? Categoria { get; set; }
+        public string? Sistema { get; set; }
         public string Estado { get; set; }
         public string? Prioridad { get; set; }
         public int? OrdenAtencion { get; set; }

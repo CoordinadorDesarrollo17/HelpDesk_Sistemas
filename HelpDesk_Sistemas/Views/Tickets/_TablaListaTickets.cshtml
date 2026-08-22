@@ -49,7 +49,7 @@
             <tr>
                 <th>Código Ticket</th>
                 <th>Sociedad</th>
-                <th>Tipo Requerimiento</th>
+                <th>Tipo de Atención</th>
                 <th>Área</th>
                 <th>Categoría</th>
                 <th>Estado</th>
@@ -85,7 +85,7 @@
                 <tr class="@(u.Estado == "En validación" ? "fila-en-validacion" : u.Estado == "Cerrado" ? "fila-cerrado" : "")">
                     <td data-label="Código Ticket">@u?.CodigoTicket</td>
                     <td data-label="Sociedad">@(u?.Sociedad ?? "-")</td>
-                    <td data-label="Tipo Requerimiento">@u?.TipoRequerimiento</td>
+                    <td data-label="Tipo de Atención">@u?.TipoRequerimiento</td>
                     <td data-label="Área">@u?.Area</td>
                     <td data-label="Categoría">@u?.Categoria</td>
                     <td data-label="Estado"><span class="badge @EstadoBadgeClass(u.Estado)">@u?.Estado</span></td>
@@ -166,7 +166,7 @@
                             <i class="bi bi-eye"></i>
                         </button>
 
-                        @if (u.Estado == "Pendiente" && u.TipoRequerimiento == "Soporte" && (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte") && !esSolicitante)
+                        @if (u.Estado == "Pendiente" && u.Flujo == "Soporte" && (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte") && !esSolicitante)
                         {
                             <button type="button" class="btn btn-sm btn-outline-primary" title="Tomar ticket" onclick="tomarTicket(@u.IdTicket)">
                                 <i class="bi bi-hand-index"></i>
@@ -211,7 +211,7 @@
                         }
 
                         <!-- IMPLEMENTACIÓN Y MEJORA -->
-                        @if (u.Estado == "Pendiente" && u.TipoRequerimiento != "Soporte" && !esSolicitante)
+                        @if (u.Estado == "Pendiente" && u.Flujo == "ImplementacionMejora" && !esSolicitante)
                         {
                             <button type="button" class="btn btn-sm btn-outline-primary" title="Tomar para levantamiento" onclick="tomarLevantamiento(@u.IdTicket)">
                                 <i class="bi bi-clipboard-check"></i>

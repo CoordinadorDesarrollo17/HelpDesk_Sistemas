@@ -23,13 +23,23 @@ namespace HelpDesk_Sistemas.Interfaces
 
         Task<List<CatalogoModel>> ObtenerEstados();
         Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimiento();
+
+        /// <summary>Tipos de atención de una área específica — para el combo de Crear ticket.</summary>
+        Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimientoPorArea(int idArea);
         Task<List<CatalogoModel>> ObtenerAreasSistemas();
-        Task<List<CatalogoModel>> ObtenerCategoriasPorArea(int idArea);
+
+        /// <summary>Las 3 áreas de soporte con Requiere_Sistema — para el combo de Crear ticket.</summary>
+        Task<List<AreaModel>> ObtenerAreasParaCrearTicket();
+        Task<List<CatalogoModel>> ObtenerCategoriasPorTipo(int idTipoReq);
+        Task<List<CatalogoModel>> ObtenerSistemas();
         Task<List<CatalogoModel>> ObtenerPrioridades();
         Task<List<CatalogoModel>> ObtenerSociedadesPorUsuario(int idUsuario);
         Task<List<CatalogoModel>> ObtenerImpactos();
         Task<List<CatalogoModel>> ObtenerUrgencias();
         Task<List<MatrizPrioridadModel>> ObtenerMatrizPrioridad();
+
+        Task<TipoRequerimientoModel?> ObtenerTipoRequerimientoPorId(int idTipoRequerimiento);
+        Task<bool> AreaRequiereSistema(int idArea);
 
         /// <summary>True si el tipo requiere Categoría (y, por extensión, la pregunta de Afecta_Funcionamiento).</summary>
         Task<bool> TipoRequiereCategoria(int idTipoRequerimiento);
@@ -47,7 +57,7 @@ namespace HelpDesk_Sistemas.Interfaces
         // CREACIÓN
         // ============================================================
 
-        Task<int> CrearTicket(CrearTicketModel model, int idUsuarioSolicita, bool requiereCategoria);
+        Task<int> CrearTicket(CrearTicketModel model, int idUsuarioSolicita);
         Task GuardarAdjunto(int idTicket, string nombreArchivo, string rutaArchivo, int pesoKB, int idUsuarioSube);
 
         // ============================================================
