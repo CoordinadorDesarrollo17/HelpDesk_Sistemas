@@ -72,37 +72,49 @@ namespace HelpDesk_Sistemas.Controllers
             // [ApiController] ya validó los [Required]/[MinLength] del modelo antes
             // de llegar aquí. Si algo falló, el cliente ya recibió un 400 automático.
 
-            var requiereCategoria = true; // valor por defecto si el tipo no se pudo determinar
-
             if (model.IdTipoRequerimiento.GetValueOrDefault() > 0)
             {
-                requiereCategoria = await ticketsService.TipoRequiereCategoria(model.IdTipoRequerimiento!.Value);
+                var tipo = await ticketsService.ObtenerTipoRequerimientoPorId(model.IdTipoRequerimiento!.Value);
+                var requiereCategoria = tipo?.RequiereCategoria ?? true;
+                var usaImpactoUrgencia = tipo?.UsaImpactoUrgencia ?? false;
+                var flujo = tipo?.Flujo ?? "Soporte";
 
                 if (requiereCategoria && model.IdCategoria is null)
                 {
-                    return BadRequest(new { mensaje = "Selecciona una categoría para este tipo de requerimiento." });
+                    return BadRequest(new { mensaje = "Selecciona una categoría para este tipo de atención." });
                 }
 
-                if (requiereCategoria && model.IdImpacto is null)
+                if (usaImpactoUrgencia)
                 {
-                    return BadRequest(new { mensaje = "Indica el impacto del inconveniente (idImpacto)." });
-                }
+                    if (model.IdImpacto is null)
+                        return BadRequest(new { mensaje = "Indica el impacto del inconveniente (idImpacto)." });
 
-                if (requiereCategoria && model.IdUrgencia is null)
-                {
-                    return BadRequest(new { mensaje = "Indica la urgencia del inconveniente (idUrgencia)." });
+                    if (model.IdUrgencia is null)
+                        return BadRequest(new { mensaje = "Indica la urgencia del inconveniente (idUrgencia)." });
                 }
-
-                if (!requiereCategoria)
+                else
                 {
-                    model.IdCategoria = null;
                     model.IdImpacto = null;
                     model.IdUrgencia = null;
+                }
 
-                    if (!RolesPermitidosImplementacionMejora.Contains(SesionTemporal.RolActual))
-                    {
-                        return BadRequest(new { mensaje = "Solo Soporte, Supervisor o Administrador pueden crear tickets de Implementación/Mejora." });
-                    }
+                if (flujo == "ImplementacionMejora" && !RolesPermitidosImplementacionMejora.Contains(SesionTemporal.RolActual))
+                {
+                    return BadRequest(new { mensaje = "Solo Soporte, Supervisor o Administrador pueden crear tickets de este tipo de atención." });
+                }
+            }
+
+            if (model.IdArea.GetValueOrDefault() > 0)
+            {
+                var requiereSistema = await ticketsService.AreaRequiereSistema(model.IdArea!.Value);
+
+                if (requiereSistema && model.IdSistema is null)
+                {
+                    return BadRequest(new { mensaje = "Selecciona en qué sistema es el inconveniente (idSistema)." });
+                }
+                else if (!requiereSistema)
+                {
+                    model.IdSistema = null;
                 }
             }
 
@@ -112,7 +124,7 @@ namespace HelpDesk_Sistemas.Controllers
                 return BadRequest(new { mensaje = "La sociedad seleccionada no es válida para este usuario." });
             }
 
-            var (idTicket, errores) = await ticketsService.CrearTicket(model, SesionTemporal.UsuarioActualTemporal, requiereCategoria);
+            var (idTicket, errores) = await ticketsService.CrearTicket(model, SesionTemporal.UsuarioActualTemporal);
 
             if (errores.Count > 0)
             {

@@ -84,8 +84,11 @@ namespace HelpDesk_Sistemas.Controllers
         [HttpGet]
         public async Task<IActionResult> CrearTicket()
         {
-            ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
-            ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
+            // Tipos y Categoría dependen del Área, que todavía no está elegida —
+            // se cargan vía AJAX (TiposPorArea / CategoriasPorTipo) cuando el usuario
+            // elige Área y luego Tipo. Sistema es un catálogo fijo, se carga entero.
+            ViewBag.Areas = await ticketsService.ObtenerAreasParaCrearTicket();
+            ViewBag.Sistemas = await ticketsService.ObtenerSistemas();
             ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(SesionTemporal.UsuarioActualTemporal);
             ViewBag.Impactos = await ticketsService.ObtenerImpactos();
             ViewBag.Urgencias = await ticketsService.ObtenerUrgencias();
@@ -95,9 +98,16 @@ namespace HelpDesk_Sistemas.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> CategoriasPorArea(int idArea)
+        public async Task<IActionResult> TiposPorArea(int idArea)
         {
-            var categorias = await ticketsService.ObtenerCategoriasPorArea(idArea);
+            var tipos = await ticketsService.ObtenerTiposRequerimientoPorArea(idArea);
+            return Json(tipos);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CategoriasPorTipo(int idTipoReq)
+        {
+            var categorias = await ticketsService.ObtenerCategoriasPorTipo(idTipoReq);
             return Json(categorias);
         }
 
@@ -105,36 +115,51 @@ namespace HelpDesk_Sistemas.Controllers
         public async Task<IActionResult> CrearTicket(CrearTicketModel model)
         {
             var requiereCategoria = true; // valor por defecto si el tipo no se pudo determinar
+            var flujo = "Soporte";
 
             if (model.IdTipoRequerimiento.GetValueOrDefault() > 0)
             {
-                requiereCategoria = await ticketsService.TipoRequiereCategoria(model.IdTipoRequerimiento!.Value);
+                var tipo = await ticketsService.ObtenerTipoRequerimientoPorId(model.IdTipoRequerimiento!.Value);
+                requiereCategoria = tipo?.RequiereCategoria ?? true;
+                flujo = tipo?.Flujo ?? "Soporte";
+                var usaImpactoUrgencia = tipo?.UsaImpactoUrgencia ?? false;
 
                 if (requiereCategoria && model.IdCategoria is null)
                 {
-                    ModelState.AddModelError(nameof(model.IdCategoria), "Selecciona una categoría para este tipo de requerimiento.");
+                    ModelState.AddModelError(nameof(model.IdCategoria), "Selecciona una categoría para este tipo de atención.");
                 }
 
-                if (requiereCategoria && model.IdImpacto is null)
+                if (usaImpactoUrgencia)
                 {
-                    ModelState.AddModelError(nameof(model.IdImpacto), "Indica el impacto del inconveniente.");
-                }
+                    if (model.IdImpacto is null)
+                        ModelState.AddModelError(nameof(model.IdImpacto), "Indica el impacto del inconveniente.");
 
-                if (requiereCategoria && model.IdUrgencia is null)
-                {
-                    ModelState.AddModelError(nameof(model.IdUrgencia), "Indica la urgencia del inconveniente.");
+                    if (model.IdUrgencia is null)
+                        ModelState.AddModelError(nameof(model.IdUrgencia), "Indica la urgencia del inconveniente.");
                 }
-
-                if (!requiereCategoria)
+                else
                 {
-                    model.IdCategoria = null;
                     model.IdImpacto = null;
                     model.IdUrgencia = null;
+                }
 
-                    if (!RolesPermitidosImplementacionMejora.Contains(SesionTemporal.RolActual))
-                    {
-                        ModelState.AddModelError(nameof(model.IdTipoRequerimiento), "Solo Soporte, Supervisor o Administrador pueden crear tickets de Implementación/Mejora.");
-                    }
+                if (flujo == "ImplementacionMejora" && !RolesPermitidosImplementacionMejora.Contains(SesionTemporal.RolActual))
+                {
+                    ModelState.AddModelError(nameof(model.IdTipoRequerimiento), "Solo Soporte, Supervisor o Administrador pueden crear tickets de este tipo de atención.");
+                }
+            }
+
+            if (model.IdArea.GetValueOrDefault() > 0)
+            {
+                var requiereSistema = await ticketsService.AreaRequiereSistema(model.IdArea!.Value);
+
+                if (requiereSistema && model.IdSistema is null)
+                {
+                    ModelState.AddModelError(nameof(model.IdSistema), "Selecciona en qué sistema es el inconveniente.");
+                }
+                else if (!requiereSistema)
+                {
+                    model.IdSistema = null;
                 }
             }
 
@@ -145,8 +170,10 @@ namespace HelpDesk_Sistemas.Controllers
 
             if (!ModelState.IsValid)
             {
-                ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
-                ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
+                ViewBag.Areas = await ticketsService.ObtenerAreasParaCrearTicket();
+                ViewBag.Sistemas = await ticketsService.ObtenerSistemas();
+                ViewBag.Tipos = model.IdArea.GetValueOrDefault() > 0 ? await ticketsService.ObtenerTiposRequerimientoPorArea(model.IdArea!.Value) : new List<TipoRequerimientoModel>();
+                ViewBag.Categorias = model.IdTipoRequerimiento.GetValueOrDefault() > 0 ? await ticketsService.ObtenerCategoriasPorTipo(model.IdTipoRequerimiento!.Value) : new List<CatalogoModel>();
                 ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(SesionTemporal.UsuarioActualTemporal);
                 ViewBag.Impactos = await ticketsService.ObtenerImpactos();
                 ViewBag.Urgencias = await ticketsService.ObtenerUrgencias();
@@ -156,7 +183,7 @@ namespace HelpDesk_Sistemas.Controllers
                 return PartialView("_CrearTicket", model);
             }
 
-            var (idTicket, errores) = await ticketsService.CrearTicket(model, SesionTemporal.UsuarioActualTemporal, requiereCategoria);
+            var (idTicket, errores) = await ticketsService.CrearTicket(model, SesionTemporal.UsuarioActualTemporal);
 
             if (errores.Count > 0)
             {
@@ -165,8 +192,10 @@ namespace HelpDesk_Sistemas.Controllers
                     ModelState.AddModelError(nameof(model.Archivos), error);
                 }
 
-                ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
-                ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
+                ViewBag.Areas = await ticketsService.ObtenerAreasParaCrearTicket();
+                ViewBag.Sistemas = await ticketsService.ObtenerSistemas();
+                ViewBag.Tipos = model.IdArea.GetValueOrDefault() > 0 ? await ticketsService.ObtenerTiposRequerimientoPorArea(model.IdArea!.Value) : new List<TipoRequerimientoModel>();
+                ViewBag.Categorias = model.IdTipoRequerimiento.GetValueOrDefault() > 0 ? await ticketsService.ObtenerCategoriasPorTipo(model.IdTipoRequerimiento!.Value) : new List<CatalogoModel>();
                 ViewBag.Sociedades = await ticketsService.ObtenerSociedadesPorUsuario(SesionTemporal.UsuarioActualTemporal);
                 ViewBag.Impactos = await ticketsService.ObtenerImpactos();
                 ViewBag.Urgencias = await ticketsService.ObtenerUrgencias();

@@ -103,14 +103,29 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.ObtenerTiposRequerimiento();
         }
 
+        public async Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimientoPorArea(int idArea)
+        {
+            return await ticketsRepository.ObtenerTiposRequerimientoPorArea(idArea);
+        }
+
         public async Task<List<CatalogoModel>> ObtenerAreasSistemas()
         {
             return await ticketsRepository.ObtenerAreasSistemas();
         }
 
-        public async Task<List<CatalogoModel>> ObtenerCategoriasPorArea(int idArea)
+        public async Task<List<AreaModel>> ObtenerAreasParaCrearTicket()
         {
-            return await ticketsRepository.ObtenerCategoriasPorArea(idArea);
+            return await ticketsRepository.ObtenerAreasParaCrearTicket();
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerCategoriasPorTipo(int idTipoReq)
+        {
+            return await ticketsRepository.ObtenerCategoriasPorTipo(idTipoReq);
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerSistemas()
+        {
+            return await ticketsRepository.ObtenerSistemas();
         }
 
         public async Task<List<CatalogoModel>> ObtenerPrioridades()
@@ -121,6 +136,16 @@ namespace HelpDesk_Sistemas.Services
         public async Task<bool> TipoRequiereCategoria(int idTipoRequerimiento)
         {
             return await ticketsRepository.TipoRequiereCategoria(idTipoRequerimiento);
+        }
+
+        public async Task<TipoRequerimientoModel?> ObtenerTipoRequerimientoPorId(int idTipoRequerimiento)
+        {
+            return await ticketsRepository.ObtenerTipoRequerimientoPorId(idTipoRequerimiento);
+        }
+
+        public async Task<bool> AreaRequiereSistema(int idArea)
+        {
+            return await ticketsRepository.AreaRequiereSistema(idArea);
         }
 
         public async Task<List<CatalogoModel>> ObtenerSociedadesPorUsuario(int idUsuario)
@@ -167,7 +192,7 @@ namespace HelpDesk_Sistemas.Services
         /// bien, crea el ticket y luego guarda cada adjunto en wwwroot/uploads con
         /// un nombre único para evitar colisiones entre archivos del mismo nombre.
         /// </summary>
-        public async Task<(int IdTicket, List<string> Errores)> CrearTicket(CrearTicketModel model, int idUsuarioSolicita, bool requiereCategoria)
+        public async Task<(int IdTicket, List<string> Errores)> CrearTicket(CrearTicketModel model, int idUsuarioSolicita)
         {
             var errores = new List<string>();
 
@@ -195,7 +220,7 @@ namespace HelpDesk_Sistemas.Services
                 return (0, errores);
             }
 
-            var idTicket = await ticketsRepository.CrearTicket(model, idUsuarioSolicita, requiereCategoria);
+            var idTicket = await ticketsRepository.CrearTicket(model, idUsuarioSolicita);
 
             if (model.Archivos != null && model.Archivos.Count > 0)
             {

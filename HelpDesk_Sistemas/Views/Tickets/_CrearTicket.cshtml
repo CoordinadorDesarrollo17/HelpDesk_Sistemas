@@ -1,30 +1,21 @@
 @using HelpDesk_Sistemas.Models
 @model HelpDesk_Sistemas.Models.CrearTicketModel
 
+@{
+    // Tipos y Categoría dependen de lo elegido antes (Área -> Tipo), así que solo
+    // vienen precargados cuando se está re-mostrando el formulario tras un error de
+    // validación (el controlador los recarga con lo que el usuario ya había
+    // elegido). En la carga inicial arrancan vacíos y el JS los llena por AJAX.
+    var areas = (List<AreaModel>)ViewBag.Areas;
+    var tipos = ViewBag.Tipos as List<TipoRequerimientoModel> ?? new List<TipoRequerimientoModel>();
+    var categorias = ViewBag.Categorias as List<CatalogoModel> ?? new List<CatalogoModel>();
+    var sistemas = (List<CatalogoModel>)ViewBag.Sistemas;
+    var sociedades = (List<CatalogoModel>)ViewBag.Sociedades;
+}
+
 <form id="formCrearTicket" asp-controller="Tickets" asp-action="CrearTicket" method="post" enctype="multipart/form-data">
 
     <h6 class="text-uppercase text-muted small fw-bold mb-2">Tipo de solicitud</h6>
-
-    <!-- TIPO DE REQUERIMIENTO -->
-    <div class="mb-3">
-        <label class="form-label">Tipo de requerimiento <span class="text-danger">*</span></label>
-        <select id="cboTipoRequerimiento" name="IdTipoRequerimiento" class="form-select">
-            <option value="">Selecciona...</option>
-            @foreach (var tipo in (List<TipoRequerimientoModel>)ViewBag.Tipos)
-            {
-                <option value="@tipo.Id"
-                        data-requiere-categoria="@tipo.RequiereCategoria.ToString().ToLower()"
-                        selected="@(Model?.IdTipoRequerimiento == tipo.Id)">
-                    @tipo.Nombre
-                </option>
-            }
-        </select>
-        <span asp-validation-for="IdTipoRequerimiento" class="text-danger small"></span>
-    </div>
-
-    @{
-        var sociedades = (List<CatalogoModel>)ViewBag.Sociedades;
-    }
 
     <div class="row g-3 mb-3">
         <!-- SOCIEDAD -->
@@ -53,32 +44,71 @@
         <!-- ÁREA -->
         <div class="col-sm-6">
             <label class="form-label">Área <span class="text-danger">*</span></label>
-            <select id="cboArea" name="IdArea" class="form-select" data-categoria-seleccionada="@Model?.IdCategoria">
+            <select id="cboArea" name="IdArea" class="form-select"
+                    data-tipo-seleccionado="@Model?.IdTipoRequerimiento" data-categoria-seleccionada="@Model?.IdCategoria">
                 <option value="">Selecciona...</option>
-                @foreach (var area in (List<CatalogoModel>)ViewBag.Areas)
+                @foreach (var area in areas)
                 {
-                    <option value="@area.Id" selected="@(Model?.IdArea == area.Id)">@area.Nombre</option>
+                    <option value="@area.Id"
+                            data-requiere-sistema="@area.RequiereSistema.ToString().ToLower()"
+                            selected="@(Model?.IdArea == area.Id)">
+                        @area.Nombre
+                    </option>
                 }
             </select>
             <span asp-validation-for="IdArea" class="text-danger small"></span>
         </div>
     </div>
 
-    <!-- CATEGORÍA (solo Soporte) -->
-    <div id="grupoCategoria" class="mb-3">
+    <!-- TIPO DE ATENCIÓN (depende del Área elegida) -->
+    <div class="mb-3">
+        <label class="form-label">Tipo de atención <span class="text-danger">*</span></label>
+        <select id="cboTipoRequerimiento" name="IdTipoRequerimiento" class="form-select" disabled="@(tipos.Count == 0)">
+            <option value="">@(tipos.Count == 0 ? "Selecciona un área primero..." : "Selecciona...")</option>
+            @foreach (var tipo in tipos)
+            {
+                <option value="@tipo.Id"
+                        data-usa-impacto-urgencia="@tipo.UsaImpactoUrgencia.ToString().ToLower()"
+                        selected="@(Model?.IdTipoRequerimiento == tipo.Id)">
+                    @tipo.Nombre
+                </option>
+            }
+        </select>
+        <span asp-validation-for="IdTipoRequerimiento" class="text-danger small"></span>
+    </div>
+
+    <!-- SISTEMA (solo Soporte Sistemas / Soporte Desarrollo) — se elige antes que Categoría -->
+    <div id="grupoSistema" class="mb-3 d-none">
+        <label class="form-label">Sistema <span class="text-danger">*</span></label>
+        <select id="cboSistema" name="IdSistema" class="form-select">
+            <option value="">Selecciona...</option>
+            @foreach (var sistema in sistemas)
+            {
+                <option value="@sistema.Id" selected="@(Model?.IdSistema == sistema.Id)">@sistema.Nombre</option>
+            }
+        </select>
+        <span asp-validation-for="IdSistema" class="text-danger small"></span>
+    </div>
+
+    <!-- CATEGORÍA (depende del Tipo de atención elegido) -->
+    <div class="mb-3">
         <label class="form-label">Categoría <span class="text-danger">*</span></label>
-        <select id="cboCategoria" name="IdCategoria" class="form-select">
-            <option value="">Selecciona un área primero...</option>
+        <select id="cboCategoria" name="IdCategoria" class="form-select" disabled="@(categorias.Count == 0)">
+            <option value="">@(categorias.Count == 0 ? "Selecciona un tipo de atención primero..." : "Selecciona...")</option>
+            @foreach (var categoria in categorias)
+            {
+                <option value="@categoria.Id" selected="@(Model?.IdCategoria == categoria.Id)">@categoria.Nombre</option>
+            }
         </select>
         <span asp-validation-for="IdCategoria" class="text-danger small"></span>
     </div>
 
-    <!-- IMPACTO Y URGENCIA (solo Soporte) — determinan la prioridad automáticamente -->
+    <!-- IMPACTO Y URGENCIA (solo tipos que usan la matriz de prioridad automática) -->
     @{
         var opcionesJson = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
         var matrizJson = System.Text.Json.JsonSerializer.Serialize((List<MatrizPrioridadModel>)ViewBag.Matriz, opcionesJson);
     }
-    <div id="grupoImpactoUrgencia" class="mb-4" data-matriz='@Html.Raw(matrizJson)'>
+    <div id="grupoImpactoUrgencia" class="mb-4 d-none" data-matriz='@Html.Raw(matrizJson)'>
         <h6 class="text-uppercase text-muted small fw-bold mb-2">Impacto y urgencia</h6>
 
         <div class="row g-3">
