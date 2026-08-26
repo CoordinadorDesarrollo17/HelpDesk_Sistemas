@@ -20,6 +20,7 @@ namespace HelpDesk_Sistemas.Interfaces
         // ============================================================
 
         Task<List<CatalogoModel>> ObtenerEstados();
+        Task<List<CatalogoModel>> ObtenerAreas();
         Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimiento();
         Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimientoPorArea(int idArea);
         Task<List<CatalogoModel>> ObtenerAreasSistemas();

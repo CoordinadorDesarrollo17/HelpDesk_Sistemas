@@ -31,6 +31,7 @@ namespace HelpDesk_Sistemas.Controllers
 
             ViewBag.Prioridades = await ticketsService.ObtenerPrioridades();
             ViewBag.Estados = await ticketsService.ObtenerEstados();
+            ViewBag.AreasSolicitantes = await ticketsService.ObtenerAreas();
             ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
             ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
             ViewBag.Rol = SesionTemporal.RolActual;

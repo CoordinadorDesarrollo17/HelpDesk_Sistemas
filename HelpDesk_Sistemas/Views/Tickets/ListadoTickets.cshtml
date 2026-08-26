@@ -72,6 +72,15 @@
 					}
 				</select>
 
+				<!-- filtro areas solicitantes, excepto sistemas-->
+				<select id="filtroAreaSolicitante" class="form-select form-select-sm w-auto">
+					<option value="">Todas las áreas solicitantes</option>
+					@foreach (var areasol in (List<CatalogoModel>)ViewBag.AreasSolicitantes)
+					{
+						<option value="@areasol.Id">@areasol.Nombre</option>
+					}
+				</select>
+
 				<select id="filtroArea" class="form-select form-select-sm w-auto">
 					<option value="">Todas las áreas</option>
 					@foreach (var area in (List<CatalogoModel>)ViewBag.Areas)
@@ -411,6 +420,7 @@
 			const params = new URLSearchParams({
 				"Buscar": txtBuscar.value,
 				"IdEstado": document.getElementById("filtroEstado").value,
+				"IdAreaSolicitante": document.getElementById("filtroAreaSolicitante").value,
 				"IdArea": document.getElementById("filtroArea").value,
 				"IdTipoRequerimiento": document.getElementById("filtroTipo").value,
 				"IdPrioridad": document.getElementById("filtroPrioridad").value,
@@ -451,7 +461,7 @@
 			cargarTabla(paginaActual);
 		}, INTERVALO_AUTOREFRESH_MS);
 
-		["filtroEstado", "filtroArea", "filtroTipo", "filtroPrioridad"].forEach(id => {
+		["filtroEstado", "filtroArea", "filtroAreaSolicitante", "filtroTipo", "filtroPrioridad"].forEach(id => {
 			document.getElementById(id).addEventListener("change", () => cargarTabla(1));
 		});
 

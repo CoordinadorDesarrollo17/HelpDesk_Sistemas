@@ -22,6 +22,7 @@ namespace HelpDesk_Sistemas.Interfaces
         // ============================================================
 
         Task<List<CatalogoModel>> ObtenerEstados();
+        Task<List<CatalogoModel>> ObtenerAreas();
         Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimiento();
 
         /// <summary>Tipos de atención de una área específica — para el combo de Crear ticket.</summary>

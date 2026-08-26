@@ -100,6 +100,10 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.ObtenerEstados();
         }
 
+        public async Task<List<CatalogoModel>> ObtenerAreas()
+        {
+            return await ticketsRepository.ObtenerAreas();
+        }
         public async Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimiento()
         {
             return await ticketsRepository.ObtenerTiposRequerimiento();

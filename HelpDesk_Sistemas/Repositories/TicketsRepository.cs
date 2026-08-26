@@ -84,6 +84,11 @@ namespace HelpDesk_Sistemas.Repositories
                 condiciones.Add("(e.Nombre = 'Pendiente' OR t.Id_Usuario_Asignado = @IdUsuarioActual)");
             }
 
+            if (model.IdAreaSolicitante.HasValue)
+            {
+                condiciones.Add("t.Id_Area = @IdAreaSolicitante");
+            }
+
             if (model.IdArea.HasValue)
                 condiciones.Add("t.Id_Area = @IdArea");
 
@@ -199,6 +204,7 @@ namespace HelpDesk_Sistemas.Repositories
                 {
                     Buscar = "%" + model.Buscar + "%",
                     model.IdEstado,
+                    model.IdAreaSolicitante,
                     model.IdArea,
                     model.IdTipoRequerimiento,
                     model.IdPrioridad,
@@ -296,6 +302,18 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
+        public async Task<List<CatalogoModel>> ObtenerAreas()
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = @"
+                SELECT Id, Nombre
+                FROM Area
+                WHERE Activo = 1
+                    AND Id_Departamento <> 1
+                ORDER BY Nombre";
+            var result = await xCon.QueryAsync<CatalogoModel>(sql);
+            return result.ToList();
+        }
         public async Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimiento()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
