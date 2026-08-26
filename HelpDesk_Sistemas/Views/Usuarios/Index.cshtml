@@ -200,6 +200,24 @@
                 });
         }
 
+        // "Es coordinador" solo aplica a gente de Sistemas (habilita el botón de
+        // Reasignar ticket para Soporte): se oculta y se destilda para cualquier otro
+        // departamento. "esSistemas" viene forzado (true/false) cuando ya se sabe por el
+        // Rol (rama plana); si no se pasa, se deduce del texto del Departamento elegido.
+        function actualizarVisibilidadCoordinador(form, esSistemas) {
+            const grupo = form.querySelector('[id^="grupoCoordinador"]');
+            const chk = grupo?.querySelector('input[type="checkbox"]');
+            if (!grupo || !chk) return;
+
+            if (esSistemas === undefined) {
+                const selDepartamento = form.querySelector('[id^="selDepartamento"]');
+                esSistemas = selDepartamento?.selectedOptions[0]?.textContent === "DEP. DE SISTEMAS";
+            }
+
+            grupo.classList.toggle("d-none", !esSistemas);
+            if (!esSistemas) chk.checked = false;
+        }
+
         // Administrador y Soporte solo pueden estar en una de las 3 áreas de soporte (se
         // llenan directo, sin elegir Departamento); Supervisor y Usuario eligen primero un
         // Departamento y luego su Área (cascade por AJAX). Si el área ya elegida deja de
@@ -222,11 +240,14 @@
 
             if (soloSistemas) {
                 poblarAreaFija(selArea, areasSistemas, idSeleccionadoPrevio);
+                actualizarVisibilidadCoordinador(form, true);
             } else if (!nombreRol) {
                 vaciarArea(selArea, "Selecciona un rol primero...");
+                actualizarVisibilidadCoordinador(form, false);
             } else {
                 if (selDepartamento) selDepartamento.value = "";
                 vaciarArea(selArea, "Selecciona un departamento primero...");
+                actualizarVisibilidadCoordinador(form, false);
             }
         }
 
@@ -236,6 +257,7 @@
 
             document.getElementById("selDepartamentoCrear")?.addEventListener("change", function () {
                 cargarAreasPorDepartamento(this.value, document.getElementById("selAreaCrear"));
+                actualizarVisibilidadCoordinador(form);
             });
 
             form.addEventListener("submit", function (e) {
@@ -292,6 +314,7 @@
 
             if (soloAreasSistemas) {
                 poblarAreaFija(selArea, JSON.parse(form.dataset.areasSistemas || "[]"), idAreaActual);
+                actualizarVisibilidadCoordinador(form, true);
             } else {
                 document.getElementById("grupoDepartamentoEditar")?.classList.remove("d-none");
                 const idDepartamentoActual = form.dataset.departamentoActual;
@@ -299,10 +322,12 @@
                     selDepartamento.value = idDepartamentoActual;
                 }
                 cargarAreasPorDepartamento(idDepartamentoActual, selArea, idAreaActual);
+                actualizarVisibilidadCoordinador(form);
             }
 
             selDepartamento?.addEventListener("change", function () {
                 cargarAreasPorDepartamento(this.value, selArea);
+                actualizarVisibilidadCoordinador(form);
             });
 
             form.addEventListener("submit", function (e) {
