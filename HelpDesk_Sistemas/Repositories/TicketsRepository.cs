@@ -78,6 +78,11 @@ namespace HelpDesk_Sistemas.Repositories
                 "CONCAT(t.Codigo_Ticket, tr.Nombre, a.Nombre, e.Nombre, us.Nombre, us.Apellido) LIKE @Buscar"
             };
 
+            if (model.IdCategoria.HasValue)
+            {
+                condiciones.Add("t.Id_Categoria = @IdCategoria");
+            }
+
             if (model.IdSociedad.HasValue)
             {
                 condiciones.Add("t.Id_Sociedad = @IdSociedad");
@@ -208,6 +213,7 @@ namespace HelpDesk_Sistemas.Repositories
                 new
                 {
                     Buscar = "%" + model.Buscar + "%",
+                    model.IdCategoria,
                     model.IdSociedad,
                     model.IdEstado,
                     model.IdAreaSolicitante,
@@ -300,6 +306,14 @@ namespace HelpDesk_Sistemas.Repositories
         // CATÁLOGOS (combos de filtros y formularios)
         // ============================================================
 
+        public async Task<List<CatalogoModel>> ObtenerCategorias()
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Id, Nombre FROM Categoria WHERE Activo = 1 ORDER BY Nombre";
+            var result = await xCon.QueryAsync<CatalogoModel>(sql);
+            return result.ToList();
+        }
+
         public async Task<List<CatalogoModel>> ObtenerSociedades()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
@@ -314,6 +328,14 @@ namespace HelpDesk_Sistemas.Repositories
             var result = await xCon.QueryAsync<CatalogoModel>(sql);
             return result.ToList();
         }
+
+        /*public async Task<List<CatalogoModel>> ObtenerPersonalSolicitante()
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "";
+            var result = await xCon.QueryAsync<CatalogoModel>(sql);
+            return result.ToList();
+        }*/
 
         public async Task<List<CatalogoModel>> ObtenerAreas()
         {

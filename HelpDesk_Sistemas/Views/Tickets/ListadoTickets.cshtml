@@ -73,20 +73,11 @@
 					}
 				</select>
 
-				<select id="filtroEstado" class="form-select form-select-sm w-auto">
-					<option value="">Todos los estados</option>
-					@foreach (var estado in (List<CatalogoModel>)ViewBag.Estados)
+				<select id="filtroTipo" class="form-select form-select-sm w-auto">
+					<option value="">Todos los tipos de atención</option>
+					@foreach (var tipo in (List<TipoRequerimientoModel>)ViewBag.Tipos)
 					{
-						<option value="@estado.Id">@estado.Nombre</option>
-					}
-				</select>
-
-				<!-- filtro areas solicitantes, excepto sistemas-->
-				<select id="filtroAreaSolicitante" class="form-select form-select-sm w-auto">
-					<option value="">Todas las áreas solicitantes</option>
-					@foreach (var areasol in (List<CatalogoModel>)ViewBag.AreasSolicitantes)
-					{
-						<option value="@areasol.Id">@areasol.Nombre</option>
+						<option value="@tipo.Id">@tipo.Nombre</option>
 					}
 				</select>
 
@@ -98,11 +89,19 @@
 					}
 				</select>
 
-				<select id="filtroTipo" class="form-select form-select-sm w-auto">
-					<option value="">Todos los tipos</option>
-					@foreach (var tipo in (List<TipoRequerimientoModel>)ViewBag.Tipos)
+				<select id="filtroCategoria" class="form-select form-select-sm w-auto">
+					<option value="">Todas las categorías</option>
+					@foreach(var categoria in (List<CatalogoModel>)ViewBag.Categorias)
 					{
-						<option value="@tipo.Id">@tipo.Nombre</option>
+						<option value="@categoria.Id">@categoria.Nombre</option>
+					}
+				</select>
+
+				<select id="filtroEstado" class="form-select form-select-sm w-auto">
+					<option value="">Todos los estados</option>
+					@foreach (var estado in (List<CatalogoModel>)ViewBag.Estados)
+					{
+						<option value="@estado.Id">@estado.Nombre</option>
 					}
 				</select>
 
@@ -111,6 +110,22 @@
 					@foreach (var prioridad in (List<CatalogoModel>)ViewBag.Prioridades)
 					{
 						<option value="@prioridad.Id">@prioridad.Nombre</option>
+					}
+				</select>
+
+				@*<select id="filtroPersonalSolicitante" class="form-select form-select-sm w-auto">
+					<option value="">Todo el personal solicitante</option>
+					@foreach (var personalsolicitante in (List<CatalogoModel>)ViewBag.PersonalSolicitantes)
+					{
+						<option value="@personalsolicitante.Id">@personalsolicitante.Nombre</option>
+					}
+					</select>*@
+
+				<select id="filtroAreaSolicitante" class="form-select form-select-sm w-auto">
+					<option value="">Todas las áreas solicitantes</option>
+					@foreach (var areasol in (List<CatalogoModel>)ViewBag.AreasSolicitantes)
+					{
+						<option value="@areasol.Id">@areasol.Nombre</option>
 					}
 				</select>
 			</div>
@@ -428,6 +443,8 @@
 
 			const params = new URLSearchParams({
 				"Buscar": txtBuscar.value,
+				//"IdPersonalSolicitante": document.getElementById("filtroPersonalSolicitante"),
+				"IdCategoria": document.getElementById("filtroCategoria").value,
 				"IdSociedad": document.getElementById("filtroSociedad").value,
 				"IdEstado": document.getElementById("filtroEstado").value,
 				"IdAreaSolicitante": document.getElementById("filtroAreaSolicitante").value,
@@ -471,7 +488,7 @@
 			cargarTabla(paginaActual);
 		}, INTERVALO_AUTOREFRESH_MS);
 
-		["filtroSociedad", "filtroEstado", "filtroArea", "filtroAreaSolicitante", "filtroTipo", "filtroPrioridad"].forEach(id => {
+		["filtroSociedad", "filtroTipo", "filtroArea", "filtroCategoria", "filtroEstado", "filtroPrioridad", "filtroAreaSolicitante"].forEach(id => {
 			document.getElementById(id).addEventListener("change", () => cargarTabla(1));
 		});
 

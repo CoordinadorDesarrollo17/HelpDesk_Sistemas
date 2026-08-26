@@ -4,7 +4,9 @@
     {
         public string Buscar { get; set; }
         public int? IdSociedad {  get; set; }
+        public int? IdCategoria { get; set; }
         public int? IdEstado { get; set; }
+        //public int? IdPersonalSolicitante { get; set; }
         public int? IdAreaSolicitante { get; set; }
         public int? IdArea { get; set; }
         public int? IdTipoRequerimiento { get; set; }

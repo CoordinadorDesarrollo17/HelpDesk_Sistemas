@@ -29,6 +29,7 @@ namespace HelpDesk_Sistemas.Controllers
         {
             var listaTickets = await ticketsService.ListadoTickets(model, SesionTemporal.UsuarioActualTemporal, SesionTemporal.RolActual);
 
+            ViewBag.Categorias = await ticketsService.ObtenerCategorias();
             ViewBag.Sociedades = await ticketsService.ObtenerSociedades();
             ViewBag.Prioridades = await ticketsService.ObtenerPrioridades();
             ViewBag.Estados = await ticketsService.ObtenerEstados();

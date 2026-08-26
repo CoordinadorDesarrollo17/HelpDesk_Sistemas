@@ -42,15 +42,16 @@ namespace HelpDesk_Sistemas.Services
             var ws = workbook.Worksheets.Add("Tickets");
 
             ws.Cell(1, 1).Value = "Código Ticket";
-            ws.Cell(1, 2).Value = "Tipo Requerimiento";
-            ws.Cell(1, 3).Value = "Área";
-            ws.Cell(1, 4).Value = "Categoría";
-            ws.Cell(1, 5).Value = "Estado";
-            ws.Cell(1, 6).Value = "Prioridad";
-            ws.Cell(1, 7).Value = "Solicitante";
-            ws.Cell(1, 8).Value = "Área Solicitante";
-            ws.Cell(1, 9).Value = "Asignado";
-            ws.Cell(1, 10).Value = "Fecha Creación";
+            ws.Cell(1, 2).Value = "Sociedad";
+            ws.Cell(1, 3).Value = "Tipo Atención";
+            ws.Cell(1, 4).Value = "Área";
+            ws.Cell(1, 5).Value = "Categoría";
+            ws.Cell(1, 6).Value = "Estado";
+            ws.Cell(1, 7).Value = "Prioridad";
+            ws.Cell(1, 8).Value = "Solicitante";
+            ws.Cell(1, 9).Value = "Área Solicitante";
+            ws.Cell(1, 10).Value = "Asignado";
+            ws.Cell(1, 11).Value = "Fecha Creación";
 
             ws.Range("A1:J1").Style.Font.Bold = true;
 
@@ -58,15 +59,16 @@ namespace HelpDesk_Sistemas.Services
             foreach (var ticket in lista)
             {
                 ws.Cell(row, 1).Value = ticket.CodigoTicket;
-                ws.Cell(row, 2).Value = ticket.TipoRequerimiento;
-                ws.Cell(row, 3).Value = ticket.Area;
-                ws.Cell(row, 4).Value = ticket.Categoria;
-                ws.Cell(row, 5).Value = ticket.Estado;
-                ws.Cell(row, 6).Value = ticket.Prioridad;
-                ws.Cell(row, 7).Value = ticket.Solicitante;
-                ws.Cell(row, 8).Value = ticket.AreaSolicitante;
-                ws.Cell(row, 9).Value = ticket.Asignado;
-                ws.Cell(row, 10).Value = ticket.FechaCreacion.ToString("dd/MM/yyyy HH:mm:ss");
+                ws.Cell(row, 2).Value = ticket.Sociedad;
+                ws.Cell(row, 3).Value = ticket.TipoRequerimiento;
+                ws.Cell(row, 4).Value = ticket.Area;
+                ws.Cell(row, 5).Value = ticket.Categoria;
+                ws.Cell(row, 6).Value = ticket.Estado;
+                ws.Cell(row, 7).Value = ticket.Prioridad;
+                ws.Cell(row, 8).Value = ticket.Solicitante;
+                ws.Cell(row, 9).Value = ticket.AreaSolicitante;
+                ws.Cell(row, 10).Value = ticket.Asignado;
+                ws.Cell(row, 11).Value = ticket.FechaCreacion.ToString("dd/MM/yyyy HH:mm:ss");
                 row++;
             }
 
@@ -98,6 +100,11 @@ namespace HelpDesk_Sistemas.Services
         public async Task<List<CatalogoModel>> ObtenerSociedades()
         {
             return await ticketsRepository.ObtenerSociedades();
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerCategorias()
+        {
+            return await ticketsRepository.ObtenerCategorias();
         }
 
         public async Task<List<CatalogoModel>> ObtenerEstados()

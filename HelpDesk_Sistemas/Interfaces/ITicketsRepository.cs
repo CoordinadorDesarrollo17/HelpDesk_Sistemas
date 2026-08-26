@@ -22,7 +22,9 @@ namespace HelpDesk_Sistemas.Interfaces
         // ============================================================
 
         Task<List<CatalogoModel>> ObtenerSociedades();
+        Task<List<CatalogoModel>> ObtenerCategorias();
         Task<List<CatalogoModel>> ObtenerEstados();
+        //Task<List<CatalogoModel>> ObtenerPersonalSolicitante();
         Task<List<CatalogoModel>> ObtenerAreas();
         Task<List<TipoRequerimientoModel>> ObtenerTiposRequerimiento();
 

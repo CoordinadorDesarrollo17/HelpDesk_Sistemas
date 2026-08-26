@@ -46,7 +46,7 @@ namespace HelpDesk_Sistemas.Repositories
                 GROUP BY Fecha
                 ORDER BY Fecha;
 
-                -- 3) Distribución por tipo de requerimiento
+                -- 3) Distribución por tipo de atención
                 SELECT tr.Nombre AS Etiqueta, COUNT(*) AS Cantidad
                 FROM Tickets t
                 INNER JOIN Tipo_Requerimiento tr ON tr.Id = t.Id_Tipo_Req
