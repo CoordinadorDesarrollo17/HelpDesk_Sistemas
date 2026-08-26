@@ -293,7 +293,7 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
-        public async Task<List<CatalogoModel>> ObtenerAreasPorDepartamento(int? idDepartamento)
+        public async Task<List<CatalogoModel>> ObtenerAreasPorDepartamento(int idDepartamento)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
