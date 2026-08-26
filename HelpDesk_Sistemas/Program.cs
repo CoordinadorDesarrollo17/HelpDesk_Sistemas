@@ -23,7 +23,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromHours(8); // este es el tiempo que la sesion se mantiene abierta, 8 por las horas de trabajo.
                                                         // puede reducirse el tiempo para que se desconecte la sesion automaticamente
         options.SlidingExpiration = true;
-    });
+    })
+    // Esquema aparte para integraciones externas de solo lectura (API de Power BI, ver
+    // PowerBiApiController): no depende de la cookie de sesión, se autentica con el
+    // header X-Api-Key. El esquema por defecto de la app sigue siendo la cookie.
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
+        ApiKeyAuthenticationHandler.SchemeName, null);
 
 builder.Services.AddAuthorization();
 
@@ -46,6 +51,8 @@ builder.Services.AddScoped<IReportesService, ReportesService>();
 builder.Services.AddScoped<IReportesRepository, ReportesRepository>();
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
 builder.Services.AddScoped<IUsuariosRepository, UsuariosRepository>();
+builder.Services.AddScoped<IPowerBiService, PowerBiService>();
+builder.Services.AddScoped<IPowerBiRepository, PowerBiRepository>();
 builder.Services.AddHostedService<SlaEngineBackgroundService>();
 
 var app = builder.Build();
@@ -96,6 +103,20 @@ app.Use(async (context, next) =>
 
 async Task ResponderError(HttpContext context, string mensaje)
 {
+    // La API de Power BI (y cualquier integración externa futura) espera códigos HTTP
+    // reales, no el envoltorio 200+"exito:false" pensado para el fetch() de la propia UI:
+    // un 200 "exitoso" con un objeto de error rompería la carga de datos en Power Query
+    // de forma confusa en vez de mostrar un error claro.
+    if (context.Request.Path.StartsWithSegments("/api/powerbi"))
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(
+            System.Text.Json.JsonSerializer.Serialize(new { mensaje })
+        );
+        return;
+    }
+
     var esPeticionAjax = context.Request.Headers["X-Requested-With"] == "XMLHttpRequest"
         || context.Request.Headers["Accept"].ToString().Contains("application/json");
 

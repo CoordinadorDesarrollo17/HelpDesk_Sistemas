@@ -1,0 +1,117 @@
+{
+  "info": {
+    "name": "HelpDesk Sistemas - API Power BI",
+    "description": "Endpoints de solo lectura para que Gerencia arme reportes en Power BI. Todos requieren el header X-Api-Key. Ver Docs/Conexion_PowerBI.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5102" },
+    { "key": "apiKey", "value": "72cb0e18bdee44b585364aac6f1fb47f837af87aa687436b88cb3be900840461" }
+  ],
+  "item": [
+    {
+      "name": "Tickets - todos",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }],
+        "url": { "raw": "{{baseUrl}}/api/powerbi/tickets", "host": ["{{baseUrl}}"], "path": ["api", "powerbi", "tickets"] }
+      }
+    },
+    {
+      "name": "Tickets - filtrado por fecha",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/powerbi/tickets?fechaInicio=2026-01-01&fechaFin=2026-12-31",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "powerbi", "tickets"],
+          "query": [
+            { "key": "fechaInicio", "value": "2026-01-01" },
+            { "key": "fechaFin", "value": "2026-12-31" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Departamentos",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }],
+        "url": { "raw": "{{baseUrl}}/api/powerbi/departamentos", "host": ["{{baseUrl}}"], "path": ["api", "powerbi", "departamentos"] }
+      }
+    },
+    {
+      "name": "Areas",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }],
+        "url": { "raw": "{{baseUrl}}/api/powerbi/areas", "host": ["{{baseUrl}}"], "path": ["api", "powerbi", "areas"] }
+      }
+    },
+    {
+      "name": "Sociedades",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }],
+        "url": { "raw": "{{baseUrl}}/api/powerbi/sociedades", "host": ["{{baseUrl}}"], "path": ["api", "powerbi", "sociedades"] }
+      }
+    },
+    {
+      "name": "Tipos de atencion",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }],
+        "url": { "raw": "{{baseUrl}}/api/powerbi/tipos-atencion", "host": ["{{baseUrl}}"], "path": ["api", "powerbi", "tipos-atencion"] }
+      }
+    },
+    {
+      "name": "Categorias",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }],
+        "url": { "raw": "{{baseUrl}}/api/powerbi/categorias", "host": ["{{baseUrl}}"], "path": ["api", "powerbi", "categorias"] }
+      }
+    },
+    {
+      "name": "Sistemas",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }],
+        "url": { "raw": "{{baseUrl}}/api/powerbi/sistemas", "host": ["{{baseUrl}}"], "path": ["api", "powerbi", "sistemas"] }
+      }
+    },
+    {
+      "name": "Estados",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }],
+        "url": { "raw": "{{baseUrl}}/api/powerbi/estados", "host": ["{{baseUrl}}"], "path": ["api", "powerbi", "estados"] }
+      }
+    },
+    {
+      "name": "Prioridades",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }],
+        "url": { "raw": "{{baseUrl}}/api/powerbi/prioridades", "host": ["{{baseUrl}}"], "path": ["api", "powerbi", "prioridades"] }
+      }
+    },
+    {
+      "name": "Usuarios",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }],
+        "url": { "raw": "{{baseUrl}}/api/powerbi/usuarios", "host": ["{{baseUrl}}"], "path": ["api", "powerbi", "usuarios"] }
+      }
+    },
+    {
+      "name": "Tickets - sin API key (debe dar 401)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/api/powerbi/tickets", "host": ["{{baseUrl}}"], "path": ["api", "powerbi", "tickets"] }
+      }
+    }
+  ]
+}
