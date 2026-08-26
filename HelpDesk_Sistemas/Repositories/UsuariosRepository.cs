@@ -293,11 +293,29 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
-        public async Task<List<CatalogoModel>> ObtenerAreasPorDepartamento(int idDepartamento)
+        public async Task<List<CatalogoModel>> ObtenerAreasPorDepartamento(int? idDepartamento)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
-            var sql = "SELECT Id, Nombre FROM Area WHERE Id_Departamento = @IdDepartamento AND Activo = 1 ORDER BY Nombre";
-            var result = await xCon.QueryAsync<CatalogoModel>(sql, new { IdDepartamento = idDepartamento });
+
+            string condWhere = string.Empty;
+
+            if (idDepartamento != null)
+            {
+                condWhere += " AND Id_Departamento = @IdDepartamento";
+            }
+
+            string sql = $@"
+                    SELECT Id, Nombre 
+                    FROM Area 
+                    WHERE Activo = 1
+                    {condWhere}
+                    ORDER BY Nombre";
+
+            var result = await xCon.QueryAsync<CatalogoModel>(
+                sql,
+                new { IdDepartamento = idDepartamento }
+            );
+
             return result.ToList();
         }
 
