@@ -266,7 +266,7 @@ a {
     width: 34px;
     height: 34px;
     border-radius: 9px;
-    background: linear-gradient( 135deg, var(--brand-green-500), var(--brand-green-700) );
+    /*background: linear-gradient( 135deg, var(--brand-green-500), var(--brand-green-700) );*/
     display: flex;
     align-items: center;
     justify-content: center;
