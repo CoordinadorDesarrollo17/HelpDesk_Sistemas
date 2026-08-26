@@ -3,6 +3,7 @@
     public class FiltrosTicketsModel
     {
         public string Buscar { get; set; }
+        public int? IdSociedad {  get; set; }
         public int? IdEstado { get; set; }
         public int? IdAreaSolicitante { get; set; }
         public int? IdArea { get; set; }

@@ -95,6 +95,11 @@ namespace HelpDesk_Sistemas.Services
         // CATÁLOGOS
         // ============================================================
 
+        public async Task<List<CatalogoModel>> ObtenerSociedades()
+        {
+            return await ticketsRepository.ObtenerSociedades();
+        }
+
         public async Task<List<CatalogoModel>> ObtenerEstados()
         {
             return await ticketsRepository.ObtenerEstados();

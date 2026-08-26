@@ -64,6 +64,15 @@
 		<!--FILTROS PARA ESTADOS, AREAS, TIPO REQUERIMIENTO, PRIORIDADES-->
 		<div class="col-12">
 			<div class="d-flex flex-wrap gap-2">
+
+				<select id="filtroSociedad" class="form-select form-select-sm w-auto">
+					<option value="">Todas las sociedades</option>
+					@foreach (var sociedad in (List<CatalogoModel>)ViewBag.Sociedades)
+					{
+						<option value="@sociedad.Id">@sociedad.Nombre</option>
+					}
+				</select>
+
 				<select id="filtroEstado" class="form-select form-select-sm w-auto">
 					<option value="">Todos los estados</option>
 					@foreach (var estado in (List<CatalogoModel>)ViewBag.Estados)
@@ -82,7 +91,7 @@
 				</select>
 
 				<select id="filtroArea" class="form-select form-select-sm w-auto">
-					<option value="">Todas las áreas</option>
+					<option value="">Todas las áreas de soporte</option>
 					@foreach (var area in (List<CatalogoModel>)ViewBag.Areas)
 					{
 						<option value="@area.Id">@area.Nombre</option>
@@ -419,6 +428,7 @@
 
 			const params = new URLSearchParams({
 				"Buscar": txtBuscar.value,
+				"IdSociedad": document.getElementById("filtroSociedad").value,
 				"IdEstado": document.getElementById("filtroEstado").value,
 				"IdAreaSolicitante": document.getElementById("filtroAreaSolicitante").value,
 				"IdArea": document.getElementById("filtroArea").value,

@@ -78,6 +78,11 @@ namespace HelpDesk_Sistemas.Repositories
                 "CONCAT(t.Codigo_Ticket, tr.Nombre, a.Nombre, e.Nombre, us.Nombre, us.Apellido) LIKE @Buscar"
             };
 
+            if (model.IdSociedad.HasValue)
+            {
+                condiciones.Add("t.Id_Sociedad = @IdSociedad");
+            }
+
             if (model.IdEstado.HasValue)
             {
                 condiciones.Add("t.Id_Estado = @IdEstado");
@@ -203,6 +208,7 @@ namespace HelpDesk_Sistemas.Repositories
                 new
                 {
                     Buscar = "%" + model.Buscar + "%",
+                    model.IdSociedad,
                     model.IdEstado,
                     model.IdAreaSolicitante,
                     model.IdArea,
@@ -294,6 +300,13 @@ namespace HelpDesk_Sistemas.Repositories
         // CATÁLOGOS (combos de filtros y formularios)
         // ============================================================
 
+        public async Task<List<CatalogoModel>> ObtenerSociedades()
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Id, Nombre FROM Sociedad WHERE Activo = 1 ORDER BY Nombre";
+            var result = await xCon.QueryAsync<CatalogoModel>(sql);
+            return result.ToList();
+        }
         public async Task<List<CatalogoModel>> ObtenerEstados()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
