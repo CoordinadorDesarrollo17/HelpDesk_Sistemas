@@ -1,7 +1,12 @@
 @using HelpDesk_Sistemas.Models
 @model CrearUsuarioModel
 
-<form id="formCrearUsuario" method="post">
+@{
+    var areasSistemasJson = System.Text.Json.JsonSerializer.Serialize(
+        ((List<AreaModel>)ViewBag.AreasSistemas).Select(a => new { id = a.Id, nombre = a.Nombre }));
+}
+
+<form id="formCrearUsuario" method="post" data-areas-sistemas='@Html.Raw(areasSistemasJson)'>
     <div class="row g-3">
         <div class="col-sm-6">
             <label class="form-label">Nombre <span class="text-danger">*</span></label>
@@ -23,7 +28,7 @@
 
         <div class="col-sm-6">
             <label class="form-label">Rol <span class="text-danger">*</span></label>
-            <select name="IdRol" id="selRolCrear" class="form-select" required onchange="filtrarAreasPorRol('selRolCrear', 'selAreaCrear')">
+            <select name="IdRol" id="selRolCrear" class="form-select" required onchange="actualizarAreaPorRol('selRolCrear', 'formCrearUsuario')">
                 <option value="">Selecciona...</option>
                 @foreach (var rol in (List<CatalogoModel>)ViewBag.Roles)
                 {
@@ -31,14 +36,20 @@
                 }
             </select>
         </div>
+        <div class="col-sm-6 d-none" id="grupoDepartamentoCrear">
+            <label class="form-label">Departamento <span class="text-danger">*</span></label>
+            <select id="selDepartamentoCrear" class="form-select">
+                <option value="">Selecciona...</option>
+                @foreach (var dep in (List<CatalogoModel>)ViewBag.Departamentos)
+                {
+                    <option value="@dep.Id">@dep.Nombre</option>
+                }
+            </select>
+        </div>
         <div class="col-sm-6">
             <label class="form-label">Área <span class="text-danger">*</span></label>
             <select name="IdArea" id="selAreaCrear" class="form-select" required>
                 <option value="">Selecciona...</option>
-                @foreach (var area in (List<AreaModel>)ViewBag.Areas)
-                {
-                    <option value="@area.Id" data-sistemas="@(area.EsAreaSistemas ? "1" : "0")" selected="@(Model.IdArea == area.Id)">@area.Nombre</option>
-                }
             </select>
             <small class="text-muted d-none" id="avisoAreaCrear">Administrador y Soporte solo pueden ser de un área de soporte (TI, Sistemas o Desarrollo).</small>
         </div>

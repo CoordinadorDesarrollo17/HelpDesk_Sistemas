@@ -158,34 +158,85 @@
                 });
         }
 
-        // Administrador y Soporte solo pueden estar en un área de soporte (TI/Sistemas/
-        // Desarrollo, marcadas con data-sistemas="1"); Supervisor y Usuario, en cualquiera.
-        // Si el área ya elegida deja de ser válida para el nuevo rol, se limpia la selección.
-        function filtrarAreasPorRol(idSelectRol, idSelectArea) {
+        // Llena un <select> de Área con una lista fija [{id,nombre}] (las 3 áreas de soporte).
+        function poblarAreaFija(selArea, areas, idSeleccionado) {
+            selArea.innerHTML = '<option value="">Selecciona...</option>';
+            areas.forEach(a => {
+                const opt = document.createElement("option");
+                opt.value = a.id;
+                opt.textContent = a.nombre;
+                opt.selected = idSeleccionado != null && a.id === Number(idSeleccionado);
+                selArea.appendChild(opt);
+            });
+            selArea.disabled = false;
+        }
+
+        // Deja el <select> de Área vacío y deshabilitado hasta elegir un departamento.
+        function vaciarArea(selArea, texto) {
+            selArea.innerHTML = `<option value="">${texto}</option>`;
+            selArea.disabled = true;
+        }
+
+        // Carga por AJAX las áreas del departamento elegido.
+        function cargarAreasPorDepartamento(idDepartamento, selArea, idSeleccionado) {
+            if (!idDepartamento) {
+                vaciarArea(selArea, "Selecciona un departamento primero...");
+                return;
+            }
+
+            fetchConManejo(`@Url.Action("AreasPorDepartamento")?idDepartamento=${idDepartamento}`)
+                .then(r => r && r.json())
+                .then(areas => {
+                    if (!areas) return;
+                    selArea.innerHTML = '<option value="">Selecciona...</option>';
+                    areas.forEach(a => {
+                        const opt = document.createElement("option");
+                        opt.value = a.id;
+                        opt.textContent = a.nombre;
+                        opt.selected = idSeleccionado != null && a.id === Number(idSeleccionado);
+                        selArea.appendChild(opt);
+                    });
+                    selArea.disabled = false;
+                });
+        }
+
+        // Administrador y Soporte solo pueden estar en una de las 3 áreas de soporte (se
+        // llenan directo, sin elegir Departamento); Supervisor y Usuario eligen primero un
+        // Departamento y luego su Área (cascade por AJAX). Si el área ya elegida deja de
+        // ser válida para el nuevo rol, se limpia la selección.
+        function actualizarAreaPorRol(idSelectRol, idFormulario, idSeleccionadoPrevio) {
             const selRol = document.getElementById(idSelectRol);
-            const selArea = document.getElementById(idSelectArea);
+            const form = document.getElementById(idFormulario);
+            const selArea = form.querySelector('[name="IdArea"]');
+            const grupoDepartamento = form.querySelector('[id^="grupoDepartamento"]');
+            const selDepartamento = form.querySelector('[id^="selDepartamento"]');
             if (!selRol || !selArea) return;
 
             const nombreRol = selRol.selectedOptions[0]?.dataset.nombre;
             const soloSistemas = nombreRol === "Administrador" || nombreRol === "Soporte";
             const aviso = selArea.parentElement.querySelector("small");
+            const areasSistemas = JSON.parse(form.dataset.areasSistemas || "[]");
 
-            let seleccionSigueValida = false;
-
-            Array.from(selArea.options).forEach(opt => {
-                if (!opt.value) return; // "Selecciona..."
-                const visible = !soloSistemas || opt.dataset.sistemas === "1";
-                opt.hidden = !visible;
-                if (opt.selected && visible) seleccionSigueValida = true;
-            });
-
-            if (!seleccionSigueValida) selArea.value = "";
             aviso?.classList.toggle("d-none", !soloSistemas);
+            grupoDepartamento?.classList.toggle("d-none", !nombreRol || soloSistemas);
+
+            if (soloSistemas) {
+                poblarAreaFija(selArea, areasSistemas, idSeleccionadoPrevio);
+            } else if (!nombreRol) {
+                vaciarArea(selArea, "Selecciona un rol primero...");
+            } else {
+                if (selDepartamento) selDepartamento.value = "";
+                vaciarArea(selArea, "Selecciona un departamento primero...");
+            }
         }
 
         function inicializarFormularioUsuario() {
             const form = document.getElementById("formCrearUsuario");
-            filtrarAreasPorRol("selRolCrear", "selAreaCrear");
+            actualizarAreaPorRol("selRolCrear", "formCrearUsuario");
+
+            document.getElementById("selDepartamentoCrear")?.addEventListener("change", function () {
+                cargarAreasPorDepartamento(this.value, document.getElementById("selAreaCrear"));
+            });
 
             form.addEventListener("submit", function (e) {
                 e.preventDefault();
@@ -234,6 +285,25 @@
 
         function inicializarFormularioEditarUsuario() {
             const form = document.getElementById("formEditarUsuario");
+            const selArea = document.getElementById("selAreaEditar");
+            const selDepartamento = document.getElementById("selDepartamentoEditar");
+            const soloAreasSistemas = form.dataset.soloAreasSistemas === "true";
+            const idAreaActual = form.dataset.areaActual;
+
+            if (soloAreasSistemas) {
+                poblarAreaFija(selArea, JSON.parse(form.dataset.areasSistemas || "[]"), idAreaActual);
+            } else {
+                document.getElementById("grupoDepartamentoEditar")?.classList.remove("d-none");
+                const idDepartamentoActual = form.dataset.departamentoActual;
+                if (selDepartamento && idDepartamentoActual) {
+                    selDepartamento.value = idDepartamentoActual;
+                }
+                cargarAreasPorDepartamento(idDepartamentoActual, selArea, idAreaActual);
+            }
+
+            selDepartamento?.addEventListener("change", function () {
+                cargarAreasPorDepartamento(this.value, selArea);
+            });
 
             form.addEventListener("submit", function (e) {
                 e.preventDefault();

@@ -71,13 +71,18 @@ namespace HelpDesk_Sistemas.Repositories
         public async Task<AreaModel?> ObtenerAreaPorId(int idArea)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
-            var sql = "SELECT Id, Nombre, Prefijo, Es_Area_Sistemas AS EsAreaSistemas FROM Area WHERE Id = @IdArea";
+            var sql = @"
+                SELECT a.Id, a.Nombre, d.Prefijo, a.Es_Area_Sistemas AS EsAreaSistemas
+                FROM Area a
+                INNER JOIN Departamento d ON d.Id = a.Id_Departamento
+                WHERE a.Id = @IdArea
+            ";
             return await xCon.QueryFirstOrDefaultAsync<AreaModel>(sql, new { IdArea = idArea });
         }
 
-        // El correlativo es por Prefijo (no por Id de área): varias áreas pueden
-        // compartir un mismo prefijo (ej. las 3 áreas de soporte comparten
-        // "MANAGER"), y todas deben repartirse un único conteo continuo.
+        // El correlativo es por Prefijo de Departamento (no por Id de área): varias
+        // áreas pueden compartir un mismo departamento/prefijo (ej. las 3 áreas de
+        // soporte comparten "MANAGER"), y todas deben repartirse un único conteo continuo.
         public async Task<int> ObtenerSiguienteNumeroSecuencial(string prefijo)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
@@ -85,7 +90,8 @@ namespace HelpDesk_Sistemas.Repositories
                 SELECT ISNULL(MAX(u.Numero_Secuencial), 0) + 1
                 FROM Usuarios u
                 INNER JOIN Area a ON a.Id = u.Id_Area
-                WHERE a.Prefijo = @Prefijo
+                INNER JOIN Departamento d ON d.Id = a.Id_Departamento
+                WHERE d.Prefijo = @Prefijo
             ";
             return await xCon.ExecuteScalarAsync<int>(sql, new { Prefijo = prefijo });
         }
@@ -160,9 +166,11 @@ namespace HelpDesk_Sistemas.Repositories
             var sql = @"
                 SELECT
                     u.Id, r.Nombre AS Rol, u.Nombre, u.Apellido, u.Correo, u.Nro_Contacto AS NroContacto,
-                    u.Id_Area AS IdArea, u.Es_Coordinador AS EsCoordinador, u.Id_Sup_Usuario AS IdSupUsuario
+                    u.Id_Area AS IdArea, a.Id_Departamento AS IdDepartamentoActual,
+                    u.Es_Coordinador AS EsCoordinador, u.Id_Sup_Usuario AS IdSupUsuario
                 FROM Usuarios u
                 INNER JOIN Rol r ON r.Id = u.IdRol
+                INNER JOIN Area a ON a.Id = u.Id_Area
                 WHERE u.Id = @Id;
 
                 SELECT Id_Sociedad FROM Usuario_Sociedad WHERE Id_Usuario = @Id;
@@ -263,11 +271,33 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
-        public async Task<List<AreaModel>> ObtenerTodasLasAreas()
+        public async Task<List<AreaModel>> ObtenerAreasSistemas()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
-            var sql = "SELECT Id, Nombre, Prefijo, Es_Area_Sistemas AS EsAreaSistemas FROM Area WHERE Activo = 1 ORDER BY Nombre";
+            var sql = @"
+                SELECT a.Id, a.Nombre, d.Prefijo, a.Es_Area_Sistemas AS EsAreaSistemas
+                FROM Area a
+                INNER JOIN Departamento d ON d.Id = a.Id_Departamento
+                WHERE a.Activo = 1 AND a.Es_Area_Sistemas = 1
+                ORDER BY a.Nombre
+            ";
             var result = await xCon.QueryAsync<AreaModel>(sql);
+            return result.ToList();
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerDepartamentos()
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Id, Nombre FROM Departamento WHERE Activo = 1 AND Nombre != 'DEP. DE SISTEMAS' ORDER BY Nombre";
+            var result = await xCon.QueryAsync<CatalogoModel>(sql);
+            return result.ToList();
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerAreasPorDepartamento(int idDepartamento)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Id, Nombre FROM Area WHERE Id_Departamento = @IdDepartamento AND Activo = 1 ORDER BY Nombre";
+            var result = await xCon.QueryAsync<CatalogoModel>(sql, new { IdDepartamento = idDepartamento });
             return result.ToList();
         }
 

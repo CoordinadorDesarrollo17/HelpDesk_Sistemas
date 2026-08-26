@@ -134,9 +134,19 @@ namespace HelpDesk_Sistemas.Services
             return await usuariosRepository.ObtenerRoles();
         }
 
-        public async Task<List<AreaModel>> ObtenerTodasLasAreas()
+        public async Task<List<AreaModel>> ObtenerAreasSistemas()
         {
-            return await usuariosRepository.ObtenerTodasLasAreas();
+            return await usuariosRepository.ObtenerAreasSistemas();
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerDepartamentos()
+        {
+            return await usuariosRepository.ObtenerDepartamentos();
+        }
+
+        public async Task<List<CatalogoModel>> ObtenerAreasPorDepartamento(int idDepartamento)
+        {
+            return await usuariosRepository.ObtenerAreasPorDepartamento(idDepartamento);
         }
 
         public async Task<List<CatalogoModel>> ObtenerPosiblesSupervisores()
