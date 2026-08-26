@@ -151,6 +151,7 @@ namespace HelpDesk_Sistemas.Repositories
             SELECT
                 d.Id, d.Nombre, d.Tipo_SLA AS TipoSla,
                 d.Id_Tipo_Req AS IdTipoReq, tr.Nombre AS TipoRequerimiento,
+                a.Nombre AS Area,
                 d.Id_Categoria AS IdCategoria, c.Nombre AS Categoria,
                 d.Id_Prioridad AS IdPrioridad, p.Nombre AS Prioridad,
                 d.Id_Sociedad AS IdSociedad, s.Nombre AS Sociedad,
@@ -160,6 +161,7 @@ namespace HelpDesk_Sistemas.Repositories
                 d.Reactivable, d.Especificidad, d.Activo
             FROM SLA_Definicion d
             LEFT  JOIN Tipo_Requerimiento tr  ON tr.Id  = d.Id_Tipo_Req
+            LEFT  JOIN Area a                 ON a.Id   = tr.Id_Area
             LEFT  JOIN Categoria c            ON c.Id   = d.Id_Categoria
             LEFT  JOIN Prioridad p            ON p.Id   = d.Id_Prioridad
             LEFT  JOIN Sociedad s             ON s.Id   = d.Id_Sociedad
