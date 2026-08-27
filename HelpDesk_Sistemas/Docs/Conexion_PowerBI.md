@@ -35,18 +35,16 @@ convierta en tabla sin expandir columnas anidadas.
 
 ## Paso a paso en Power BI Desktop
 
-1. **Obtener datos → Web**.
-2. Pega la URL de un endpoint, por ejemplo `http://<servidor>:<puerto>/api/powerbi/tickets`.
-3. Elegir **Avanzado** para poder agregar un encabezado HTTP, o si el diálogo básico no te
-   deja nombrar el encabezado, usa **Editor avanzado** con este código M (reemplaza la URL y
-   la clave):
+1. **Inicio → Transformar Datos**. Esto abrirá el **Editor de Power Query**.
+2. **Inicio → Editor avanzado**. Normalmente está dentro de la cinta de opciones, hacia la derecha.
+3. Se abrirá el editor, ahi debes pegar este código M:
 
    ```
    let
        Origen = Json.Document(
            Web.Contents(
-               "http://<servidor>:<puerto>/api/powerbi/tickets",
-               [Headers = [#"X-Api-Key" = "<tu-api-key>"]]
+               "http://192.168.1.52:6767/api/powerbi/tickets",
+               [Headers = [#"X-Api-Key" = "72cb0e18bdee44b585364aac6f1fb47f837af87aa687436b88cb3be900840461"]]
            )
        ),
        Tabla = Table.FromList(Origen, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
