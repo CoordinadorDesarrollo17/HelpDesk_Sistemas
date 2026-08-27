@@ -1,6 +1,6 @@
 # Conexión de Power BI a HelpDesk Sistemas
 
-API de solo lectura pensada para que Gerencia arme sus propios reportes en Power BI, sin
+API de solo lectura pensada para que Gerencia/Analistas armen sus propios reportes en Power BI, sin
 depender de las pantallas de Reportes ya existentes en el sistema. Devuelve datos planos
 (tabla de hechos de tickets + catálogos/dimensiones) para que se pueda modelar libremente.
 
