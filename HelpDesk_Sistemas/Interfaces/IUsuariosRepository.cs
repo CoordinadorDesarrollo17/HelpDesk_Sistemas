@@ -10,7 +10,7 @@ namespace HelpDesk_Sistemas.Interfaces
         /// <summary>Área con su Prefijo (para generar el Usuario al crear una cuenta).</summary>
         Task<AreaModel?> ObtenerAreaPorId(int idArea);
 
-        Task<string?> ObtenerRolUsuario(int idUsuario);
+        Task<RolUsuarioModel?> ObtenerRolUsuario(int idUsuario);
 
         /// <summary>Siguiente correlativo para ese prefijo de área (ej. "MANAGER" -> 4, para "manager4").</summary>
         Task<int> ObtenerSiguienteNumeroSecuencial(string prefijo);
@@ -19,7 +19,7 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<bool> CambiarActivo(int id, bool activo);
 
         Task<EditarUsuarioModel?> ObtenerUsuarioParaEditar(int id);
-        Task<bool> ActualizarUsuario(EditarUsuarioModel model);
+        Task<bool> ActualizarUsuario(EditarUsuarioModel model, int idRolFinal);
         Task<(bool Exito, string? Mensaje)> EliminarUsuario(int id);
 
         Task<List<CatalogoModel>> ObtenerRoles();
@@ -28,7 +28,8 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<List<AreaModel>> ObtenerAreasSistemas();
         Task<List<CatalogoModel>> ObtenerDepartamentos();
         Task<List<CatalogoModel>> ObtenerAreasPorDepartamento(int idDepartamento);
-        Task<List<CatalogoModel>> ObtenerPosiblesSupervisores();
+        Task<List<CatalogoModel>> ObtenerPosiblesSupervisoresPorDepartamento(int idDepartamento, int? idExcluir);
+        Task<int?> ObtenerIdDepartamentoSistemas();
         Task<List<CatalogoModel>> ObtenerSociedades();
     }
 }

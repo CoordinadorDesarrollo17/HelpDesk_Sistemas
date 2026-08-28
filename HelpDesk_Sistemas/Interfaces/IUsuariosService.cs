@@ -18,7 +18,8 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<List<AreaModel>> ObtenerAreasSistemas();
         Task<List<CatalogoModel>> ObtenerDepartamentos();
         Task<List<CatalogoModel>> ObtenerAreasPorDepartamento(int idDepartamento);
-        Task<List<CatalogoModel>> ObtenerPosiblesSupervisores();
+        Task<List<CatalogoModel>> ObtenerPosiblesSupervisoresPorDepartamento(int idDepartamento, int? idExcluir);
+        Task<int?> ObtenerIdDepartamentoSistemas();
         Task<List<CatalogoModel>> ObtenerSociedades();
     }
 }

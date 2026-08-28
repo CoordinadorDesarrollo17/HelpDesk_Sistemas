@@ -3,6 +3,9 @@
 
 @{
     ViewData["Title"] = "Usuarios";
+    var roles = Model.Select(u => u.Rol).Distinct().OrderBy(r => r).ToList();
+    var departamentos = Model.Select(u => u.Departamento).Where(d => !string.IsNullOrEmpty(d)).Distinct().OrderBy(d => d).ToList();
+    var sociedades = Model.SelectMany(u => (u.Sociedades ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)).Distinct().OrderBy(s => s).ToList();
 }
 
 <div class="card shadow-sm mb-4">
@@ -14,13 +17,50 @@
     </div>
 
     <div class="card-body">
+        <!-- FILTROS Y BUSCADOR -->
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <input type="text" id="txtBuscarUsuario" class="form-control form-control-sm w-auto"
+                   style="min-width: 220px;" placeholder="Buscar por nombre, usuario o correo..." autocomplete="off" />
+
+            <select id="filtroRol" class="form-select form-select-sm w-auto">
+                <option value="">Todos los roles</option>
+                @foreach (var rol in roles)
+                {
+                    <option value="@rol">@rol</option>
+                }
+            </select>
+
+            <select id="filtroDepartamento" class="form-select form-select-sm w-auto">
+                <option value="">Todos los departamentos</option>
+                @foreach (var dep in departamentos)
+                {
+                    <option value="@dep">@dep</option>
+                }
+            </select>
+
+            <select id="filtroSociedad" class="form-select form-select-sm w-auto">
+                <option value="">Todas las sociedades</option>
+                @foreach (var soc in sociedades)
+                {
+                    <option value="@soc">@soc</option>
+                }
+            </select>
+
+            <select id="filtroActivo" class="form-select form-select-sm w-auto">
+                <option value="">Activos e inactivos</option>
+                <option value="1">Solo activos</option>
+                <option value="0">Solo inactivos</option>
+            </select>
+        </div>
+
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
+            <table class="table table-hover align-middle" id="tablaUsuarios">
                 <thead class="table-header">
                     <tr>
                         <th>Nombre</th>
                         <th>Usuario</th>
                         <th>Rol</th>
+                        <th>Departamento</th>
                         <th>Área</th>
                         <th>Sociedades</th>
                         <th>Correo</th>
@@ -31,10 +71,17 @@
                 <tbody>
                     @foreach (var u in Model)
                     {
-                        <tr>
+                        <tr data-nombre="@($"{u.Nombre} {u.Apellido}".ToLower())"
+                            data-usuario="@u.Usuario.ToLower()"
+                            data-correo="@(u.Correo ?? "").ToLower()"
+                            data-rol="@u.Rol"
+                            data-departamento="@u.Departamento"
+                            data-sociedades="@u.Sociedades"
+                            data-activo="@(u.Activo ? "1" : "0")">
                             <td>@u.Nombre @u.Apellido</td>
                             <td><code>@u.Usuario</code></td>
                             <td><span class="badge bg-primary">@u.Rol</span></td>
+                            <td>@(u.Departamento ?? "-")</td>
                             <td>@u.Area</td>
                             <td>@(string.IsNullOrEmpty(u.Sociedades) ? "-" : u.Sociedades)</td>
                             <td>@(u.Correo ?? "-")</td>
@@ -57,6 +104,7 @@
                     }
                 </tbody>
             </table>
+            <p class="text-muted small mb-0 d-none" id="avisoSinResultadosUsuarios">Ningún usuario coincide con los filtros.</p>
         </div>
     </div>
 </div>
@@ -177,8 +225,12 @@
             selArea.disabled = true;
         }
 
-        // Carga por AJAX las áreas del departamento elegido.
-        function cargarAreasPorDepartamento(idDepartamento, selArea, idSeleccionado) {
+        // Carga por AJAX las áreas del departamento elegido. Si areaInactivaActual viene
+        // informado (solo pasa en Editar, cuando el área actual del usuario está inactiva) y no
+        // aparece en la lista de áreas activas que devuelve el servidor, se agrega igual como
+        // opción extra marcada "(inactiva)" y preseleccionada — así nunca se pierde en silencio
+        // la asignación real de alguien solo porque su área fue desactivada mientras tanto.
+        function cargarAreasPorDepartamento(idDepartamento, selArea, idSeleccionado, areaInactivaActual) {
             if (!idDepartamento) {
                 vaciarArea(selArea, "Selecciona un departamento primero...");
                 return;
@@ -196,7 +248,42 @@
                         opt.selected = idSeleccionado != null && a.id === Number(idSeleccionado);
                         selArea.appendChild(opt);
                     });
+
+                    if (areaInactivaActual && !areas.some(a => Number(a.id) === areaInactivaActual.id)) {
+                        const opt = document.createElement("option");
+                        opt.value = areaInactivaActual.id;
+                        opt.textContent = `${areaInactivaActual.nombre} (inactiva)`;
+                        opt.selected = true;
+                        selArea.appendChild(opt);
+                    }
+
                     selArea.disabled = false;
+                });
+        }
+
+        // Carga por AJAX los supervisores del mismo departamento (idExcluir se usa al editar,
+        // para que el propio usuario no pueda elegirse a sí mismo).
+        function cargarSupervisoresPorDepartamento(idDepartamento, selSupervisor, idExcluir, idSeleccionado) {
+            if (!idDepartamento) {
+                selSupervisor.innerHTML = '<option value="">Ninguno</option>';
+                return;
+            }
+
+            const params = new URLSearchParams({ idDepartamento });
+            if (idExcluir) params.append("idExcluir", idExcluir);
+
+            fetchConManejo(`@Url.Action("SupervisoresPorDepartamento")?${params.toString()}`)
+                .then(r => r && r.json())
+                .then(supervisores => {
+                    if (!supervisores) return;
+                    selSupervisor.innerHTML = '<option value="">Ninguno</option>';
+                    supervisores.forEach(s => {
+                        const opt = document.createElement("option");
+                        opt.value = s.id;
+                        opt.textContent = s.nombre;
+                        opt.selected = idSeleccionado != null && s.id === Number(idSeleccionado);
+                        selSupervisor.appendChild(opt);
+                    });
                 });
         }
 
@@ -226,8 +313,10 @@
             const selRol = document.getElementById(idSelectRol);
             const form = document.getElementById(idFormulario);
             const selArea = form.querySelector('[name="IdArea"]');
+            const selSupervisor = form.querySelector('[name="IdSupUsuario"]');
             const grupoDepartamento = form.querySelector('[id^="grupoDepartamento"]');
             const selDepartamento = form.querySelector('[id^="selDepartamento"]');
+            const idDepartamentoSistemas = form.dataset.idDepartamentoSistemas;
             if (!selRol || !selArea) return;
 
             const nombreRol = selRol.selectedOptions[0]?.dataset.nombre;
@@ -241,13 +330,18 @@
             if (soloSistemas) {
                 poblarAreaFija(selArea, areasSistemas, idSeleccionadoPrevio);
                 actualizarVisibilidadCoordinador(form, true);
+                if (selSupervisor) {
+                    cargarSupervisoresPorDepartamento(idDepartamentoSistemas, selSupervisor, form.dataset.idUsuario, form.dataset.supervisorActual);
+                }
             } else if (!nombreRol) {
                 vaciarArea(selArea, "Selecciona un rol primero...");
                 actualizarVisibilidadCoordinador(form, false);
+                if (selSupervisor) selSupervisor.innerHTML = '<option value="">Ninguno</option>';
             } else {
                 if (selDepartamento) selDepartamento.value = "";
                 vaciarArea(selArea, "Selecciona un departamento primero...");
                 actualizarVisibilidadCoordinador(form, false);
+                if (selSupervisor) selSupervisor.innerHTML = '<option value="">Ninguno</option>';
             }
         }
 
@@ -257,6 +351,7 @@
 
             document.getElementById("selDepartamentoCrear")?.addEventListener("change", function () {
                 cargarAreasPorDepartamento(this.value, document.getElementById("selAreaCrear"));
+                cargarSupervisoresPorDepartamento(this.value, document.getElementById("selSupervisorCrear"));
                 actualizarVisibilidadCoordinador(form);
             });
 
@@ -308,25 +403,33 @@
         function inicializarFormularioEditarUsuario() {
             const form = document.getElementById("formEditarUsuario");
             const selArea = document.getElementById("selAreaEditar");
+            const selSupervisor = document.getElementById("selSupervisorEditar");
             const selDepartamento = document.getElementById("selDepartamentoEditar");
             const soloAreasSistemas = form.dataset.soloAreasSistemas === "true";
             const idAreaActual = form.dataset.areaActual;
+            const idUsuario = form.dataset.idUsuario;
+            const idSupervisorActual = form.dataset.supervisorActual;
+            const areaActualActiva = form.dataset.areaActualActiva === "true";
+            const areaInactivaActual = areaActualActiva ? null : { id: Number(idAreaActual), nombre: form.dataset.areaActualNombre };
 
             if (soloAreasSistemas) {
                 poblarAreaFija(selArea, JSON.parse(form.dataset.areasSistemas || "[]"), idAreaActual);
                 actualizarVisibilidadCoordinador(form, true);
+                cargarSupervisoresPorDepartamento(form.dataset.idDepartamentoSistemas, selSupervisor, idUsuario, idSupervisorActual);
             } else {
                 document.getElementById("grupoDepartamentoEditar")?.classList.remove("d-none");
                 const idDepartamentoActual = form.dataset.departamentoActual;
                 if (selDepartamento && idDepartamentoActual) {
                     selDepartamento.value = idDepartamentoActual;
                 }
-                cargarAreasPorDepartamento(idDepartamentoActual, selArea, idAreaActual);
+                cargarAreasPorDepartamento(idDepartamentoActual, selArea, idAreaActual, areaInactivaActual);
+                cargarSupervisoresPorDepartamento(idDepartamentoActual, selSupervisor, idUsuario, idSupervisorActual);
                 actualizarVisibilidadCoordinador(form);
             }
 
             selDepartamento?.addEventListener("change", function () {
                 cargarAreasPorDepartamento(this.value, selArea);
+                cargarSupervisoresPorDepartamento(this.value, selSupervisor, idUsuario);
                 actualizarVisibilidadCoordinador(form);
             });
 
@@ -390,5 +493,41 @@
                     }
                 });
         }
+
+        // ============================================================
+        // FILTROS Y BUSCADOR DEL LISTADO (todo client-side: la tabla ya
+        // viene completa en la página, sin paginación por AJAX).
+        // ============================================================
+        function filtrarTablaUsuarios() {
+            const texto = txtBuscarUsuario.value.trim().toLowerCase();
+            const rol = filtroRol.value;
+            const departamento = filtroDepartamento.value;
+            const sociedad = filtroSociedad.value;
+            const activo = filtroActivo.value;
+
+            let visibles = 0;
+
+            document.querySelectorAll("#tablaUsuarios tbody tr").forEach(fila => {
+                const coincideTexto = !texto
+                    || fila.dataset.nombre.includes(texto)
+                    || fila.dataset.usuario.includes(texto)
+                    || fila.dataset.correo.includes(texto);
+                const coincideRol = !rol || fila.dataset.rol === rol;
+                const coincideDepartamento = !departamento || fila.dataset.departamento === departamento;
+                const coincideSociedad = !sociedad || (fila.dataset.sociedades || "").split(",").map(s => s.trim()).includes(sociedad);
+                const coincideActivo = !activo || fila.dataset.activo === activo;
+
+                const visible = coincideTexto && coincideRol && coincideDepartamento && coincideSociedad && coincideActivo;
+                fila.classList.toggle("d-none", !visible);
+                if (visible) visibles++;
+            });
+
+            document.getElementById("avisoSinResultadosUsuarios").classList.toggle("d-none", visibles > 0);
+        }
+
+        ["filtroRol", "filtroDepartamento", "filtroSociedad", "filtroActivo"].forEach(id => {
+            document.getElementById(id).addEventListener("change", filtrarTablaUsuarios);
+        });
+        txtBuscarUsuario.addEventListener("input", filtrarTablaUsuarios);
     </script>
 }

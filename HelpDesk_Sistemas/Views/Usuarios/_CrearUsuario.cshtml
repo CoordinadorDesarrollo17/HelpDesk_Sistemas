@@ -6,7 +6,8 @@
         ((List<AreaModel>)ViewBag.AreasSistemas).Select(a => new { id = a.Id, nombre = a.Nombre }));
 }
 
-<form id="formCrearUsuario" method="post" data-areas-sistemas='@Html.Raw(areasSistemasJson)'>
+<form id="formCrearUsuario" method="post" data-areas-sistemas='@Html.Raw(areasSistemasJson)'
+      data-id-departamento-sistemas="@ViewBag.IdDepartamentoSistemas">
     <div class="row g-3">
         <div class="col-sm-6">
             <label class="form-label">Nombre <span class="text-danger">*</span></label>
@@ -71,13 +72,10 @@
 
         <div class="col-sm-6">
             <label class="form-label">Supervisor (opcional)</label>
-            <select name="IdSupUsuario" class="form-select">
+            <select name="IdSupUsuario" id="selSupervisorCrear" class="form-select">
                 <option value="">Ninguno</option>
-                @foreach (var sup in (List<CatalogoModel>)ViewBag.Supervisores)
-                {
-                    <option value="@sup.Id" selected="@(Model.IdSupUsuario == sup.Id)">@sup.Nombre</option>
-                }
             </select>
+            <small class="text-muted">Solo se listan supervisores del mismo departamento.</small>
         </div>
         <div class="col-sm-6 d-flex align-items-end d-none" id="grupoCoordinadorCrear">
             <div class="form-check">

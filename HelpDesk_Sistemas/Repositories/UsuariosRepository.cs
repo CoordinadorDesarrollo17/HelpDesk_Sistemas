@@ -44,7 +44,8 @@ namespace HelpDesk_Sistemas.Repositories
             // un usuario con N sociedades saldría repetido N veces en el listado.
             var sql = @"
                 SELECT
-                    u.Id, u.Nombre, u.Apellido, u.Usuario, r.Nombre AS Rol, a.Nombre AS Area, u.Correo, u.Activo,
+                    u.Id, u.Nombre, u.Apellido, u.Usuario, r.Nombre AS Rol, a.Nombre AS Area,
+                    d.Nombre AS Departamento, u.Correo, u.Activo,
                     (
                         SELECT STRING_AGG(s.Nombre, ', ') WITHIN GROUP (ORDER BY s.Nombre)
                         FROM Usuario_Sociedad us
@@ -54,6 +55,7 @@ namespace HelpDesk_Sistemas.Repositories
                 FROM Usuarios u
                 INNER JOIN Rol r ON r.Id = u.IdRol
                 INNER JOIN Area a ON a.Id = u.Id_Area
+                LEFT JOIN Departamento d ON d.Id = a.Id_Departamento
                 ORDER BY u.Nombre, u.Apellido
             ";
 
@@ -61,11 +63,11 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
-        public async Task<string?> ObtenerRolUsuario(int idUsuario)
+        public async Task<RolUsuarioModel?> ObtenerRolUsuario(int idUsuario)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
-            var sql = "SELECT r.Nombre FROM Usuarios u INNER JOIN Rol r ON r.Id = u.IdRol WHERE u.Id = @IdUsuario";
-            return await xCon.QueryFirstOrDefaultAsync<string>(sql, new { IdUsuario = idUsuario });
+            var sql = "SELECT u.IdRol AS IdRol, r.Nombre AS Nombre FROM Usuarios u INNER JOIN Rol r ON r.Id = u.IdRol WHERE u.Id = @IdUsuario";
+            return await xCon.QueryFirstOrDefaultAsync<RolUsuarioModel>(sql, new { IdUsuario = idUsuario });
         }
 
         public async Task<AreaModel?> ObtenerAreaPorId(int idArea)
@@ -167,6 +169,7 @@ namespace HelpDesk_Sistemas.Repositories
                 SELECT
                     u.Id, r.Nombre AS Rol, u.Nombre, u.Apellido, u.Correo, u.Nro_Contacto AS NroContacto,
                     u.Id_Area AS IdArea, a.Id_Departamento AS IdDepartamentoActual,
+                    a.Nombre AS AreaActualNombre, a.Activo AS AreaActualActiva,
                     u.Es_Coordinador AS EsCoordinador, u.Id_Sup_Usuario AS IdSupUsuario
                 FROM Usuarios u
                 INNER JOIN Rol r ON r.Id = u.IdRol
@@ -185,7 +188,7 @@ namespace HelpDesk_Sistemas.Repositories
             return usuario;
         }
 
-        public async Task<bool> ActualizarUsuario(EditarUsuarioModel model)
+        public async Task<bool> ActualizarUsuario(EditarUsuarioModel model, int idRolFinal)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
             await xCon.OpenAsync();
@@ -200,12 +203,24 @@ namespace HelpDesk_Sistemas.Repositories
                         Correo = @Correo,
                         Nro_Contacto = @NroContacto,
                         Id_Area = @IdArea,
+                        IdRol = @IdRol,
                         Es_Coordinador = @EsCoordinador,
                         Id_Sup_Usuario = @IdSupUsuario
                     WHERE Id = @Id
                 ";
 
-                var filas = await xCon.ExecuteAsync(sql, model, transaccion);
+                var filas = await xCon.ExecuteAsync(sql, new
+                {
+                    model.Id,
+                    model.Nombre,
+                    model.Apellido,
+                    model.Correo,
+                    model.NroContacto,
+                    model.IdArea,
+                    IdRol = idRolFinal,
+                    model.EsCoordinador,
+                    model.IdSupUsuario
+                }, transaccion);
 
                 if (filas == 0)
                 {
@@ -319,9 +334,10 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
-        // Solo usuarios con Rol = "Supervisor": el combo de Supervisor no debe
-        // ofrecer a cualquier usuario activo, solo a quienes de verdad supervisan.
-        public async Task<List<CatalogoModel>> ObtenerPosiblesSupervisores()
+        // Solo usuarios con Rol = "Supervisor" del MISMO departamento que el usuario que se está
+        // creando/editando: no tiene sentido operativo elegir un supervisor de otra área.
+        // idExcluir se usa al editar, para que un usuario no pueda elegirse a sí mismo.
+        public async Task<List<CatalogoModel>> ObtenerPosiblesSupervisoresPorDepartamento(int idDepartamento, int? idExcluir)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
@@ -329,12 +345,24 @@ namespace HelpDesk_Sistemas.Repositories
                 SELECT u.Id AS Id, CONCAT(u.Nombre, ' ', u.Apellido) AS Nombre
                 FROM Usuarios u
                 INNER JOIN Rol r ON r.Id = u.IdRol
+                INNER JOIN Area a ON a.Id = u.Id_Area
                 WHERE u.Activo = 1 AND r.Nombre = 'Supervisor'
+                  AND a.Id_Departamento = @IdDepartamento
+                  AND (@IdExcluir IS NULL OR u.Id <> @IdExcluir)
                 ORDER BY u.Nombre, u.Apellido
             ";
 
-            var result = await xCon.QueryAsync<CatalogoModel>(sql);
+            var result = await xCon.QueryAsync<CatalogoModel>(sql, new { IdDepartamento = idDepartamento, IdExcluir = idExcluir });
             return result.ToList();
+        }
+
+        // Necesario para acotar el combo de Supervisor cuando el Rol es Administrador/Soporte
+        // (la rama plana de las 3 áreas de soporte, que no muestra un combo de Departamento).
+        public async Task<int?> ObtenerIdDepartamentoSistemas()
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Id FROM Departamento WHERE Nombre = 'DEP. DE SISTEMAS'";
+            return await xCon.QueryFirstOrDefaultAsync<int?>(sql);
         }
 
         public async Task<List<CatalogoModel>> ObtenerSociedades()

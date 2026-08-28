@@ -84,6 +84,11 @@ namespace HelpDesk_Sistemas.Services
             return await usuariosRepository.ObtenerUsuarioParaEditar(id);
         }
 
+        // Solo se puede editar el Rol entre Usuario <-> Supervisor: son los 2 roles que no
+        // dependen de estar en una de las 3 áreas de soporte, así que cambiar entre ellos no
+        // afecta ninguna otra validación (Área, coordinador, etc.).
+        private static readonly string[] RolesEditables = { "Usuario", "Supervisor" };
+
         public async Task<(bool Exito, string? Mensaje)> ActualizarUsuario(EditarUsuarioModel model)
         {
             if (model.IdSupUsuario == model.Id)
@@ -91,11 +96,16 @@ namespace HelpDesk_Sistemas.Services
                 return (false, "Un usuario no puede ser su propio supervisor.");
             }
 
-            // El Rol no se edita en este formulario, así que se valida contra el Rol
-            // real ya guardado (no contra model.Rol, que el cliente podría alterar).
+            // El Rol no viene del cliente como texto de confianza: se valida contra el que
+            // ya está guardado (rolActual.Nombre), no contra model.Rol.
             var rolActual = await usuariosRepository.ObtenerRolUsuario(model.Id);
 
-            if (rolActual is not null && RolesSoloAreasSistemas.Contains(rolActual))
+            if (rolActual is null)
+            {
+                return (false, "No se encontró el usuario a actualizar.");
+            }
+
+            if (RolesSoloAreasSistemas.Contains(rolActual.Nombre))
             {
                 var area = await usuariosRepository.ObtenerAreaPorId(model.IdArea);
 
@@ -105,6 +115,25 @@ namespace HelpDesk_Sistemas.Services
                 }
             }
 
+            var idRolFinal = rolActual.IdRol;
+
+            if (model.IdRolNuevo.HasValue && model.IdRolNuevo.Value != rolActual.IdRol)
+            {
+                if (!RolesEditables.Contains(rolActual.Nombre))
+                {
+                    return (false, "No se puede cambiar el rol de este usuario.");
+                }
+
+                var rolNuevo = (await usuariosRepository.ObtenerRoles()).FirstOrDefault(r => r.Id == model.IdRolNuevo.Value);
+
+                if (rolNuevo is null || !RolesEditables.Contains(rolNuevo.Nombre))
+                {
+                    return (false, "El rol elegido no es válido.");
+                }
+
+                idRolFinal = rolNuevo.Id;
+            }
+
             model.IdSociedades = model.IdSociedades.Distinct().ToList();
 
             if (model.IdSociedades.Count == 0)
@@ -112,7 +141,7 @@ namespace HelpDesk_Sistemas.Services
                 return (false, "Selecciona al menos una sociedad.");
             }
 
-            var actualizado = await usuariosRepository.ActualizarUsuario(model);
+            var actualizado = await usuariosRepository.ActualizarUsuario(model, idRolFinal);
 
             return actualizado
                 ? (true, (string?)null)
@@ -149,9 +178,14 @@ namespace HelpDesk_Sistemas.Services
             return await usuariosRepository.ObtenerAreasPorDepartamento(idDepartamento);
         }
 
-        public async Task<List<CatalogoModel>> ObtenerPosiblesSupervisores()
+        public async Task<List<CatalogoModel>> ObtenerPosiblesSupervisoresPorDepartamento(int idDepartamento, int? idExcluir)
         {
-            return await usuariosRepository.ObtenerPosiblesSupervisores();
+            return await usuariosRepository.ObtenerPosiblesSupervisoresPorDepartamento(idDepartamento, idExcluir);
+        }
+
+        public async Task<int?> ObtenerIdDepartamentoSistemas()
+        {
+            return await usuariosRepository.ObtenerIdDepartamentoSistemas();
         }
 
         public async Task<List<CatalogoModel>> ObtenerSociedades()

@@ -14,7 +14,12 @@
       data-areas-sistemas='@Html.Raw(areasSistemasJson)'
       data-solo-areas-sistemas="@soloAreasSistemas.ToString().ToLower()"
       data-departamento-actual="@Model.IdDepartamentoActual"
-      data-area-actual="@Model.IdArea">
+      data-area-actual="@Model.IdArea"
+      data-area-actual-nombre="@Model.AreaActualNombre"
+      data-area-actual-activa="@Model.AreaActualActiva.ToString().ToLower()"
+      data-id-departamento-sistemas="@ViewBag.IdDepartamentoSistemas"
+      data-supervisor-actual="@Model.IdSupUsuario"
+      data-id-usuario="@Model.Id">
     <input type="hidden" name="Id" value="@Model.Id" />
 
     <div class="row g-3">
@@ -34,6 +39,27 @@
         <div class="col-sm-6">
             <label class="form-label">Nro. de contacto</label>
             <input type="text" name="NroContacto" class="form-control" value="@Model.NroContacto" />
+        </div>
+
+        <div class="col-sm-6">
+            <label class="form-label">Rol</label>
+            @{
+                var rolesEditables = new[] { "Usuario", "Supervisor" };
+            }
+            @if (rolesEditables.Contains(Model.Rol))
+            {
+                <select name="IdRolNuevo" class="form-select">
+                    @foreach (var rol in ((List<CatalogoModel>)ViewBag.Roles).Where(r => rolesEditables.Contains(r.Nombre)))
+                    {
+                        <option value="@rol.Id" selected="@(rol.Nombre == Model.Rol)">@rol.Nombre</option>
+                    }
+                </select>
+            }
+            else
+            {
+                <input type="text" class="form-control" value="@Model.Rol" disabled />
+                <small class="text-muted">Este rol no se puede cambiar desde aquí.</small>
+            }
         </div>
 
         <div class="col-sm-6 d-none" id="grupoDepartamentoEditar">
@@ -73,14 +99,10 @@
 
         <div class="col-sm-6">
             <label class="form-label">Supervisor (opcional)</label>
-            <select name="IdSupUsuario" class="form-select">
+            <select name="IdSupUsuario" id="selSupervisorEditar" class="form-select">
                 <option value="">Ninguno</option>
-                @foreach (var sup in (List<CatalogoModel>)ViewBag.Supervisores)
-                {
-                    if (sup.Id == Model.Id) { continue; }
-                    <option value="@sup.Id" selected="@(Model.IdSupUsuario == sup.Id)">@sup.Nombre</option>
-                }
             </select>
+            <small class="text-muted">Solo se listan supervisores del mismo departamento.</small>
         </div>
 
         <div class="col-sm-6 d-flex align-items-end d-none" id="grupoCoordinadorEditar">
