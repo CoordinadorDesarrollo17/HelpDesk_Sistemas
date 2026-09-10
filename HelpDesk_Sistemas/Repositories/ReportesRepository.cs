@@ -19,12 +19,22 @@ namespace HelpDesk_Sistemas.Repositories
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
             var sql = @"
-                -- 1) Resumen general (según fecha de creación)
+                -- 1) Resumen general (según fecha de creación). Los 3 tiempos son horas
+                --    corridas (wall-clock) y forman una descomposición coherente: se
+                --    promedian sobre el MISMO conjunto (tickets ya cerrados y asignados),
+                --    así Cola + TrabajoAgente ~= Resolucion total.
+                --      Cola          = creación -> asignación
+                --      TrabajoAgente = asignación -> cierre
+                --      Resolucion    = creación -> cierre
                 SELECT
                     COUNT(*) AS TotalCreados,
                     SUM(CASE WHEN e.Nombre IN ('Cerrado', 'Cierre') THEN 1 ELSE 0 END) AS TotalCerrados,
                     SUM(CASE WHEN e.Nombre NOT IN ('Cerrado', 'Cierre', 'Anulado') THEN 1 ELSE 0 END) AS TicketsActivos,
-                    AVG(CASE WHEN t.Fecha_Cierre IS NOT NULL
+                    AVG(CASE WHEN t.Fecha_Cierre IS NOT NULL AND t.Fecha_Asignacion IS NOT NULL
+                             THEN CAST(DATEDIFF(MINUTE, t.Fecha_Creacion, t.Fecha_Asignacion) AS DECIMAL(10,2)) / 60.0 END) AS TiempoPromedioColaHoras,
+                    AVG(CASE WHEN t.Fecha_Cierre IS NOT NULL AND t.Fecha_Asignacion IS NOT NULL
+                             THEN CAST(DATEDIFF(MINUTE, t.Fecha_Asignacion, t.Fecha_Cierre) AS DECIMAL(10,2)) / 60.0 END) AS TiempoPromedioTrabajoAgenteHoras,
+                    AVG(CASE WHEN t.Fecha_Cierre IS NOT NULL AND t.Fecha_Asignacion IS NOT NULL
                              THEN CAST(DATEDIFF(MINUTE, t.Fecha_Creacion, t.Fecha_Cierre) AS DECIMAL(10,2)) / 60.0 END) AS TiempoPromedioResolucionHoras
                 FROM Tickets t
                 INNER JOIN Estado e ON e.Id = t.Id_Estado
@@ -70,12 +80,16 @@ namespace HelpDesk_Sistemas.Repositories
                 GROUP BY p.Nombre, p.Orden
                 ORDER BY p.Orden;
 
-                -- 6) Productividad por agente asignado
+                -- 6) Productividad por agente asignado. Cola = horas corridas que sus
+                --    tickets esperaron antes de que él los tomara (creación->asignación);
+                --    Resolucion = horas corridas ya trabajándolo (asignación->cierre).
                 SELECT
                     CONCAT(u.Nombre, ' ', u.Apellido) AS Agente,
                     COUNT(*) AS Asignados,
                     SUM(CASE WHEN e.Nombre IN ('Cerrado', 'Cierre') THEN 1 ELSE 0 END) AS Cerrados,
                     SUM(CASE WHEN e.Nombre NOT IN ('Cerrado', 'Cierre', 'Anulado') THEN 1 ELSE 0 END) AS Activos,
+                    AVG(CASE WHEN t.Fecha_Asignacion IS NOT NULL
+                             THEN CAST(DATEDIFF(MINUTE, t.Fecha_Creacion, t.Fecha_Asignacion) AS DECIMAL(10,2)) / 60.0 END) AS TiempoPromedioColaHoras,
                     AVG(CASE WHEN t.Fecha_Cierre IS NOT NULL AND t.Fecha_Asignacion IS NOT NULL
                              THEN CAST(DATEDIFF(MINUTE, t.Fecha_Asignacion, t.Fecha_Cierre) AS DECIMAL(10,2)) / 60.0 END) AS TiempoPromedioResolucionHoras,
                     (
@@ -94,6 +108,23 @@ namespace HelpDesk_Sistemas.Repositories
                   AND (@IdAreaAgente IS NULL OR t.Id_Area = @IdAreaAgente)
                 GROUP BY u.Id, u.Nombre, u.Apellido
                 ORDER BY Cerrados DESC, Asignados DESC;
+
+                -- 7) Detalle por ticket: los 3 tramos ya calculados (vista vw_TiemposTicket).
+                --    Trae horas hábiles (como el SLA) y horas corridas. Solo se usa para la
+                --    hoja de detalle del Excel.
+                SELECT
+                    v.CodigoTicket, v.EstadoActual, v.Area, v.Prioridad, v.AsesorAsignado,
+                    v.FechaCreacion, v.FechaToma, v.FechaResolucion,
+                    v.MinCola_Habil            AS MinColaHabil,
+                    v.MinTrabajoAsesor_Habil   AS MinTrabajoAsesorHabil,
+                    v.MinResolucionTotal_Habil AS MinResolucionTotalHabil,
+                    v.MinCola_Reloj            AS MinColaReloj,
+                    v.MinTrabajoAsesor_Reloj   AS MinTrabajoAsesorReloj,
+                    v.MinResolucionTotal_Reloj AS MinResolucionTotalReloj
+                FROM vw_TiemposTicket v
+                WHERE v.FechaCreacion >= @FechaInicio AND v.FechaCreacion < @FechaFinExclusiva
+                  AND (@IdAreaAgente IS NULL OR v.IdArea = @IdAreaAgente)
+                ORDER BY v.FechaCreacion DESC;
             ";
 
             var parametros = new
@@ -111,6 +142,7 @@ namespace HelpDesk_Sistemas.Repositories
             var porArea = (await multi.ReadAsync<ReporteDistribucionModel>()).ToList();
             var porPrioridad = (await multi.ReadAsync<ReporteDistribucionModel>()).ToList();
             var porAgente = (await multi.ReadAsync<ReporteAgenteModel>()).ToList();
+            var detalleTiempos = (await multi.ReadAsync<ReporteTiempoTicketModel>()).ToList();
 
             return new ReporteGeneralModel
             {
@@ -119,7 +151,8 @@ namespace HelpDesk_Sistemas.Repositories
                 PorTipo = porTipo,
                 PorArea = porArea,
                 PorPrioridad = porPrioridad,
-                PorAgente = porAgente
+                PorAgente = porAgente,
+                DetalleTiempos = detalleTiempos
             };
         }
     }
