@@ -20,6 +20,11 @@
         public int? OrdenAtencion { get; set; }
         public string Solicitante { get; set; }
         public string? Asignado { get; set; }
+        // Id del agente que tiene el ticket (NULL si aún nadie lo tomó). Se usa en el
+        // listado para decidir qué acciones puede ejecutar el usuario logueado: solo
+        // quien lo tiene asignado (o nadie todavía) puede operarlo; un coordinador que
+        // ve el ticket de otro agente únicamente puede reasignarlo.
+        public int? IdUsuarioAsignado { get; set; }
         public DateTime FechaCreacion { get; set; }
         public int CantidadMismaAsignadoPrioridad { get; set; }
         public int IdArea { get; set; }

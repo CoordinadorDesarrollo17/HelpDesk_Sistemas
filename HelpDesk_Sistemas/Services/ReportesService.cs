@@ -24,6 +24,8 @@ namespace HelpDesk_Sistemas.Services
 
             using var workbook = new XLWorkbook();
 
+            string Horas(decimal? h) => h.HasValue ? Math.Round(h.Value, 1).ToString() : "-";
+
             var wsResumen = workbook.Worksheets.Add("Resumen");
             wsResumen.Cell(1, 1).Value = "Período";
             wsResumen.Cell(1, 2).Value = $"{filtro.FechaInicio:dd/MM/yyyy} - {filtro.FechaFin:dd/MM/yyyy}";
@@ -33,8 +35,14 @@ namespace HelpDesk_Sistemas.Services
             wsResumen.Cell(3, 2).Value = reporte.Resumen.TotalCerrados;
             wsResumen.Cell(4, 1).Value = "Tickets activos";
             wsResumen.Cell(4, 2).Value = reporte.Resumen.TicketsActivos;
-            wsResumen.Cell(5, 1).Value = "Tiempo promedio de resolución (horas)";
-            wsResumen.Cell(5, 2).Value = reporte.Resumen.TiempoPromedioResolucionHoras.HasValue ? Math.Round(reporte.Resumen.TiempoPromedioResolucionHoras.Value, 1).ToString() : "-";
+            wsResumen.Cell(6, 1).Value = "Tiempos promedio (horas corridas)";
+            wsResumen.Cell(6, 1).Style.Font.Italic = true;
+            wsResumen.Cell(7, 1).Value = "  En cola  (creación → asignación)";
+            wsResumen.Cell(7, 2).Value = Horas(reporte.Resumen.TiempoPromedioColaHoras);
+            wsResumen.Cell(8, 1).Value = "  Trabajo del asesor  (asignación → cierre)";
+            wsResumen.Cell(8, 2).Value = Horas(reporte.Resumen.TiempoPromedioTrabajoAgenteHoras);
+            wsResumen.Cell(9, 1).Value = "  Resolución total  (creación → cierre)";
+            wsResumen.Cell(9, 2).Value = Horas(reporte.Resumen.TiempoPromedioResolucionHoras);
             wsResumen.Column(1).Style.Font.Bold = true;
             wsResumen.Columns().AdjustToContents();
 
@@ -48,9 +56,10 @@ namespace HelpDesk_Sistemas.Services
             wsAgentes.Cell(1, 2).Value = "Asignados";
             wsAgentes.Cell(1, 3).Value = "Cerrados";
             wsAgentes.Cell(1, 4).Value = "Activos";
-            wsAgentes.Cell(1, 5).Value = "Tiempo promedio resolución (h)";
-            wsAgentes.Cell(1, 6).Value = "Devoluciones";
-            wsAgentes.Range("A1:F1").Style.Font.Bold = true;
+            wsAgentes.Cell(1, 5).Value = "Prom. en cola (h)";
+            wsAgentes.Cell(1, 6).Value = "Prom. trabajo del asesor (h)";
+            wsAgentes.Cell(1, 7).Value = "Devoluciones";
+            wsAgentes.Range("A1:G1").Style.Font.Bold = true;
 
             var filaAgente = 2;
             foreach (var a in reporte.PorAgente)
@@ -59,12 +68,15 @@ namespace HelpDesk_Sistemas.Services
                 wsAgentes.Cell(filaAgente, 2).Value = a.Asignados;
                 wsAgentes.Cell(filaAgente, 3).Value = a.Cerrados;
                 wsAgentes.Cell(filaAgente, 4).Value = a.Activos;
-                wsAgentes.Cell(filaAgente, 5).Value = a.TiempoPromedioResolucionHoras.HasValue ? Math.Round(a.TiempoPromedioResolucionHoras.Value, 1).ToString() : "-";
-                wsAgentes.Cell(filaAgente, 6).Value = a.Devoluciones;
+                wsAgentes.Cell(filaAgente, 5).Value = Horas(a.TiempoPromedioColaHoras);
+                wsAgentes.Cell(filaAgente, 6).Value = Horas(a.TiempoPromedioResolucionHoras);
+                wsAgentes.Cell(filaAgente, 7).Value = a.Devoluciones;
                 filaAgente++;
             }
             wsAgentes.Columns().AdjustToContents();
             wsAgentes.SheetView.FreezeRows(1);
+
+            AgregarHojaDetalleTiempos(workbook, reporte.DetalleTiempos);
 
             foreach (var ws in workbook.Worksheets)
             {
@@ -116,6 +128,52 @@ namespace HelpDesk_Sistemas.Services
             {
                 ws.Cell(fila, 1).Value = f.Etiqueta;
                 ws.Cell(fila, 2).Value = f.Cantidad;
+                fila++;
+            }
+            ws.Columns().AdjustToContents();
+            ws.SheetView.FreezeRows(1);
+        }
+
+        // Una fila por ticket con sus 3 tramos (cola / trabajo del asesor / total), en horas
+        // hábiles (como el SLA) y en horas corridas. Vacío -> el tramo aún no ocurrió.
+        private static void AgregarHojaDetalleTiempos(XLWorkbook workbook, List<ReporteTiempoTicketModel> tickets)
+        {
+            var ws = workbook.Worksheets.Add("Detalle por ticket");
+            string[] encabezados =
+            {
+                "Ticket", "Estado", "Área", "Prioridad", "Asesor asignado",
+                "Creación", "Toma", "Resolución",
+                "Cola háb. (h)", "Trabajo asesor háb. (h)", "Total háb. (h)",
+                "Cola corr. (h)", "Trabajo asesor corr. (h)", "Total corr. (h)"
+            };
+            for (var i = 0; i < encabezados.Length; i++)
+            {
+                ws.Cell(1, i + 1).Value = encabezados[i];
+            }
+            ws.Range(1, 1, 1, encabezados.Length).Style.Font.Bold = true;
+
+            static string Horas(int? minutos) => minutos.HasValue ? Math.Round(minutos.Value / 60.0, 1).ToString() : "-";
+
+            var fila = 2;
+            foreach (var t in tickets)
+            {
+                ws.Cell(fila, 1).Value = t.CodigoTicket;
+                ws.Cell(fila, 2).Value = t.EstadoActual ?? "-";
+                ws.Cell(fila, 3).Value = t.Area ?? "-";
+                ws.Cell(fila, 4).Value = t.Prioridad ?? "-";
+                ws.Cell(fila, 5).Value = string.IsNullOrWhiteSpace(t.AsesorAsignado) ? "-" : t.AsesorAsignado;
+                ws.Cell(fila, 6).Value = t.FechaCreacion;
+                ws.Cell(fila, 6).Style.DateFormat.Format = "dd/MM/yyyy HH:mm";
+                if (t.FechaToma.HasValue) { ws.Cell(fila, 7).Value = t.FechaToma.Value; ws.Cell(fila, 7).Style.DateFormat.Format = "dd/MM/yyyy HH:mm"; }
+                else { ws.Cell(fila, 7).Value = "-"; }
+                if (t.FechaResolucion.HasValue) { ws.Cell(fila, 8).Value = t.FechaResolucion.Value; ws.Cell(fila, 8).Style.DateFormat.Format = "dd/MM/yyyy HH:mm"; }
+                else { ws.Cell(fila, 8).Value = "-"; }
+                ws.Cell(fila, 9).Value = Horas(t.MinColaHabil);
+                ws.Cell(fila, 10).Value = Horas(t.MinTrabajoAsesorHabil);
+                ws.Cell(fila, 11).Value = Horas(t.MinResolucionTotalHabil);
+                ws.Cell(fila, 12).Value = Horas(t.MinColaReloj);
+                ws.Cell(fila, 13).Value = Horas(t.MinTrabajoAsesorReloj);
+                ws.Cell(fila, 14).Value = Horas(t.MinResolucionTotalReloj);
                 fila++;
             }
             ws.Columns().AdjustToContents();

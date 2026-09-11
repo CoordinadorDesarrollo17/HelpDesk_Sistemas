@@ -57,10 +57,22 @@
             <div class="col-6 col-lg-3">
                 <div class="kpi-card">
                     <div class="kpi-valor">@(Model.Resumen.TiempoPromedioResolucionHoras.HasValue ? Math.Round(Model.Resumen.TiempoPromedioResolucionHoras.Value, 1).ToString() : "-")</div>
-                    <div class="kpi-etiqueta">Horas promedio de resolución</div>
+                    <div class="kpi-etiqueta">Horas prom. de resolución (total)</div>
                 </div>
             </div>
         </div>
+
+        @{
+            string HorasKpi(decimal? h) => h.HasValue ? Math.Round(h.Value, 1).ToString() : "-";
+        }
+        <p class="text-muted small mb-4">
+            <i class="bi bi-clock-history"></i>
+            El tiempo total de resolución se reparte en
+            <strong>@HorasKpi(Model.Resumen.TiempoPromedioColaHoras) h en cola</strong>
+            (desde que ingresa el ticket hasta que un asesor lo toma) +
+            <strong>@HorasKpi(Model.Resumen.TiempoPromedioTrabajoAgenteHoras) h de trabajo del asesor</strong>
+            (desde que lo toma hasta que lo cierra). Promedios en horas corridas, sobre tickets ya cerrados.
+        </p>
 
         <!-- Tendencia -->
         <h6 class="fw-bold">Tendencia de tickets</h6>
@@ -142,7 +154,8 @@
                                     <th class="text-end">Asignados</th>
                                     <th class="text-end">Cerrados</th>
                                     <th class="text-end">Activos</th>
-                                    <th class="text-end">Prom. resolución (h)</th>
+                                    <th class="text-end">Prom. en cola (h)</th>
+                                    <th class="text-end">Prom. trabajo asesor (h)</th>
                                     <th class="text-end">Devoluciones</th>
                                 </tr>
                             </thead>
@@ -154,6 +167,7 @@
                                         <td class="text-end">@a.Asignados</td>
                                         <td class="text-end">@a.Cerrados</td>
                                         <td class="text-end">@a.Activos</td>
+                                        <td class="text-end">@(a.TiempoPromedioColaHoras.HasValue ? Math.Round(a.TiempoPromedioColaHoras.Value, 1).ToString() : "-")</td>
                                         <td class="text-end">@(a.TiempoPromedioResolucionHoras.HasValue ? Math.Round(a.TiempoPromedioResolucionHoras.Value, 1).ToString() : "-")</td>
                                         <td class="text-end">
                                             @if (a.Devoluciones > 0)
@@ -170,7 +184,10 @@
                             </tbody>
                         </table>
                     </div>
-                    <small class="text-muted d-block mt-2">El tiempo de resolución es el transcurrido entre la asignación y el cierre (no descuenta pausas).</small>
+                    <small class="text-muted d-block mt-2">
+                        <strong>En cola</strong>: horas corridas entre que ingresa el ticket y el asesor lo toma.
+                        <strong>Trabajo del asesor</strong>: horas corridas entre que lo toma y lo cierra (no descuenta pausas).
+                    </small>
                 </div>
             </div>
         }

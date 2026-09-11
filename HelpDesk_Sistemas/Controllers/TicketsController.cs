@@ -38,6 +38,7 @@ namespace HelpDesk_Sistemas.Controllers
             ViewBag.Tipos = await ticketsService.ObtenerTiposRequerimiento();
             ViewBag.Rol = SesionTemporal.RolActual;
             ViewBag.Usuario = SesionTemporal.NombreCompletoActual;
+            ViewBag.IdUsuarioActual = SesionTemporal.UsuarioActualTemporal;
             ViewBag.IdAreaUsuario = SesionTemporal.IdAreaActual;
             ViewBag.EsCoordinador = SesionTemporal.EsCoordinadorActual;
 

@@ -171,6 +171,7 @@ namespace HelpDesk_Sistemas.Repositories
                     p.Nombre                              AS Prioridad,
                     CONCAT(us.Nombre, ' ', us.Apellido)   AS Solicitante,
                     CONCAT(ua.Nombre, ' ', ua.Apellido)   AS Asignado,
+                    t.Id_Usuario_Asignado                 AS IdUsuarioAsignado,
                     t.Fecha_Creacion                      AS FechaCreacion,
                     t.Orden_Atencion                      AS OrdenAtencion,
                     t.Id_Area                             AS IdArea,
@@ -717,13 +718,18 @@ namespace HelpDesk_Sistemas.Repositories
         /// Cambia el ticket de estadoOrigen a estadoDestino y registra el cambio
         /// en la bitácora. Si se indica campoFechaExtra (ej. "Fecha_Cierre"), esa
         /// columna también se actualiza a la fecha/hora actual en el mismo UPDATE.
+        /// Con exigirAsignado = true la transición solo procede si quien la ejecuta
+        /// es el agente que tiene el ticket asignado (acciones "de cola": atender,
+        /// desarrollar, etc.). Las transiciones que corresponden al solicitante
+        /// —confirmar/devolver solución— lo dejan en false.
         /// </summary>
-        private async Task<bool> CambiarEstado(int idTicket, string estadoOrigen, string estadoDestino, int idUsuarioAccion, string comentario, string? campoFechaExtra = null, bool reactivarSla = false)
+        private async Task<bool> CambiarEstado(int idTicket, string estadoOrigen, string estadoDestino, int idUsuarioAccion, string comentario, string? campoFechaExtra = null, bool reactivarSla = false, bool exigirAsignado = false)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
             var setFechaExtra = campoFechaExtra != null ? $", {campoFechaExtra} = GETDATE()" : "";
             var reactivarSlaSql = reactivarSla ? "EXEC sp_SLA_Reactivar @IdTicket = @IdTicket;" : "";
+            var filtroAsignado = exigirAsignado ? " AND Id_Usuario_Asignado = @IdUsuarioAccion" : "";
 
             var sql = $@"
                 DECLARE @IdEstadoAnterior INT = (SELECT Id_Estado FROM Tickets WHERE Id = @IdTicket);
@@ -732,7 +738,7 @@ namespace HelpDesk_Sistemas.Repositories
                 UPDATE Tickets
                 SET Id_Estado = @IdEstadoNuevo{setFechaExtra}
                 WHERE Id = @IdTicket
-                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = @EstadoOrigen);
+                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = @EstadoOrigen){filtroAsignado};
 
                 DECLARE @FilasActualizadas INT = @@ROWCOUNT;
 
@@ -814,9 +820,9 @@ namespace HelpDesk_Sistemas.Repositories
         public async Task<bool> TomarTicket(int idTicket, int idUsuarioAsignado)
             => await TomarGenerico(idTicket, "Pendiente", "En revisión", idUsuarioAsignado, "Ticket tomado por el usuario de Soporte");
 
-        /// <summary>En revisión → En atención.</summary>
+        /// <summary>En revisión → En atención. Solo el agente que tiene el ticket asignado.</summary>
         public async Task<bool> AtenderTicket(int idTicket, int idUsuarioAccion)
-            => await CambiarEstado(idTicket, "En revisión", "En atención", idUsuarioAccion, "Ticket en atención", "Fecha_Atencion");
+            => await CambiarEstado(idTicket, "En revisión", "En atención", idUsuarioAccion, "Ticket en atención", "Fecha_Atencion", exigirAsignado: true);
 
         /// <summary>
         /// En atención → En pausa. Registra el motivo (Reunión o Atención de otro
@@ -833,7 +839,8 @@ namespace HelpDesk_Sistemas.Repositories
                 UPDATE Tickets
                 SET Id_Estado = @IdEstadoNuevo
                 WHERE Id = @IdTicket
-                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'En atención');
+                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'En atención')
+                  AND Id_Usuario_Asignado = @IdUsuarioAccion;
 
                 DECLARE @FilasActualizadas INT = @@ROWCOUNT;
 
@@ -874,7 +881,8 @@ namespace HelpDesk_Sistemas.Repositories
                 UPDATE Tickets
                 SET Id_Estado = @IdEstadoNuevo
                 WHERE Id = @IdTicket
-                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'En pausa');
+                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'En pausa')
+                  AND Id_Usuario_Asignado = @IdUsuarioAccion;
 
                 DECLARE @FilasActualizadas INT = @@ROWCOUNT;
 
@@ -905,8 +913,12 @@ namespace HelpDesk_Sistemas.Repositories
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
+            // Id_Usuario_Accion es el agente actualmente asignado al ticket (t.Id_Usuario_Asignado),
+            // no quien registró la pausa: ReanudarTicket exige que quien reanuda sea el asignado,
+            // y si el ticket se reasignó durante la pausa el reinicio automático debe seguir
+            // funcionando a nombre del nuevo responsable.
             var sql = @"
-                SELECT tp.Id_Ticket AS IdTicket, tp.Id_Usuario_Accion AS IdUsuarioAccion
+                SELECT tp.Id_Ticket AS IdTicket, t.Id_Usuario_Asignado AS IdUsuarioAccion
                 FROM Ticket_Pausas tp
                 INNER JOIN Tickets t ON t.Id = tp.Id_Ticket
                 INNER JOIN Estado e ON e.Id = t.Id_Estado
@@ -933,7 +945,8 @@ namespace HelpDesk_Sistemas.Repositories
                 SET Id_Estado = @IdEstadoNuevo,
                     Solucion = @Solucion
                 WHERE Id = @IdTicket
-                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'En atención');
+                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'En atención')
+                  AND Id_Usuario_Asignado = @IdUsuarioAccion;
 
                 DECLARE @FilasActualizadas INT = @@ROWCOUNT;
 
@@ -986,7 +999,10 @@ namespace HelpDesk_Sistemas.Repositories
                 WHERE Id = @IdTicket
                   AND Id_Estado IN (
                         SELECT Id FROM Estado WHERE Nombre IN ('Pendiente', 'En revisión', 'En atención', 'En pausa', 'En validación')
-                      );
+                      )
+                  -- Un ticket sin tomar lo puede anular cualquier agente de la cola; uno ya
+                  -- asignado, solo su responsable (un coordinador debe reasignárselo primero).
+                  AND (Id_Usuario_Asignado IS NULL OR Id_Usuario_Asignado = @IdUsuarioAccion);
 
                 DECLARE @FilasActualizadas INT = @@ROWCOUNT;
 
@@ -1145,21 +1161,21 @@ namespace HelpDesk_Sistemas.Repositories
         public async Task<bool> TomarLevantamiento(int idTicket, int idUsuarioAsignado)
             => await TomarGenerico(idTicket, "Pendiente", "Levantamiento", idUsuarioAsignado, "Ticket tomado para levantamiento");
 
-        /// <summary>Levantamiento → Desarrollo.</summary>
+        /// <summary>Levantamiento → Desarrollo. Solo el agente que tiene el ticket asignado.</summary>
         public async Task<bool> IniciarDesarrollo(int idTicket, int idUsuarioAccion)
-            => await CambiarEstado(idTicket, "Levantamiento", "Desarrollo", idUsuarioAccion, "Inicia desarrollo");
+            => await CambiarEstado(idTicket, "Levantamiento", "Desarrollo", idUsuarioAccion, "Inicia desarrollo", exigirAsignado: true);
 
-        /// <summary>Desarrollo → Pruebas.</summary>
+        /// <summary>Desarrollo → Pruebas. Solo el agente que tiene el ticket asignado.</summary>
         public async Task<bool> EnviarAPruebas(int idTicket, int idUsuarioAccion)
-            => await CambiarEstado(idTicket, "Desarrollo", "Pruebas", idUsuarioAccion, "Enviado a pruebas del solicitante");
+            => await CambiarEstado(idTicket, "Desarrollo", "Pruebas", idUsuarioAccion, "Enviado a pruebas del solicitante", exigirAsignado: true);
 
         /// <summary>Pruebas → Pase a producción. El solicitante confirma que las pruebas salieron bien.</summary>
         public async Task<bool> ConfirmarPruebas(int idTicket, int idUsuarioAccion)
             => await CambiarEstado(idTicket, "Pruebas", "Pase a producción", idUsuarioAccion, "Solicitante confirma pruebas correctas");
 
-        /// <summary>Pase a producción → Cierre.</summary>
+        /// <summary>Pase a producción → Cierre. Solo el agente que tiene el ticket asignado.</summary>
         public async Task<bool> CerrarImplementacion(int idTicket, int idUsuarioAccion)
-            => await CambiarEstado(idTicket, "Pase a producción", "Cierre", idUsuarioAccion, "Ticket cerrado", "Fecha_Cierre");
+            => await CambiarEstado(idTicket, "Pase a producción", "Cierre", idUsuarioAccion, "Ticket cerrado", "Fecha_Cierre", exigirAsignado: true);
 
         // ============================================================
         // REASIGNACIÓN (aplica a ambos flujos)
