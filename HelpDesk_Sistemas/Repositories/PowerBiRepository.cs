@@ -74,9 +74,11 @@ namespace HelpDesk_Sistemas.Repositories
                 LEFT  JOIN Sistema sis          ON sis.Id = t.Id_Sistema
                 LEFT JOIN Ticket_SLA tsr ON tsr.Id_Ticket = t.Id
                     AND tsr.Id_SLA_Definicion IN (SELECT Id FROM SLA_Definicion WHERE Tipo_SLA = 'Respuesta')
+                    AND tsr.Etapa <> 'Cancelado'
                 LEFT JOIN SLA_Definicion dsr ON dsr.Id = tsr.Id_SLA_Definicion
                 LEFT JOIN Ticket_SLA tso ON tso.Id_Ticket = t.Id
                     AND tso.Id_SLA_Definicion IN (SELECT Id FROM SLA_Definicion WHERE Tipo_SLA = 'Resolucion')
+                    AND tso.Etapa <> 'Cancelado'
                 LEFT JOIN SLA_Definicion dso ON dso.Id = tso.Id_SLA_Definicion
                 WHERE {string.Join(" AND ", condiciones)}
                 ORDER BY t.Fecha_Creacion DESC

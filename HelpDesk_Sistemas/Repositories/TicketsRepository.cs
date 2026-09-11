@@ -21,12 +21,19 @@ namespace HelpDesk_Sistemas.Repositories
         // (listado, detalle, GET por id). Ver Database/Sla/*.sql.
         // ============================================================
 
+        // Un ticket puede tener más de una fila de Ticket_SLA para el mismo Tipo_SLA cuando
+        // TicketsRepository.CorregirImpacto cancela el SLA que ya estaba corriendo y abre uno
+        // nuevo (impacto corregido -> cambia la prioridad -> cambia la definición de SLA). Sin
+        // "Etapa <> 'Cancelado'" el LEFT JOIN hace fan-out: 2 filas de Respuesta × 2 de
+        // Resolución = el ticket aparece 4 veces en el listado.
         private const string SqlJoinsSla = @"
             LEFT JOIN Ticket_SLA tsr ON tsr.Id_Ticket = t.Id
                 AND tsr.Id_SLA_Definicion IN (SELECT Id FROM SLA_Definicion WHERE Tipo_SLA = 'Respuesta')
+                AND tsr.Etapa <> 'Cancelado'
             LEFT JOIN SLA_Definicion dsr ON dsr.Id = tsr.Id_SLA_Definicion
             LEFT JOIN Ticket_SLA tso ON tso.Id_Ticket = t.Id
                 AND tso.Id_SLA_Definicion IN (SELECT Id FROM SLA_Definicion WHERE Tipo_SLA = 'Resolucion')
+                AND tso.Etapa <> 'Cancelado'
             LEFT JOIN SLA_Definicion dso ON dso.Id = tso.Id_SLA_Definicion
         ";
 
