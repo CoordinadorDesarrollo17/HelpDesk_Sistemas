@@ -55,6 +55,7 @@
                 <th>Estado</th>
                 @if (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte")
                 {
+                    <th>Impacto</th>
                     <th>Prioridad</th>
                 }
                 @if (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte")
@@ -102,6 +103,33 @@
                     <td data-label="Área">@u?.Area</td>
                     <td data-label="Categoría">@u?.Categoria</td>
                     <td data-label="Estado"><span class="badge @EstadoBadgeClass(u.Estado)">@u?.Estado</span></td>
+
+                    <td data-label="Impacto">
+                        @{
+                            // El impacto lo reporta quien crea el ticket, pero puede no ser el
+                            // correcto — Soporte/Administrador lo corrige antes de tomarlo (mismo
+                            // criterio que la prioridad). Solo aplica a tickets que usan la matriz
+                            // Impacto × Urgencia (u.IdImpacto tiene valor); Implementación/Mejora no.
+                            var puedeCorregirImpacto = (ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte") && !esSolicitante && u.IdImpacto.HasValue;
+                        }
+                        @if (puedeCorregirImpacto && u.Estado == "Pendiente")
+                        {
+                            <select class="form-select form-select-sm" onchange="corregirImpacto(@u.IdTicket, this.value)">
+                                @foreach (var impacto in (List<CatalogoModel>)ViewBag.Impactos)
+                                {
+                                    <option value="@impacto.Id" selected="@(u.Impacto == impacto.Nombre)">@impacto.Nombre</option>
+                                }
+                            </select>
+                        }
+                        else if (u.Impacto != null)
+                        {
+                            @u.Impacto
+                        }
+                        else
+                        {
+                            @:-
+                        }
+                    </td>
 
                     <td data-label="Prioridad">
                         @{

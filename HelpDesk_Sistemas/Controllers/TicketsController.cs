@@ -32,6 +32,7 @@ namespace HelpDesk_Sistemas.Controllers
             ViewBag.Categorias = await ticketsService.ObtenerCategorias();
             ViewBag.Sociedades = await ticketsService.ObtenerSociedades();
             ViewBag.Prioridades = await ticketsService.ObtenerPrioridades();
+            ViewBag.Impactos = await ticketsService.ObtenerImpactos();
             ViewBag.Estados = await ticketsService.ObtenerEstados();
             ViewBag.AreasSolicitantes = await ticketsService.ObtenerAreas();
             ViewBag.Areas = await ticketsService.ObtenerAreasSistemas();
@@ -349,6 +350,22 @@ namespace HelpDesk_Sistemas.Controllers
             }
 
             var (exito, mensaje) = await ticketsService.AsignarPrioridad(id, idPrioridad, SesionTemporal.UsuarioActualTemporal, SesionTemporal.IdAreaActual);
+            return Json(new { exito, mensaje });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CorregirImpacto(int id, int idImpacto)
+        {
+            // Mismo criterio que AsignarPrioridad: lo corrige quien trabaja la cola
+            // (Soporte/Administrador), nunca quien solicitó el ticket.
+            var puedeCorregirImpacto = SesionTemporal.RolActual == "Administrador" || SesionTemporal.RolActual == "Soporte";
+
+            if (!puedeCorregirImpacto)
+            {
+                return Json(new { exito = false, mensaje = "Solo Soporte o un administrador puede corregir el impacto." });
+            }
+
+            var (exito, mensaje) = await ticketsService.CorregirImpacto(id, idImpacto, SesionTemporal.UsuarioActualTemporal, SesionTemporal.IdAreaActual);
             return Json(new { exito, mensaje });
         }
 

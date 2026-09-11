@@ -84,6 +84,7 @@ namespace HelpDesk_Sistemas.Interfaces
         // ============================================================
 
         Task<(bool Exito, string? Mensaje)> AsignarPrioridad(int idTicket, int idPrioridad, int idUsuarioActual, int idAreaUsuarioActual);
+        Task<(bool Exito, string? Mensaje)> CorregirImpacto(int idTicket, int idImpacto, int idUsuarioActual, int idAreaUsuarioActual);
         Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden, int idUsuarioActual, int idAreaUsuarioActual);
 
         /// <summary>Tickets del mismo usuario, con prioridad definida, aptos como motivo de pausa.</summary>
