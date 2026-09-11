@@ -1,4 +1,4 @@
-# Visual Studio
+﻿# Visual Studio
 .vs/
 
 # Build folders
@@ -28,3 +28,6 @@ wwwroot/uploads/
 # de BD). Se sigue necesitando localmente para correr la app: crea tu propia copia
 # a partir de appsettings.example.json.
 HelpDesk_Sistemas/appsettings.json
+
+# Perfiles de publicación de Visual Studio
+**/Properties/PublishProfiles/*.pubxml
