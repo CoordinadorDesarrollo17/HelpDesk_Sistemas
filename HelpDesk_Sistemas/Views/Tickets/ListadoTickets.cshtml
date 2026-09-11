@@ -1159,6 +1159,29 @@
 		// PRIORIDAD Y ORDEN DE ATENCIÓN
 		// ============================================================
 
+		// Corrige el impacto de un ticket Pendiente (antes de tomarlo): si eso cambia la
+		// prioridad que resulta de la matriz, el servidor reinicia el SLA solo.
+		function corregirImpacto(idTicket, idImpacto) {
+			if (!idImpacto) return;
+
+			const params = new URLSearchParams({ id: idTicket, idImpacto: idImpacto });
+
+			fetchConManejo(`@Url.Action("CorregirImpacto")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast(data.mensaje || "No se pudo corregir el impacto. Puede que el ticket ya haya cambiado de estado.", "danger");
+					} else {
+						mostrarToast("Impacto corregido correctamente", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
 		function asignarPrioridad(idTicket, idPrioridad) {
 			if (!idPrioridad) return;
 

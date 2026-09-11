@@ -334,6 +334,11 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.AsignarPrioridad(idTicket, idPrioridad, idUsuarioActual, idAreaUsuarioActual);
         }
 
+        public async Task<(bool Exito, string? Mensaje)> CorregirImpacto(int idTicket, int idImpacto, int idUsuarioActual, int idAreaUsuarioActual)
+        {
+            return await ticketsRepository.CorregirImpacto(idTicket, idImpacto, idUsuarioActual, idAreaUsuarioActual);
+        }
+
         public async Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden, int idUsuarioActual, int idAreaUsuarioActual)
         {
             return await ticketsRepository.AsignarOrdenAtencion(idTicket, orden, idUsuarioActual, idAreaUsuarioActual);

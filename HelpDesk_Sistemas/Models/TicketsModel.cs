@@ -17,6 +17,11 @@
         public string? Sistema { get; set; }
         public string Estado { get; set; }
         public string? Prioridad { get; set; }
+        // Impacto reportado al crear el ticket (NULL para Implementación/Mejora, que no usa
+        // la matriz Impacto × Urgencia). Editable por Soporte/Administrador mientras el
+        // ticket está Pendiente: el usuario que reporta puede elegir uno que no corresponde.
+        public string? Impacto { get; set; }
+        public int? IdImpacto { get; set; }
         public int? OrdenAtencion { get; set; }
         public string Solicitante { get; set; }
         public string? Asignado { get; set; }

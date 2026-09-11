@@ -169,6 +169,8 @@ namespace HelpDesk_Sistemas.Repositories
                     sis.Nombre                            AS Sistema,
                     e.Nombre                              AS Estado,
                     p.Nombre                              AS Prioridad,
+                    imp.Nombre                            AS Impacto,
+                    t.Id_Impacto                          AS IdImpacto,
                     CONCAT(us.Nombre, ' ', us.Apellido)   AS Solicitante,
                     CONCAT(ua.Nombre, ' ', ua.Apellido)   AS Asignado,
                     t.Id_Usuario_Asignado                 AS IdUsuarioAsignado,
@@ -195,6 +197,7 @@ namespace HelpDesk_Sistemas.Repositories
                 LEFT  JOIN Categoria c           ON c.Id  = t.Id_Categoria
                 INNER JOIN Estado e              ON e.Id  = t.Id_Estado
                 LEFT  JOIN Prioridad p           ON p.Id  = t.Id_Prioridad
+                LEFT  JOIN Impacto imp           ON imp.Id = t.Id_Impacto
                 INNER JOIN Usuarios us           ON us.Id = t.Id_Usuario_Solicita
                 LEFT  JOIN Area aSol             ON aSol.Id = us.Id_Area
                 LEFT  JOIN Usuarios ua           ON ua.Id = t.Id_Usuario_Asignado
@@ -1057,6 +1060,83 @@ namespace HelpDesk_Sistemas.Repositories
             ";
 
             var filasAfectadas = await xCon.ExecuteAsync(sql, new { IdTicket = idTicket, IdPrioridad = idPrioridad });
+            return (filasAfectadas > 0, null);
+        }
+
+        /// <summary>
+        /// Corrige el Impacto de un ticket Pendiente (antes de tomarlo): quien reportó el
+        /// ticket puede haber elegido un impacto que no corresponde. Si el nuevo Impacto
+        /// cambia la Prioridad que resulta de la matriz Impacto × Urgencia, se recalcula la
+        /// Prioridad y se reinicia el SLA (se cancelan los Ticket_SLA abiertos y se abren de
+        /// nuevo con la definición correcta) — como si el ticket se hubiera creado con el
+        /// impacto correcto desde el inicio.
+        /// </summary>
+        public async Task<(bool Exito, string? Mensaje)> CorregirImpacto(int idTicket, int idImpacto, int idUsuarioActual, int idAreaUsuarioActual)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sqlInfo = @"
+                SELECT t.Id_Usuario_Solicita AS IdUsuarioSolicita, t.Id_Area AS IdArea, e.Nombre AS Estado,
+                       t.Id_Tipo_Req AS IdTipoReq, t.Id_Urgencia AS IdUrgencia, t.Id_Prioridad AS IdPrioridadActual
+                FROM Tickets t
+                INNER JOIN Estado e ON e.Id = t.Id_Estado
+                WHERE t.Id = @IdTicket
+            ";
+            var info = await xCon.QueryFirstOrDefaultAsync<(int IdUsuarioSolicita, int IdArea, string? Estado, int IdTipoReq, int? IdUrgencia, int? IdPrioridadActual)>(sqlInfo, new { IdTicket = idTicket });
+
+            if (info.Estado is null)
+            {
+                return (false, "No se encontró el ticket.");
+            }
+
+            if (info.IdUsuarioSolicita == idUsuarioActual && info.IdArea != idAreaUsuarioActual)
+            {
+                return (false, "No puedes corregir el impacto de un ticket que tú mismo solicitaste.");
+            }
+
+            if (info.Estado != "Pendiente")
+            {
+                return (false, "El impacto solo se puede corregir mientras el ticket está pendiente.");
+            }
+
+            var idPrioridadNueva = await xCon.ExecuteScalarAsync<int?>(
+                "SELECT Id_Prioridad FROM Matriz_Prioridad WHERE Id_Tipo_Req = @IdTipoReq AND Id_Impacto = @IdImpacto AND Id_Urgencia = @IdUrgencia",
+                new { info.IdTipoReq, IdImpacto = idImpacto, info.IdUrgencia });
+
+            if (idPrioridadNueva is null)
+            {
+                return (false, "No hay una prioridad definida para esa combinación de impacto y urgencia.");
+            }
+
+            var prioridadCambio = idPrioridadNueva != info.IdPrioridadActual;
+
+            var sql = @"
+                UPDATE Tickets
+                SET Id_Impacto = @IdImpacto, Id_Prioridad = @IdPrioridadNueva
+                WHERE Id = @IdTicket
+                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'Pendiente');
+
+                IF @@ROWCOUNT > 0 AND @PrioridadCambio = 1
+                BEGIN
+                    -- La prioridad (y por lo tanto la definición de SLA que aplica) cambió:
+                    -- se cancela lo que ya estaba corriendo y se vuelve a iniciar con la
+                    -- definición correcta, igual que si el ticket hubiera nacido así.
+                    UPDATE Ticket_SLA
+                    SET Etapa = 'Cancelado', Fecha_Modificacion = GETDATE()
+                    WHERE Id_Ticket = @IdTicket AND Etapa IN ('EnCurso', 'Pausado');
+
+                    EXEC sp_SLA_IniciarParaTicket @IdTicket = @IdTicket;
+                END
+            ";
+
+            var filasAfectadas = await xCon.ExecuteAsync(sql, new
+            {
+                IdTicket = idTicket,
+                IdImpacto = idImpacto,
+                IdPrioridadNueva = idPrioridadNueva,
+                PrioridadCambio = prioridadCambio
+            });
+
             return (filasAfectadas > 0, null);
         }
 
