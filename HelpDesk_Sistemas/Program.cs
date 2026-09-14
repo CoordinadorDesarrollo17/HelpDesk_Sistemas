@@ -140,6 +140,6 @@ app.MapControllerRoute(
     .WithStaticAssets();
 
 //para generar una contraseña hashcodeada:
-//Console.WriteLine(PasswordHasher.Hash("marrom1"));
+//Console.WriteLine(PasswordHasher.Hash("TICOBE@R789"));
 
 app.Run();
