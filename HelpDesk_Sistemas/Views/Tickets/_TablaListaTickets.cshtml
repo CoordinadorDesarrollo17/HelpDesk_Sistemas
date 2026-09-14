@@ -4,16 +4,19 @@
 @model IPagedList<TicketsModel>
 
 @functions {
-    // Regla simple para los dos flujos: mientras el ticket siga pendiente de que alguien
-    // haga algo (que lo tomen, que lo trabajen, que lo confirme/pruebe, que esté en pausa,
-    // etc.) va en amarillo. Solo el cierre exitoso va en verde. "Anulado" es su propia
-    // categoría — no es "pendiente" (ya no hay nada más por hacer) ni un cierre exitoso,
-    // así que se queda con un color distinto en vez de amarillo o verde.
+    // Amarillo = el ticket está detenido esperando que alguien en concreto haga algo
+    // (tomarlo, reanudarlo, validar la solución, confirmar las pruebas): al ver amarillo,
+    // ese usuario sabe que le toca actuar. Mientras alguien ya lo está trabajando
+    // activamente (En revisión, En atención, Levantamiento, Desarrollo, Pase a producción)
+    // no hay una acción pendiente de un usuario puntual, así que se queda en azul/celeste.
+    // Verde = cierre exitoso. "Anulado" no es ni espera ni cierre exitoso, así que mantiene
+    // su propio color en vez de amarillo o verde.
     string EstadoBadgeClass(string? estado) => estado switch
     {
         "Cerrado" or "Cierre" => "bg-success",
         "Anulado" => "bg-dark",
-        _ => "bg-warning text-dark"
+        "Pendiente" or "En pausa" or "En validación" or "Pruebas" => "bg-warning text-dark",
+        _ => "bg-primary"
     };
 
     string PrioridadBadgeClass(string? prioridad) => prioridad switch
