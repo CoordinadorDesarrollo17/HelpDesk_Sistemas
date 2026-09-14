@@ -4,16 +4,16 @@
 @model IPagedList<TicketsModel>
 
 @functions {
+    // Regla simple para los dos flujos: mientras el ticket siga pendiente de que alguien
+    // haga algo (que lo tomen, que lo trabajen, que lo confirme/pruebe, que esté en pausa,
+    // etc.) va en amarillo. Solo el cierre exitoso va en verde. "Anulado" es su propia
+    // categoría — no es "pendiente" (ya no hay nada más por hacer) ni un cierre exitoso,
+    // así que se queda con un color distinto en vez de amarillo o verde.
     string EstadoBadgeClass(string? estado) => estado switch
     {
-        "Pendiente" => "bg-secondary",
-        "En revisión" or "Levantamiento" => "bg-info text-dark",
-        "En atención" or "Desarrollo" or "Pase a producción" => "bg-primary",
-        "En pausa" => "bg-warning text-dark",
-        "En validación" or "Pruebas" => "bg-primary-subtle text-primary-emphasis",
         "Cerrado" or "Cierre" => "bg-success",
         "Anulado" => "bg-dark",
-        _ => "bg-light text-dark"
+        _ => "bg-warning text-dark"
     };
 
     string PrioridadBadgeClass(string? prioridad) => prioridad switch
@@ -280,7 +280,7 @@
                            dejaba afuera justo a quien reportó el ticket cuando era de otra área). *@
                         @if (u.Estado == "Pruebas" && esQuienReporto)
                         {
-                            <button type="button" class="btn btn-sm btn-outline-success" title="Confirmar pruebas OK" onclick="confirmarPruebas(@u.IdTicket)">
+                            <button type="button" class="btn btn-sm btn-outline-success" title="Confirmar pruebas OK" onclick="abrirConfirmarPruebas(@u.IdTicket, '@u.CodigoTicket')">
                                 <i class="bi bi-check2-all"></i>
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-warning" title="Devolver con feedback" onclick="abrirDevolverPruebas(@u.IdTicket)">

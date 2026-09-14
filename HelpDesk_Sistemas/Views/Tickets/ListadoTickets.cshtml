@@ -315,6 +315,35 @@
 			</div>
 		</div>
 
+		<!-- MODAL CONFIRMAR PRUEBAS: paso previo antes de mandar el ticket a producción, para
+		     que un clic de más no lo confirme sin querer (mismo patrón que "Confirmar solución"
+		     en Soporte). -->
+		<div class="modal fade" id="modalConfirmarPruebas" tabindex="-1">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">
+							<i class="bi bi-clipboard-check text-success"></i>
+							Confirmar pruebas <span id="codigoTicketPruebas" class="text-muted fw-normal"></span>
+						</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+					</div>
+					<div class="modal-body">
+						<input type="hidden" id="idTicketConfirmarPruebas" />
+						<p class="mb-0 fw-semibold">¿Las pruebas salieron bien? Al confirmar, el ticket pasa a producción y ya no se puede deshacer desde acá.</p>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-outline-warning" onclick="devolverDesdePruebas()">
+							<i class="bi bi-arrow-counterclockwise"></i> No, devolver
+						</button>
+						<button type="button" class="btn btn-success" onclick="confirmarPruebasDesdeModal()">
+							<i class="bi bi-check-circle"></i> Sí, confirmar
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<!-- MODAL DEVOLVER PRUEBAS: el solicitante deja feedback para que Desarrollo lo revise
 		     (Pruebas -> Desarrollo). Se puede repetir las veces que haga falta hasta que
 		     confirme. -->
@@ -1303,7 +1332,19 @@
 				});
 		}
 
-		function confirmarPruebas(idTicket) {
+		// Antes de confirmar se pregunta primero (mismo patrón que abrirConfirmarSolucion):
+		// un clic de más no debe mandar el ticket a producción sin querer.
+		function abrirConfirmarPruebas(idTicket, codigoTicket) {
+			document.getElementById("idTicketConfirmarPruebas").value = idTicket;
+			document.getElementById("codigoTicketPruebas").textContent = codigoTicket;
+
+			const modal = new bootstrap.Modal(document.getElementById("modalConfirmarPruebas"));
+			modal.show();
+		}
+
+		function confirmarPruebasDesdeModal() {
+			const idTicket = document.getElementById("idTicketConfirmarPruebas").value;
+
 			fetchConManejo(`@Url.Action("ConfirmarPruebas")?id=${idTicket}`, { method: "POST" })
 				.then(r => {
 					if (!r) return;
@@ -1314,10 +1355,19 @@
 					if (!data.exito) {
 						mostrarToast("No se pudo confirmar.", "danger");
 					} else {
+						bootstrap.Modal.getInstance(document.getElementById("modalConfirmarPruebas")).hide();
 						mostrarToast("Se completó la etapa de pruebas satisfactoriamente.", "success");
 					}
 					cargarTabla(1);
 				});
+		}
+
+		// Pasa del modal de confirmación al de devolución, arrastrando el ticket (mismo
+		// patrón que devolverDesdeSolucion).
+		function devolverDesdePruebas() {
+			const idTicket = document.getElementById("idTicketConfirmarPruebas").value;
+			bootstrap.Modal.getInstance(document.getElementById("modalConfirmarPruebas")).hide();
+			abrirDevolverPruebas(idTicket);
 		}
 
 		// Pruebas -> Desarrollo, con el feedback del solicitante. Se puede repetir el ciclo
