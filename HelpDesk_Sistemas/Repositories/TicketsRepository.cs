@@ -67,8 +67,10 @@ namespace HelpDesk_Sistemas.Repositories
 
         /// <summary>
         /// Trae los tickets que cumplen los filtros dados. Si se filtra por un Estado
-        /// distinto de "Pendiente", solo devuelve los asignados al usuario actual
-        /// (los Pendiente son visibles para todos, ya que nadie los tiene asignado aún).
+        /// distinto de "Pendiente"/"Anulado", solo devuelve los asignados al usuario
+        /// actual (Pendiente y Anulado son visibles para todos: a Pendiente nadie lo
+        /// tiene asignado aún, y Anulado puede haberse anulado directo desde Pendiente
+        /// sin que nadie lo tomara, dejando Id_Usuario_Asignado en NULL para siempre).
         /// Además, la bandeja se acota según el rol: Usuario ve solo lo que él creó,
         /// Supervisor ve lo suyo más lo de su equipo (Usuarios.Id_Sup_Usuario), Soporte
         /// ve lo de su propia área de trabajo (Soporte TI/Sistemas/Desarrollo son
@@ -98,7 +100,7 @@ namespace HelpDesk_Sistemas.Repositories
             if (model.IdEstado.HasValue)
             {
                 condiciones.Add("t.Id_Estado = @IdEstado");
-                condiciones.Add("(e.Nombre = 'Pendiente' OR t.Id_Usuario_Asignado = @IdUsuarioActual)");
+                condiciones.Add("(e.Nombre IN ('Pendiente', 'Anulado') OR t.Id_Usuario_Asignado = @IdUsuarioActual)");
             }
 
             if (model.IdAreaSolicitante.HasValue)
