@@ -444,6 +444,18 @@ namespace HelpDesk_Sistemas.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> DevolverPruebas(int id, string feedback)
+        {
+            if (string.IsNullOrWhiteSpace(feedback))
+            {
+                return Json(new { exito = false, mensaje = "Debes indicar qué encontraste en las pruebas." });
+            }
+
+            var exito = await ticketsService.DevolverPruebas(id, SesionTemporal.UsuarioActualTemporal, feedback);
+            return Json(new { exito });
+        }
+
+        [HttpPost]
         public async Task<IActionResult> CerrarImplementacion(int id)
         {
             var exito = await ticketsService.CerrarImplementacion(id, SesionTemporal.UsuarioActualTemporal);

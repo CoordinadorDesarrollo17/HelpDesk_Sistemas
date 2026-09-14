@@ -222,7 +222,7 @@
                             </button>
                         }
 
-                        @if (u.Estado == "En atención" && puedeOperar)
+                        @if ((u.Estado == "En atención" || u.Estado == "Desarrollo") && puedeOperar)
                         {
                             <button type="button" class="btn btn-sm btn-outline-warning" title="Pausar ticket" onclick="abrirPausarTicket(@u.IdTicket)">
                                 <i class="bi bi-pause-circle"></i>
@@ -274,10 +274,17 @@
                             </button>
                         }
 
-                        @if (u.Estado == "Pruebas" && !esSolicitante)
+                        @* Igual que "En validación" en Soporte: en Pruebas quien trabaja es el
+                           solicitante probando, no el desarrollador — por eso confirmar/devolver es
+                           exclusivo de esQuienReporto, sin importar el área (antes "!esSolicitante"
+                           dejaba afuera justo a quien reportó el ticket cuando era de otra área). *@
+                        @if (u.Estado == "Pruebas" && esQuienReporto)
                         {
                             <button type="button" class="btn btn-sm btn-outline-success" title="Confirmar pruebas OK" onclick="confirmarPruebas(@u.IdTicket)">
                                 <i class="bi bi-check2-all"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-warning" title="Devolver con feedback" onclick="abrirDevolverPruebas(@u.IdTicket)">
+                                <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
                         }
 

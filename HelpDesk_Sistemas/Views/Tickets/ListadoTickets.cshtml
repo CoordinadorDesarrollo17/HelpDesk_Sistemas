@@ -315,6 +315,30 @@
 			</div>
 		</div>
 
+		<!-- MODAL DEVOLVER PRUEBAS: el solicitante deja feedback para que Desarrollo lo revise
+		     (Pruebas -> Desarrollo). Se puede repetir las veces que haga falta hasta que
+		     confirme. -->
+		<div class="modal fade" id="modalDevolverPruebas" tabindex="-1">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">Devolver con feedback</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+					</div>
+					<div class="modal-body">
+						<input type="hidden" id="idTicketDevolverPruebas" />
+						<label class="form-label">¿Qué encontraste en las pruebas?</label>
+						<textarea id="feedbackPruebas" class="form-control" rows="4"></textarea>
+						<span id="errorDevolverPruebas" class="text-danger small"></span>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+						<button type="button" class="btn btn-danger" onclick="confirmarDevolverPruebas()">Devolver</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<!--MODAL PARA REASIGNAR TICKET-->
 		<div class="modal fade" id="modalReasignarTicket" tabindex="-1">
 			<div class="modal-dialog">
@@ -1293,6 +1317,45 @@
 						mostrarToast("Se completó la etapa de pruebas satisfactoriamente.", "success");
 					}
 					cargarTabla(1);
+				});
+		}
+
+		// Pruebas -> Desarrollo, con el feedback del solicitante. Se puede repetir el ciclo
+		// Desarrollo -> Pruebas -> Desarrollo las veces que haga falta hasta que confirme.
+		function abrirDevolverPruebas(idTicket) {
+			document.getElementById("idTicketDevolverPruebas").value = idTicket;
+			document.getElementById("feedbackPruebas").value = "";
+			document.getElementById("errorDevolverPruebas").textContent = "";
+
+			const modal = new bootstrap.Modal(document.getElementById("modalDevolverPruebas"));
+			modal.show();
+		}
+
+		function confirmarDevolverPruebas() {
+			const idTicket = document.getElementById("idTicketDevolverPruebas").value;
+			const feedback = document.getElementById("feedbackPruebas").value;
+
+			if (!feedback.trim()) {
+				document.getElementById("errorDevolverPruebas").textContent = "Debes indicar qué encontraste en las pruebas.";
+				return;
+			}
+
+			const params = new URLSearchParams({ id: idTicket, feedback: feedback });
+
+			fetchConManejo(`@Url.Action("DevolverPruebas")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (data.exito) {
+						bootstrap.Modal.getInstance(document.getElementById("modalDevolverPruebas")).hide();
+						mostrarToast("Ticket devuelto a desarrollo con tu feedback", "success");
+						cargarTabla(1);
+					} else {
+						document.getElementById("errorDevolverPruebas").textContent = data.mensaje || "No se pudo devolver el ticket.";
+					}
 				});
 		}
 

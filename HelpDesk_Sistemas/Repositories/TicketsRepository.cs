@@ -843,8 +843,13 @@ namespace HelpDesk_Sistemas.Repositories
             => await CambiarEstado(idTicket, "En revisión", "En atención", idUsuarioAccion, "Ticket en atención", "Fecha_Atencion", exigirAsignado: true);
 
         /// <summary>
-        /// En atención → En pausa. Registra el motivo (Reunión o Atención de otro
-        /// ticket propio) en Ticket_Pausas, con Fecha_Fin en NULL mientras dure la pausa.
+        /// En atención / Desarrollo → En pausa (el "estar trabajando" de quien tiene el
+        /// ticket asignado: Soporte solo tiene "En atención"; Implementación/Mejora tiene
+        /// Desarrollo. "Pruebas" queda fuera a propósito: ahí quien trabaja es el
+        /// solicitante probando, no el asignado — y Levantamiento/Pase a producción
+        /// también quedan fuera, son etapas cortas de triage/cierre). Registra el motivo
+        /// (Reunión, Atención de otro ticket propio o Refrigerio) en Ticket_Pausas, con
+        /// Fecha_Fin en NULL mientras dure la pausa.
         /// </summary>
         public async Task<bool> PausarTicket(int idTicket, int idUsuarioAccion, string tipoMotivo, int? idTicketRelacionado)
         {
@@ -857,7 +862,7 @@ namespace HelpDesk_Sistemas.Repositories
                 UPDATE Tickets
                 SET Id_Estado = @IdEstadoNuevo
                 WHERE Id = @IdTicket
-                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'En atención')
+                  AND Id_Estado IN (SELECT Id FROM Estado WHERE Nombre IN ('En atención', 'Desarrollo'))
                   AND Id_Usuario_Asignado = @IdUsuarioAccion;
 
                 DECLARE @FilasActualizadas INT = @@ROWCOUNT;
@@ -887,19 +892,34 @@ namespace HelpDesk_Sistemas.Repositories
             return filasAfectadas > 0;
         }
 
-        /// <summary>En pausa → En atención. Cierra la pausa abierta (Fecha_Fin = ahora).</summary>
+        /// <summary>
+        /// En pausa → el estado del que vino (En atención / Desarrollo). Cierra la pausa
+        /// abierta (Fecha_Fin = ahora). Ya no es siempre "En atención": desde que también
+        /// se puede pausar Desarrollo, el destino se busca en el historial (el
+        /// Id_Estado_Anterior que quedó registrado al entrar a "En pausa"), con "En
+        /// atención" como respaldo si por algo no hubiera esa fila.
+        /// </summary>
         public async Task<bool> ReanudarTicket(int idTicket, int idUsuarioAccion, string comentario = "Ticket reanudado")
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
             var sql = @"
                 DECLARE @IdEstadoAnterior INT = (SELECT Id_Estado FROM Tickets WHERE Id = @IdTicket);
-                DECLARE @IdEstadoNuevo INT = (SELECT Id FROM Estado WHERE Nombre = 'En atención');
+                DECLARE @IdEstadoEnPausa INT = (SELECT Id FROM Estado WHERE Nombre = 'En pausa');
+                DECLARE @IdEstadoDestino INT = ISNULL(
+                    (
+                        SELECT TOP 1 h.Id_Estado_Anterior
+                        FROM Ticket_Historial h
+                        WHERE h.Id_Ticket = @IdTicket AND h.Id_Estado_Nuevo = @IdEstadoEnPausa
+                        ORDER BY h.Fecha_Cambio DESC
+                    ),
+                    (SELECT Id FROM Estado WHERE Nombre = 'En atención')
+                );
 
                 UPDATE Tickets
-                SET Id_Estado = @IdEstadoNuevo
+                SET Id_Estado = @IdEstadoDestino
                 WHERE Id = @IdTicket
-                  AND Id_Estado = (SELECT Id FROM Estado WHERE Nombre = 'En pausa')
+                  AND Id_Estado = @IdEstadoEnPausa
                   AND Id_Usuario_Asignado = @IdUsuarioAccion;
 
                 DECLARE @FilasActualizadas INT = @@ROWCOUNT;
@@ -913,7 +933,7 @@ namespace HelpDesk_Sistemas.Repositories
                     EXEC sp_SLA_Reanudar @IdTicket = @IdTicket;
 
                     INSERT INTO Ticket_Historial (Id_Ticket, Id_Estado_Anterior, Id_Estado_Nuevo, Id_Usuario_Accion, Comentario)
-                    VALUES (@IdTicket, @IdEstadoAnterior, @IdEstadoNuevo, @IdUsuarioAccion, @Comentario);
+                    VALUES (@IdTicket, @IdEstadoAnterior, @IdEstadoDestino, @IdUsuarioAccion, @Comentario);
                 END
 
                 SELECT @FilasActualizadas;
@@ -1267,6 +1287,19 @@ namespace HelpDesk_Sistemas.Repositories
         /// <summary>Pruebas → Pase a producción. El solicitante confirma que las pruebas salieron bien.</summary>
         public async Task<bool> ConfirmarPruebas(int idTicket, int idUsuarioAccion)
             => await CambiarEstado(idTicket, "Pruebas", "Pase a producción", idUsuarioAccion, "Solicitante confirma pruebas correctas");
+
+        /// <summary>
+        /// Pruebas → Desarrollo. El solicitante devuelve con feedback (encontró algo que no
+        /// quedó bien, o simplemente una observación) para que el desarrollador lo revise y
+        /// lo vuelva a mandar a pruebas — el ciclo Desarrollo ⇄ Pruebas se puede repetir las
+        /// veces que haga falta hasta que el solicitante confirme. A diferencia de
+        /// DevolverTicket (Soporte), acá NO hace falta reactivar el SLA de Resolución: en este
+        /// flujo el SLA de Resolución recién se cierra al llegar a "Pase a producción", así que
+        /// mientras el ticket va y viene entre Desarrollo y Pruebas el reloj sigue corriendo
+        /// sin interrupción — no está "cerrado" a medio camino como si pasa en Soporte.
+        /// </summary>
+        public async Task<bool> DevolverPruebas(int idTicket, int idUsuarioAccion, string feedback)
+            => await CambiarEstado(idTicket, "Pruebas", "Desarrollo", idUsuarioAccion, feedback);
 
         /// <summary>Pase a producción → Cierre. Solo el agente que tiene el ticket asignado.</summary>
         public async Task<bool> CerrarImplementacion(int idTicket, int idUsuarioAccion)

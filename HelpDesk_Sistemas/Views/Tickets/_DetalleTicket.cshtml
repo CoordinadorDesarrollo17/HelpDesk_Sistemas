@@ -22,6 +22,13 @@
         .Where(h => h.EstadoAnterior == "En validación" && h.EstadoNuevo == "En atención" && !string.IsNullOrWhiteSpace(h.Comentario))
         .OrderByDescending(h => h.FechaCambio)
         .FirstOrDefault();
+
+    // Mismo criterio que ultimaDevolucion, pero para el feedback de pruebas de
+    // Implementación/Mejora (Pruebas -> Desarrollo).
+    var ultimaObservacionPruebas = Model.Historial
+        .Where(h => h.EstadoAnterior == "Pruebas" && h.EstadoNuevo == "Desarrollo" && !string.IsNullOrWhiteSpace(h.Comentario))
+        .OrderByDescending(h => h.FechaCambio)
+        .FirstOrDefault();
 }
 
 <div class="mb-3">
@@ -116,6 +123,15 @@
         <strong><i class="bi bi-arrow-counterclockwise"></i> Devuelto por @ultimaDevolucion.UsuarioAccion</strong>
         <span class="text-muted small">— @ultimaDevolucion.FechaCambio.ToString("dd/MM/yyyy HH:mm")</span>
         <div class="mt-1" style="white-space: pre-wrap;">@ultimaDevolucion.Comentario</div>
+    </div>
+}
+
+@if (ultimaObservacionPruebas != null)
+{
+    <div class="alert alert-warning">
+        <strong><i class="bi bi-arrow-counterclockwise"></i> Feedback de pruebas de @ultimaObservacionPruebas.UsuarioAccion</strong>
+        <span class="text-muted small">— @ultimaObservacionPruebas.FechaCambio.ToString("dd/MM/yyyy HH:mm")</span>
+        <div class="mt-1" style="white-space: pre-wrap;">@ultimaObservacionPruebas.Comentario</div>
     </div>
 }
 

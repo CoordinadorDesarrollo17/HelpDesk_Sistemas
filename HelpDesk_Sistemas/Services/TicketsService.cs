@@ -439,6 +439,11 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.ConfirmarPruebas(idTicket, idUsuarioAccion);
         }
 
+        public async Task<bool> DevolverPruebas(int idTicket, int idUsuarioAccion, string feedback)
+        {
+            return await ticketsRepository.DevolverPruebas(idTicket, idUsuarioAccion, feedback);
+        }
+
         public async Task<bool> CerrarImplementacion(int idTicket, int idUsuarioAccion)
         {
             return await ticketsRepository.CerrarImplementacion(idTicket, idUsuarioAccion);
