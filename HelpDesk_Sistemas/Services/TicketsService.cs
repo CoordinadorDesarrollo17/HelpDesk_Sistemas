@@ -10,14 +10,29 @@ namespace HelpDesk_Sistemas.Services
     {
         private readonly ITicketsRepository ticketsRepository;
         private readonly IWebHostEnvironment webHostEnvironment;
+        private readonly IConfiguration configuration;
+        private readonly ILogger<TicketsService> logger;
 
         private const long TamanoMaximoBytes = 10 * 1024 * 1024; // 10 MB por archivo
         private static readonly string[] ExtensionesPermitidas = { ".jpg", ".jpeg", ".png", ".pdf", ".docx", ".xlsx", ".ppt", ".pptx", ".mp4" };
 
-        public TicketsService(ITicketsRepository ticketsRepository, IWebHostEnvironment webHostEnvironment)
+        public TicketsService(ITicketsRepository ticketsRepository, IWebHostEnvironment webHostEnvironment, IConfiguration configuration, ILogger<TicketsService> logger)
         {
             this.ticketsRepository = ticketsRepository;
             this.webHostEnvironment = webHostEnvironment;
+            this.configuration = configuration;
+            this.logger = logger;
+        }
+
+        /// <summary>
+        /// Carpeta física donde se guardan los adjuntos, configurable por
+        /// appsettings.json (Almacenamiento:CarpetaAdjuntos) — así cada servidor puede
+        /// apuntar a su propio disco de datos sin tocar código. Si no está configurada,
+        /// usa la ruta del servidor de producción como valor por defecto.
+        /// </summary>
+        private string ObtenerCarpetaAdjuntos()
+        {
+            return configuration["Almacenamiento:CarpetaAdjuntos"] ?? @"D:\COBEFARWEBFILES\Helpdesk_Adjuntos";
         }
 
         // ============================================================
@@ -206,13 +221,20 @@ namespace HelpDesk_Sistemas.Services
 
         /// <summary>
         /// Valida tamaño y extensión de cada archivo antes de crear nada (si algo
-        /// falla, no se crea el ticket ni se guarda ningún archivo). Si todo está
-        /// bien, crea el ticket y luego guarda cada adjunto en wwwroot/uploads con
-        /// un nombre único para evitar colisiones entre archivos del mismo nombre.
+        /// falla, no se crea el ticket ni se guarda ningún archivo). También comprueba
+        /// ANTES de crear el ticket que la carpeta de adjuntos sea escribible: si el
+        /// disco/carpeta no está disponible (falta el drive, permisos del pool de
+        /// aplicaciones, etc.) el ticket no debe llegar a crearse — de lo contrario el
+        /// ticket queda guardado pero la petición termina en una excepción no controlada
+        /// (error genérico al usuario) y cada reintento crea un ticket duplicado más,
+        /// porque desde el navegador no hay forma de saber que ya se había creado.
+        /// Si todo está bien, crea el ticket y luego guarda cada adjunto con un nombre
+        /// único para evitar colisiones entre archivos del mismo nombre.
         /// </summary>
         public async Task<(int IdTicket, List<string> Errores)> CrearTicket(CrearTicketModel model, int idUsuarioSolicita)
         {
             var errores = new List<string>();
+            var hayArchivos = model.Archivos != null && model.Archivos.Any(a => a.Length > 0);
 
             if (model.Archivos != null)
             {
@@ -233,6 +255,23 @@ namespace HelpDesk_Sistemas.Services
                 }
             }
 
+            string? carpetaUploads = null;
+
+            if (hayArchivos)
+            {
+                carpetaUploads = ObtenerCarpetaAdjuntos();
+
+                try
+                {
+                    Directory.CreateDirectory(carpetaUploads); // no hace nada si ya existe
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "No se pudo acceder/crear la carpeta de adjuntos '{Carpeta}'.", carpetaUploads);
+                    errores.Add("No se pudo acceder a la carpeta de adjuntos del servidor. Avisa a soporte antes de reintentar (revisa la ruta configurada en Almacenamiento:CarpetaAdjuntos y sus permisos).");
+                }
+            }
+
             if (errores.Count > 0)
             {
                 return (0, errores);
@@ -240,35 +279,62 @@ namespace HelpDesk_Sistemas.Services
 
             var idTicket = await ticketsRepository.CrearTicket(model, idUsuarioSolicita);
 
-            if (model.Archivos != null && model.Archivos.Count > 0)
+            if (hayArchivos)
             {
-                var carpetaUploads = Path.Combine(webHostEnvironment.WebRootPath, "uploads");
-
-                if (!Directory.Exists(carpetaUploads))
-                {
-                    Directory.CreateDirectory(carpetaUploads);
-                }
-
-                foreach (var archivo in model.Archivos)
+                foreach (var archivo in model.Archivos!)
                 {
                     if (archivo.Length == 0) continue;
 
                     var nombreUnico = $"{Guid.NewGuid()}_{archivo.FileName}";
-                    var rutaFisica = Path.Combine(carpetaUploads, nombreUnico);
+                    var rutaFisica = Path.Combine(carpetaUploads!, nombreUnico);
 
-                    using (var stream = new FileStream(rutaFisica, FileMode.Create))
+                    try
                     {
-                        await archivo.CopyToAsync(stream);
+                        using (var stream = new FileStream(rutaFisica, FileMode.Create))
+                        {
+                            await archivo.CopyToAsync(stream);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // El ticket #{idTicket} ya existe en este punto — no se puede deshacer
+                        // sin arriesgar dejar el SLA/historial a medias. Se registra el fallo y
+                        // se sigue con el resto de adjuntos en vez de tirar abajo la respuesta
+                        // completa (eso es justo lo que generaba tickets duplicados al reintentar).
+                        logger.LogError(ex, "No se pudo guardar el adjunto '{Archivo}' del ticket {IdTicket}.", archivo.FileName, idTicket);
+                        continue;
                     }
 
-                    var rutaRelativa = $"/uploads/{nombreUnico}";
+                    // Se guarda solo el nombre físico (no una URL): el archivo se sirve por
+                    // TicketsController.DescargarAdjunto, que resuelve la ruta real contra
+                    // ObtenerCarpetaAdjuntos() — así el valor no queda atado a dónde vive el
+                    // disco en cada servidor.
                     var pesoKB = (int)(archivo.Length / 1024);
 
-                    await ticketsRepository.GuardarAdjunto(idTicket, archivo.FileName, rutaRelativa, pesoKB, idUsuarioSolicita);
+                    await ticketsRepository.GuardarAdjunto(idTicket, archivo.FileName, nombreUnico, pesoKB, idUsuarioSolicita);
                 }
             }
 
             return (idTicket, errores);
+        }
+
+        /// <summary>
+        /// Resuelve un adjunto a su archivo físico real, para que el controlador lo sirva.
+        /// Usa Path.GetFileName sobre lo guardado en Ruta_Archivo (por si quedó algún
+        /// registro viejo con el formato "/uploads/xxx" de antes de tener esta descarga)
+        /// para no arrastrar ningún segmento de ruta hacia Path.Combine.
+        /// </summary>
+        public async Task<(string RutaFisica, string NombreArchivo)?> ObtenerAdjuntoParaDescarga(int idAdjunto)
+        {
+            var (nombreArchivo, rutaGuardada) = await ticketsRepository.ObtenerAdjuntoPorId(idAdjunto);
+            if (nombreArchivo is null || rutaGuardada is null) return null;
+
+            var nombreFisico = Path.GetFileName(rutaGuardada);
+            var rutaFisica = Path.Combine(ObtenerCarpetaAdjuntos(), nombreFisico);
+
+            if (!System.IO.File.Exists(rutaFisica)) return null;
+
+            return (rutaFisica, nombreArchivo);
         }
 
         // ============================================================

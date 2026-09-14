@@ -2,6 +2,7 @@
 using HelpDesk_Sistemas.Interfaces;
 using HelpDesk_Sistemas.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using System.Linq;
 
 namespace HelpDesk_Sistemas.Controllers
@@ -211,6 +212,30 @@ namespace HelpDesk_Sistemas.Controllers
             }
 
             return Content("OK");
+        }
+
+        /// <summary>
+        /// Sirve el archivo físico de un adjunto (ver TicketsService.ObtenerAdjuntoParaDescarga).
+        /// No hay más regla de acceso que estar logueado (igual que ver el detalle del
+        /// ticket): cualquier usuario autenticado con el Id del adjunto puede descargarlo.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> DescargarAdjunto(int id)
+        {
+            var adjunto = await ticketsService.ObtenerAdjuntoParaDescarga(id);
+
+            if (adjunto is null)
+            {
+                return NotFound();
+            }
+
+            var proveedorTipoContenido = new FileExtensionContentTypeProvider();
+            if (!proveedorTipoContenido.TryGetContentType(adjunto.Value.NombreArchivo, out var tipoContenido))
+            {
+                tipoContenido = "application/octet-stream";
+            }
+
+            return PhysicalFile(adjunto.Value.RutaFisica, tipoContenido, adjunto.Value.NombreArchivo);
         }
 
         // ============================================================

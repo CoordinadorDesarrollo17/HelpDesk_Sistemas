@@ -607,6 +607,7 @@ namespace HelpDesk_Sistemas.Repositories
 
             var sqlAdjuntos = @"
                 SELECT
+                    Id             AS Id,
                     Nombre_Archivo AS NombreArchivo,
                     Ruta_Archivo   AS RutaArchivo,
                     Peso_KB        AS PesoKB
@@ -714,6 +715,13 @@ namespace HelpDesk_Sistemas.Repositories
             ";
 
             await xCon.ExecuteAsync(sql, new { IdTicket = idTicket, NombreArchivo = nombreArchivo, RutaArchivo = rutaArchivo, PesoKB = pesoKB, IdUsuarioSube = idUsuarioSube });
+        }
+
+        public async Task<(string? NombreArchivo, string? RutaArchivo)> ObtenerAdjuntoPorId(int idAdjunto)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+            var sql = "SELECT Nombre_Archivo AS NombreArchivo, Ruta_Archivo AS RutaArchivo FROM Ticket_Adjuntos WHERE Id = @IdAdjunto";
+            return await xCon.QueryFirstOrDefaultAsync<(string? NombreArchivo, string? RutaArchivo)>(sql, new { IdAdjunto = idAdjunto });
         }
 
         // ============================================================

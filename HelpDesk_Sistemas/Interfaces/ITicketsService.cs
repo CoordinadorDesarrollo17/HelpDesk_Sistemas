@@ -53,6 +53,7 @@ namespace HelpDesk_Sistemas.Interfaces
         // ============================================================
 
         Task<(int IdTicket, List<string> Errores)> CrearTicket(CrearTicketModel model, int idUsuarioSolicita);
+        Task<(string RutaFisica, string NombreArchivo)?> ObtenerAdjuntoParaDescarga(int idAdjunto);
 
         // ============================================================
         // FLUJO CONSULTA / SOPORTE

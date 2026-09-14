@@ -140,7 +140,7 @@ else
         @foreach (var adj in Model.Adjuntos)
         {
             <li class="list-group-item d-flex justify-content-between align-items-center">
-                <a href="@adj.RutaArchivo" target="_blank" rel="noopener">@adj.NombreArchivo</a>
+                <a href="@Url.Action("DescargarAdjunto", "Tickets", new { id = adj.Id })" target="_blank" rel="noopener">@adj.NombreArchivo</a>
                 @if (adj.PesoKB.HasValue)
                 {
                     <small class="text-muted">@adj.PesoKB KB</small>
