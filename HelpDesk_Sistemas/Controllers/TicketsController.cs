@@ -352,7 +352,7 @@ namespace HelpDesk_Sistemas.Controllers
                 return Json(new { exito = false, mensaje = "Debes indicar un motivo de anulación." });
             }
 
-            var exito = await ticketsService.AnularTicket(id, SesionTemporal.UsuarioActualTemporal, motivo);
+            var exito = await ticketsService.AnularTicket(id, SesionTemporal.UsuarioActualTemporal, motivo, SesionTemporal.IdAreaActual);
             var mensaje = exito ? null : "El ticket ya no estaba disponible para anular.";
 
             return Json(new { exito, mensaje });

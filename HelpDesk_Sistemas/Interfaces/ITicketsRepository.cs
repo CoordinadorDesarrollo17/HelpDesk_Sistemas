@@ -77,7 +77,7 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<bool> ValidarTicket(int idTicket, int idUsuarioAccion, string solucion);
         Task<bool> ConfirmarSolucion(int idTicket, int idUsuarioAccion);
         Task<bool> DevolverTicket(int idTicket, int idUsuarioAccion, string motivo);
-        Task<bool> AnularTicket(int idTicket, int idUsuarioAccion, string motivo);
+        Task<bool> AnularTicket(int idTicket, int idUsuarioAccion, string motivo, int idAreaUsuarioActual);
         Task<bool> UsuarioPerteneceSociedad(int idUsuario, int idSociedad);
 
         // ============================================================

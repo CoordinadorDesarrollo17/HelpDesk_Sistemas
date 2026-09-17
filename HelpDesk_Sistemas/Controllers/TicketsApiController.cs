@@ -302,7 +302,7 @@ namespace HelpDesk_Sistemas.Controllers
                 return BadRequest(new { mensaje = "Debes indicar un motivo de anulación." });
             }
 
-            var exito = await ticketsService.AnularTicket(id, SesionTemporal.UsuarioActualTemporal, request.Motivo);
+            var exito = await ticketsService.AnularTicket(id, SesionTemporal.UsuarioActualTemporal, request.Motivo, SesionTemporal.IdAreaActual);
 
             if (!exito)
             {

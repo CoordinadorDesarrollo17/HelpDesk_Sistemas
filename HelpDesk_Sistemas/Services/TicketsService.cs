@@ -381,9 +381,9 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.DevolverTicket(idTicket, idUsuarioAccion, motivo);
         }
 
-        public async Task<bool> AnularTicket(int idTicket, int idUsuarioAccion, string motivo)
+        public async Task<bool> AnularTicket(int idTicket, int idUsuarioAccion, string motivo, int idAreaUsuarioActual)
         {
-            return await ticketsRepository.AnularTicket(idTicket, idUsuarioAccion, motivo);
+            return await ticketsRepository.AnularTicket(idTicket, idUsuarioAccion, motivo, idAreaUsuarioActual);
         }
 
         public async Task<bool> UsuarioPerteneceSociedad(int idUsuario, int idSociedad)
