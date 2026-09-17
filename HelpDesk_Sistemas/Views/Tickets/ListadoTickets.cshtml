@@ -869,11 +869,79 @@
 			const extensionesPermitidas = ['.jpg', '.jpeg', '.png', '.pdf', '.xlsx', '.docx', '.ppt', '.pptx', '.mp4'];
 			const tamanoMaximoBytes = 10 * 1024 * 1024;
 			const btnSubmit = document.querySelector('#formCrearTicket button[type="submit"]');
+			const spanError = document.querySelector('span[data-valmsg-for="Archivos"]');
+			const formCrearTicket = document.getElementById("formCrearTicket");
+			const listaArchivos = document.getElementById("listaArchivosAdjuntos");
 
-			inputArchivos.addEventListener("change", function () {
+			// El input nativo reemplaza su selección completa cada vez que se abre el
+			// diálogo de archivos (y no tiene forma de "agregar" lo pegado con Ctrl+V),
+			// así que la lista real se lleva acá y se reconstruye en el input con
+			// DataTransfer — así FormData(form) sigue leyendo todo junto al enviar.
+			let archivosSeleccionados = [];
+			let urlsDeVistaPrevia = [];
+
+			function renderizarListaArchivos() {
+				urlsDeVistaPrevia.forEach(url => URL.revokeObjectURL(url));
+				urlsDeVistaPrevia = [];
+				listaArchivos.innerHTML = "";
+
+				archivosSeleccionados.forEach((archivo, indice) => {
+					const chip = document.createElement("div");
+					chip.className = "border rounded d-flex align-items-center gap-2 p-1 pe-2";
+					chip.style.maxWidth = "220px";
+
+					if (archivo.type.startsWith("image/")) {
+						const url = URL.createObjectURL(archivo);
+						urlsDeVistaPrevia.push(url);
+
+						const img = document.createElement("img");
+						img.src = url;
+						img.style.cssText = "width:32px;height:32px;object-fit:cover;border-radius:4px;";
+						chip.appendChild(img);
+					} else {
+						const icono = document.createElement("i");
+						icono.className = "bi bi-file-earmark-text fs-5";
+						chip.appendChild(icono);
+					}
+
+					const nombre = document.createElement("span");
+					nombre.className = "small text-truncate";
+					nombre.title = archivo.name;
+					nombre.textContent = `${archivo.name} (${(archivo.size / 1024).toFixed(0)} KB)`;
+					chip.appendChild(nombre);
+
+					const btnQuitar = document.createElement("button");
+					btnQuitar.type = "button";
+					btnQuitar.className = "btn-close ms-auto";
+					btnQuitar.style.fontSize = ".65rem";
+					btnQuitar.title = "Quitar archivo";
+					btnQuitar.addEventListener("click", function () {
+						archivosSeleccionados.splice(indice, 1);
+						validarYActualizar();
+					});
+					chip.appendChild(btnQuitar);
+
+					listaArchivos.appendChild(chip);
+				});
+			}
+
+			function validarYActualizar() {
+				const vistos = new Set();
+				archivosSeleccionados = archivosSeleccionados.filter(archivo => {
+					const clave = archivo.name + "|" + archivo.size;
+					if (vistos.has(clave)) return false;
+					vistos.add(clave);
+					return true;
+				});
+
+				const dt = new DataTransfer();
+				archivosSeleccionados.forEach(archivo => dt.items.add(archivo));
+				inputArchivos.files = dt.files;
+				renderizarListaArchivos();
+
 				const errores = [];
 
-				for (const archivo of this.files) {
+				for (const archivo of archivosSeleccionados) {
 					const extension = "." + archivo.name.split(".").pop().toLowerCase();
 
 					if (!extensionesPermitidas.includes(extension)) {
@@ -885,14 +953,53 @@
 					}
 				}
 
-				const spanError = document.querySelector('span[data-valmsg-for="Archivos"]');
-
 				if (errores.length > 0) {
 					spanError.textContent = errores.join(" ") + " Vuelve a seleccionar los archivos para continuar.";
 					btnSubmit.disabled = true;
 				} else {
-					spanError.textContent = "";
+					spanError.textContent = archivosSeleccionados.length > 0
+						? `${archivosSeleccionados.length} archivo(s) listo(s) para enviar.`
+						: "";
 					btnSubmit.disabled = false;
+				}
+			}
+
+			inputArchivos.addEventListener("change", function () {
+				archivosSeleccionados.push(...this.files);
+				validarYActualizar();
+			});
+
+			// Pegar una captura de pantalla (Ctrl+V) en cualquier parte del formulario
+			// agrega el archivo a la misma lista, sin reemplazar lo ya seleccionado.
+			formCrearTicket.addEventListener("paste", function (event) {
+				const items = event.clipboardData?.items;
+				if (!items) return;
+
+				const archivosPegados = [];
+
+				for (const item of items) {
+					if (item.kind !== "file") continue;
+
+					const archivo = item.getAsFile();
+					if (!archivo) continue;
+
+					// Una captura de pantalla copiada suele llegar sin nombre real
+					// (o siempre con el mismo "image.png"): se le da uno único con la
+					// extensión correcta, para que la validación de arriba y el
+					// nombre guardado en el servidor tengan sentido.
+					const extension = archivo.type.split("/")[1] || "png";
+					const necesitaNombre = !archivo.name || archivo.name === "image.png" || archivo.name === "blob";
+					const nombreFinal = necesitaNombre
+						? `Pegado_${Date.now()}.${extension}`
+						: archivo.name;
+
+					archivosPegados.push(new File([archivo], nombreFinal, { type: archivo.type }));
+				}
+
+				if (archivosPegados.length > 0) {
+					event.preventDefault();
+					archivosSeleccionados.push(...archivosPegados);
+					validarYActualizar();
 				}
 			});
 		}

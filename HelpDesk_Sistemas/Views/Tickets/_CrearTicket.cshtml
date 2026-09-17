@@ -156,8 +156,9 @@
     <div class="mb-3">
         <label class="form-label">Archivos adjuntos</label>
         <input type="file" name="Archivos" class="form-control" multiple accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx,.ppt,.pptx,.mp4" />
+        <div id="listaArchivosAdjuntos" class="d-flex flex-wrap gap-2 mt-2"></div>
         <span asp-validation-for="Archivos" class="text-danger small d-block"></span>
-        <small class="text-muted">Máximo 10 MB por archivo. Formatos permitidos: jpg, png, pdf, xlsx, docx, ppt, pptx, mp4.</small>
+        <small class="text-muted">Máximo 10 MB por archivo. Formatos permitidos: jpg, png, pdf, xlsx, docx, ppt, pptx, mp4. También puedes pegar una captura de pantalla con Ctrl+V en cualquier parte de este formulario.</small>
     </div>
 
     <!-- BOTÓN CREAR TICKET -->
