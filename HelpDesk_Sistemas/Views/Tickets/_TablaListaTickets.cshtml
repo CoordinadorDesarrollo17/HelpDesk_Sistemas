@@ -16,7 +16,7 @@
         "Cerrado" or "Cierre" => "bg-success",
         "Anulado" => "bg-dark",
         "Pendiente" or "En pausa" or "En validación" or "Pruebas" => "bg-warning text-dark",
-        _ => "bg-primary"
+        _ => "bg-info text-dark"
     };
 
     string PrioridadBadgeClass(string? prioridad) => prioridad switch
@@ -99,7 +99,7 @@
                 // que no quede reasignado a su nombre no puede ejecutar el resto de acciones.
                 var esAsignadoActual = u.IdUsuarioAsignado == null || u.IdUsuarioAsignado == (int)ViewBag.IdUsuarioActual;
                 var puedeOperar = !esSolicitante && esAsignadoActual;
-                <tr class="@(u.Estado == "En validación" ? "fila-en-validacion" : u.Estado == "Cerrado" ? "fila-cerrado" : "")">
+                <tr class="@((u.Estado == "En validación" || u.Estado == "Pruebas") ? "fila-en-validacion" : (u.Estado == "Cerrado" || u.Estado == "Cierre") ? "fila-cerrado" : "")">
                     <td data-label="Código Ticket">@u?.CodigoTicket</td>
                     <td data-label="Sociedad">@(u?.Sociedad ?? "-")</td>
                     <td data-label="Tipo de Atención">@u?.TipoRequerimiento</td>
