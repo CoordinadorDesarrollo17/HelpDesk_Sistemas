@@ -202,7 +202,28 @@
                     </td>
 
                     <td data-label="Solicitante">@u?.Solicitante</td>
-                    <td data-label="Área Solicitante">@(u?.AreaSolicitante ?? "-")</td>
+                    <td data-label="Área Solicitante">
+                        @{
+                            // Temporal, solo para pruebas (ver CrearTicketModel.IdAreaSolicitante):
+                            // deja corregir a mano de qué área es el solicitante, ya que mientras
+                            // se prueba con las mismas cuentas siempre sale la misma área real.
+                            var puedeCorregirAreaSolicitante = ViewBag.Rol == "Administrador" || ViewBag.Rol == "Soporte";
+                        }
+                        @if (puedeCorregirAreaSolicitante)
+                        {
+                            <select class="form-select form-select-sm" onchange="corregirAreaSolicitante(@u.IdTicket, this.value)">
+                                <option value="">Usar la real</option>
+                                @foreach (var areaSol in (List<CatalogoModel>)ViewBag.AreasSolicitantes)
+                                {
+                                    <option value="@areaSol.Id" selected="@(u.AreaSolicitante == areaSol.Nombre)">@areaSol.Nombre</option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            @(u?.AreaSolicitante ?? "-")
+                        }
+                    </td>
                     <td data-label="Personal Asignado">@u?.Asignado</td>
                     <td data-label="Fecha Creación">@u?.FechaCreacion.ToString("dd/MM/yyyy")</td>
 

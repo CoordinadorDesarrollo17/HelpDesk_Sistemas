@@ -60,6 +60,22 @@
         </div>
     </div>
 
+    <!-- ÁREA SOLICITANTE (temporal, solo para pruebas — ver CrearTicketModel.IdAreaSolicitante) -->
+    <div class="mb-3">
+        <label class="form-label">
+            Área solicitante
+            <span class="badge bg-warning text-dark ms-1">Temporal — pruebas</span>
+        </label>
+        <select name="IdAreaSolicitante" class="form-select">
+            <option value="">Usar mi propia área (como en producción)</option>
+            @foreach (var areaSol in (List<CatalogoModel>)ViewBag.AreasSolicitantes)
+            {
+                <option value="@areaSol.Id" selected="@(Model?.IdAreaSolicitante == areaSol.Id)">@areaSol.Nombre</option>
+            }
+        </select>
+        <small class="text-muted">Mientras probamos con las mismas cuentas, elige aquí de qué área es realmente el reporte. Déjalo en blanco para usar el comportamiento normal.</small>
+    </div>
+
     <!-- TIPO DE ATENCIÓN (depende del Área elegida) -->
     <div class="mb-3">
         <label class="form-label">Tipo de atención <span class="text-danger">*</span></label>

@@ -88,6 +88,9 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<(bool Exito, string? Mensaje)> CorregirImpacto(int idTicket, int idImpacto, int idUsuarioActual, int idAreaUsuarioActual);
         Task<(bool Exito, string? Mensaje)> AsignarOrdenAtencion(int idTicket, int orden, int idUsuarioActual, int idAreaUsuarioActual);
 
+        /// <summary>Corrige el área solicitante de un ticket ya creado (uso temporal en pruebas, ver CrearTicket).</summary>
+        Task<bool> CorregirAreaSolicitante(int idTicket, int? idAreaSolicitante);
+
         /// <summary>Tickets del mismo usuario, con prioridad definida, aptos como motivo de pausa.</summary>
         Task<List<CatalogoModel>> ObtenerMisTicketsPropios(int idUsuario, int idTicketActual);
 

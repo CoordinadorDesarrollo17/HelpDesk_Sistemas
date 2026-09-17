@@ -105,7 +105,7 @@ namespace HelpDesk_Sistemas.Repositories
 
             if (model.IdAreaSolicitante.HasValue)
             {
-                condiciones.Add("t.Id_Area = @IdAreaSolicitante");
+                condiciones.Add("COALESCE(t.Id_Area_Solicitante, us.Id_Area) = @IdAreaSolicitante");
             }
 
             if (model.IdArea.HasValue)
@@ -208,7 +208,7 @@ namespace HelpDesk_Sistemas.Repositories
                 LEFT  JOIN Prioridad p           ON p.Id  = t.Id_Prioridad
                 LEFT  JOIN Impacto imp           ON imp.Id = t.Id_Impacto
                 INNER JOIN Usuarios us           ON us.Id = t.Id_Usuario_Solicita
-                LEFT  JOIN Area aSol             ON aSol.Id = us.Id_Area
+                LEFT  JOIN Area aSol             ON aSol.Id = COALESCE(t.Id_Area_Solicitante, us.Id_Area)
                 LEFT  JOIN Usuarios ua           ON ua.Id = t.Id_Usuario_Asignado
                 LEFT JOIN Sociedad soc           ON soc.Id = t.Id_Sociedad
                 LEFT JOIN Sistema sis            ON sis.Id = t.Id_Sistema
@@ -678,8 +678,8 @@ namespace HelpDesk_Sistemas.Repositories
                 );
                 DECLARE @IdTicketNuevo INT;
 
-                INSERT INTO Tickets (Codigo_Ticket, Id_Tipo_Req, Id_Categoria, Id_Area, Id_Sistema, Id_Usuario_Solicita, Detalle, Id_Estado, Id_Impacto, Id_Urgencia, Id_Prioridad, Id_Sociedad)
-                VALUES (@Codigo, @IdTipoReq, @IdCategoria, @IdArea, @IdSistema, @IdUsuarioSolicita, @Detalle, @IdEstadoPendiente, @IdImpacto, @IdUrgencia, @IdPrioridad, @IdSociedad);
+                INSERT INTO Tickets (Codigo_Ticket, Id_Tipo_Req, Id_Categoria, Id_Area, Id_Sistema, Id_Usuario_Solicita, Detalle, Id_Estado, Id_Impacto, Id_Urgencia, Id_Prioridad, Id_Sociedad, Id_Area_Solicitante)
+                VALUES (@Codigo, @IdTipoReq, @IdCategoria, @IdArea, @IdSistema, @IdUsuarioSolicita, @Detalle, @IdEstadoPendiente, @IdImpacto, @IdUrgencia, @IdPrioridad, @IdSociedad, @IdAreaSolicitante);
 
                 SET @IdTicketNuevo = SCOPE_IDENTITY();
 
@@ -701,7 +701,8 @@ namespace HelpDesk_Sistemas.Repositories
                 Detalle = model.Detalle,
                 IdImpacto = model.IdImpacto,
                 IdUrgencia = model.IdUrgencia,
-                IdSociedad = model.IdSociedad
+                IdSociedad = model.IdSociedad,
+                IdAreaSolicitante = model.IdAreaSolicitante
             });
 
             return idTicket;
@@ -1197,6 +1198,24 @@ namespace HelpDesk_Sistemas.Repositories
             });
 
             return (filasAfectadas > 0, null);
+        }
+
+        /// <summary>
+        /// Corrige el área solicitante de un ticket ya creado. Uso temporal mientras el
+        /// sistema está en pruebas (todos los tickets los crean las mismas cuentas de
+        /// prueba, así que el área solicitante real necesita poder ajustarse a mano para
+        /// tener trazabilidad de dónde vino cada reporte). No cambia el estado ni el SLA
+        /// del ticket, solo este dato informativo — por eso no exige ningún estado en
+        /// particular ni queda registrado en la bitácora de cambios de estado.
+        /// </summary>
+        public async Task<bool> CorregirAreaSolicitante(int idTicket, int? idAreaSolicitante)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sql = "UPDATE Tickets SET Id_Area_Solicitante = @IdAreaSolicitante WHERE Id = @IdTicket";
+            var filasAfectadas = await xCon.ExecuteAsync(sql, new { IdTicket = idTicket, IdAreaSolicitante = idAreaSolicitante });
+
+            return filasAfectadas > 0;
         }
 
         /// <summary>

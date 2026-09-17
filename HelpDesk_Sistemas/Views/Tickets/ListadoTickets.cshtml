@@ -1342,6 +1342,28 @@
 				});
 		}
 
+		// Temporal, solo para pruebas (ver CrearTicketModel.IdAreaSolicitante): permite
+		// corregir a mano el área solicitante de un ticket ya creado. Vacío = quitar la
+		// corrección manual y volver a usar el área real del solicitante.
+		function corregirAreaSolicitante(idTicket, idAreaSolicitante) {
+			const params = new URLSearchParams({ id: idTicket, idAreaSolicitante: idAreaSolicitante || 0 });
+
+			fetchConManejo(`@Url.Action("CorregirAreaSolicitante")?${params.toString()}`, { method: "POST" })
+				.then(r => {
+					if (!r) return;
+					return r.json();
+				})
+				.then(data => {
+					if (!data) return;
+					if (!data.exito) {
+						mostrarToast("No se pudo corregir el área solicitante.", "danger");
+					} else {
+						mostrarToast("Área solicitante corregida", "success");
+					}
+					cargarTabla(1);
+				});
+		}
+
 		function asignarPrioridad(idTicket, idPrioridad) {
 			if (!idPrioridad) return;
 

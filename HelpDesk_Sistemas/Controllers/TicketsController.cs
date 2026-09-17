@@ -99,6 +99,8 @@ namespace HelpDesk_Sistemas.Controllers
             ViewBag.Impactos = await ticketsService.ObtenerImpactos();
             ViewBag.Urgencias = await ticketsService.ObtenerUrgencias();
             ViewBag.Matriz = await ticketsService.ObtenerMatrizPrioridad();
+            // Temporal, solo para pruebas (ver CrearTicketModel.IdAreaSolicitante).
+            ViewBag.AreasSolicitantes = await ticketsService.ObtenerAreas();
 
             return PartialView("_CrearTicket");
         }
@@ -184,6 +186,7 @@ namespace HelpDesk_Sistemas.Controllers
                 ViewBag.Impactos = await ticketsService.ObtenerImpactos();
                 ViewBag.Urgencias = await ticketsService.ObtenerUrgencias();
                 ViewBag.Matriz = await ticketsService.ObtenerMatrizPrioridad();
+                ViewBag.AreasSolicitantes = await ticketsService.ObtenerAreas();
 
                 Response.StatusCode = 400;
                 return PartialView("_CrearTicket", model);
@@ -206,6 +209,7 @@ namespace HelpDesk_Sistemas.Controllers
                 ViewBag.Impactos = await ticketsService.ObtenerImpactos();
                 ViewBag.Urgencias = await ticketsService.ObtenerUrgencias();
                 ViewBag.Matriz = await ticketsService.ObtenerMatrizPrioridad();
+                ViewBag.AreasSolicitantes = await ticketsService.ObtenerAreas();
 
                 Response.StatusCode = 400;
                 return PartialView("_CrearTicket", model);
@@ -409,6 +413,32 @@ namespace HelpDesk_Sistemas.Controllers
 
             var (exito, mensaje) = await ticketsService.AsignarOrdenAtencion(id, orden, SesionTemporal.UsuarioActualTemporal, SesionTemporal.IdAreaActual);
             return Json(new { exito, mensaje });
+        }
+
+        /// <summary>
+        /// Corrige el área solicitante de un ticket ya creado. Temporal mientras el sistema
+        /// está en pruebas: todos los tickets los crean las mismas cuentas de prueba, así
+        /// que se necesita poder ajustar a mano de qué área es cada reporte para tener
+        /// trazabilidad. idAreaSolicitante en 0 o vacío limpia la corrección manual (vuelve
+        /// a usar el área propia de quien solicitó el ticket).
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CorregirAreaSolicitante(int id, int? idAreaSolicitante)
+        {
+            var puedeCorregir = SesionTemporal.RolActual == "Administrador" || SesionTemporal.RolActual == "Soporte";
+
+            if (!puedeCorregir)
+            {
+                return Json(new { exito = false, mensaje = "Solo Soporte o un administrador puede corregir el área solicitante." });
+            }
+
+            if (idAreaSolicitante <= 0)
+            {
+                idAreaSolicitante = null;
+            }
+
+            var exito = await ticketsService.CorregirAreaSolicitante(id, idAreaSolicitante);
+            return Json(new { exito });
         }
 
         // ============================================================

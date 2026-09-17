@@ -31,5 +31,12 @@ namespace HelpDesk_Sistemas.Models
 
         [Required(ErrorMessage = "Selecciona la sociedad para este ticket.")]
         public int? IdSociedad { get; set; }
+
+        // Temporal, solo para pruebas: permite indicar manualmente de qué área es el
+        // solicitante, en vez de que siempre se derive del área propia de quien crea el
+        // ticket (todas las pruebas las hacen las mismas cuentas, así que sin esto no hay
+        // trazabilidad de qué área originó cada reporte). Opcional: si se deja vacío, el
+        // comportamiento es el de siempre (se usa el área del usuario que crea el ticket).
+        public int? IdAreaSolicitante { get; set; }
     }
 }

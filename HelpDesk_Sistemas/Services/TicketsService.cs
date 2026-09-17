@@ -410,6 +410,11 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.AsignarOrdenAtencion(idTicket, orden, idUsuarioActual, idAreaUsuarioActual);
         }
 
+        public async Task<bool> CorregirAreaSolicitante(int idTicket, int? idAreaSolicitante)
+        {
+            return await ticketsRepository.CorregirAreaSolicitante(idTicket, idAreaSolicitante);
+        }
+
         public async Task<List<CatalogoModel>> ObtenerMisTicketsPropios(int idUsuario, int idTicketActual)
         {
             return await ticketsRepository.ObtenerMisTicketsPropios(idUsuario, idTicketActual);

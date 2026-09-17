@@ -68,7 +68,7 @@ namespace HelpDesk_Sistemas.Repositories
                 LEFT  JOIN Impacto imp          ON imp.Id = t.Id_Impacto
                 LEFT  JOIN Urgencia urg         ON urg.Id = t.Id_Urgencia
                 INNER JOIN Usuarios us          ON us.Id = t.Id_Usuario_Solicita
-                LEFT  JOIN Area aSol            ON aSol.Id = us.Id_Area
+                LEFT  JOIN Area aSol            ON aSol.Id = COALESCE(t.Id_Area_Solicitante, us.Id_Area)
                 LEFT  JOIN Usuarios ua          ON ua.Id = t.Id_Usuario_Asignado
                 LEFT  JOIN Sociedad soc         ON soc.Id = t.Id_Sociedad
                 LEFT  JOIN Sistema sis          ON sis.Id = t.Id_Sistema
