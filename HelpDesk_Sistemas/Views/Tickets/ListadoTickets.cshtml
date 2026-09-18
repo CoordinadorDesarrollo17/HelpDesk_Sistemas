@@ -514,6 +514,12 @@
 
 			let url = `@Url.Action("ListadoTickets", "Tickets")?${params.toString()}`;
 
+			// El refresco reemplaza el HTML completo de la tabla — incluido el
+			// contenedor con scroll horizontal (.table-responsive) — así que sin esto
+			// cada actualización automática regresaba la vista al borde izquierdo
+			// aunque el usuario estuviera viendo columnas de más a la derecha.
+			const scrollPrevio = tablaTickets.querySelector(".table-responsive")?.scrollLeft ?? 0;
+
 			fetchConManejo(url, {
 				headers: { "X-Requested-With": "XMLHttpRequest" }
 			})
@@ -524,6 +530,9 @@
 			.then(html => {
 				if (!html) return;
 				tablaTickets.innerHTML = html;
+
+				const scrollNuevo = tablaTickets.querySelector(".table-responsive");
+				if (scrollNuevo) scrollNuevo.scrollLeft = scrollPrevio;
 			});
 		}
 

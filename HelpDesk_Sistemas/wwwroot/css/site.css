@@ -19,6 +19,7 @@
     --ink: var(--brand-950);
     --focus-ring-bg: #fff;
     --sidebar-width: 248px;
+    --sidebar-width-colapsado: 72px;
 }
 
 /* ============================================================
@@ -234,13 +235,80 @@ a {
     left: 0;
     bottom: 0;
     z-index: 1030;
-    transition: transform .2s ease;
+    transition: transform .2s ease, width .2s ease;
+}
+
+/* ============================================================
+   REGLAS DEL SIDEBAR COLAPSADO
+   Solo en escritorio: en celular el sidebar ya usa su propio modo
+   deslizable (ver SIDEBAR RESPONSIVE más abajo) y el botón de colapsar
+   está oculto (d-none d-md-inline-flex), así que estas reglas no
+   deben mezclarse con esa vista.
+   ============================================================ */
+
+@media (min-width: 768px) {
+    [data-sidebar="colapsado"] .sidebar {
+        width: var(--sidebar-width-colapsado);
+    }
+    [data-sidebar="colapsado"] .app-main {
+        margin-left: var(--sidebar-width-colapsado);
+    }
+    [data-sidebar="colapsado"] .sidebar-brand-text,
+    [data-sidebar="colapsado"] .sidebar-link span,
+    [data-sidebar="colapsado"] .sidebar-section-label,
+    [data-sidebar="colapsado"] .sidebar-user-info {
+        display: none;
+    }
+
+    /* Fila del logo: se centra sola y el botón de colapsar pasa debajo,
+       ya no caben uno al lado del otro en 72px. */
+    [data-sidebar="colapsado"] .sidebar-top {
+        flex-direction: column;
+        padding: .85rem 0 .6rem;
+        gap: .5rem;
+    }
+    [data-sidebar="colapsado"] .sidebar-brand {
+        padding: 0;
+        justify-content: center;
+    }
+    [data-sidebar="colapsado"] .sidebar-collapse-btn {
+        margin-right: 0;
+        transform: rotate(180deg);
+    }
+
+    /* Links: el ícono queda centrado en vez de pegado a la izquierda. */
+    [data-sidebar="colapsado"] .sidebar-link {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+    }
+    [data-sidebar="colapsado"] .sidebar-link-sub {
+        padding-left: 0;
+    }
+
+    /* Usuario: sin el nombre/rol, el botón de tema y el de salir se
+       apilan centrados en vez de quedar amontonados a la izquierda. */
+    [data-sidebar="colapsado"] .sidebar-user {
+        flex-direction: column;
+        justify-content: center;
+        padding: .75rem .35rem;
+        gap: .4rem;
+    }
+    [data-sidebar="colapsado"] .sidebar-user .d-flex {
+        flex-direction: column;
+    }
 }
 
 
 /* ============================================================
    BRAND DEL SIDEBAR
    ============================================================ */
+
+.sidebar-top {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
 
 .sidebar-brand {
     display: flex;
@@ -249,10 +317,31 @@ a {
     padding: 1.15rem 1.25rem;
     color: #fff;
     text-decoration: none;
-    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    flex: 1;
+    min-width: 0;
 }
 
     .sidebar-brand:hover {
+        color: #fff;
+    }
+
+.sidebar-collapse-btn {
+    flex-shrink: 0;
+    width: 1.9rem;
+    height: 1.9rem;
+    margin-right: .85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: .4rem;
+    background: rgba(255, 255, 255, .08);
+    color: #c9cccd;
+    transition: background .15s ease, transform .2s ease;
+}
+
+    .sidebar-collapse-btn:hover {
+        background: rgba(255, 255, 255, .16);
         color: #fff;
     }
 
@@ -419,6 +508,7 @@ a {
     display: flex;
     flex-direction: column;
     margin-left: var(--sidebar-width);
+    transition: margin-left .2s ease;
 }
 
 

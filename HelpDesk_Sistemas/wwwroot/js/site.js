@@ -25,6 +25,26 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // ============================================================
+// SIDEBAR COLAPSADO ESCRITORIO
+// ============================================================
+
+document.addEventListener("DOMContentLoaded", function () {
+    const btnColapsar = document.getElementById("btnColapsarSidebar");
+    if (!btnColapsar) return;
+
+    btnColapsar.addEventListener("click", function () {
+        const colapsado = document.documentElement.getAttribute("data-sidebar") === "colapsado";
+        if (colapsado) {
+            document.documentElement.removeAttribute("data-sidebar");
+            localStorage.setItem("sidebarColapsado", "false");
+        } else {
+            document.documentElement.setAttribute("data-sidebar", "colapsado");
+            localStorage.setItem("sidebarColapsado", "true");
+        }
+    });
+});
+
+// ============================================================
 // MODO OSCURO
 // ============================================================
 
