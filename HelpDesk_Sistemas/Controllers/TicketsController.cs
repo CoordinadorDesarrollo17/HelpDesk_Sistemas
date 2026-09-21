@@ -239,7 +239,9 @@ namespace HelpDesk_Sistemas.Controllers
                 tipoContenido = "application/octet-stream";
             }
 
-            return PhysicalFile(adjunto.Value.RutaFisica, tipoContenido, adjunto.Value.NombreArchivo);
+            // enableRangeProcessing: sin esto un video adjunto (visto en el propio detalle o
+            // en el modal de la solución) se reproduce pero no deja adelantar/retroceder.
+            return PhysicalFile(adjunto.Value.RutaFisica, tipoContenido, adjunto.Value.NombreArchivo, enableRangeProcessing: true);
         }
 
         // ============================================================
@@ -294,15 +296,14 @@ namespace HelpDesk_Sistemas.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ValidarTicket(int id, string solucion)
+        public async Task<IActionResult> ValidarTicket(int id, string solucion, List<IFormFile>? archivos)
         {
             if (string.IsNullOrWhiteSpace(solucion))
             {
                 return Json(new { exito = false, mensaje = "Debes registrar la solución del ticket." });
             }
 
-            var exito = await ticketsService.ValidarTicket(id, SesionTemporal.UsuarioActualTemporal, solucion);
-            var mensaje = exito ? null : "El ticket ya no está disponible para validar.";
+            var (exito, mensaje) = await ticketsService.ValidarTicket(id, SesionTemporal.UsuarioActualTemporal, solucion, archivos);
 
             return Json(new { exito, mensaje });
         }
@@ -323,7 +324,14 @@ namespace HelpDesk_Sistemas.Controllers
                 codigoTicket = solucion.CodigoTicket,
                 solucion = solucion.Solucion,
                 resueltoPor = solucion.ResueltoPor,
-                fechaSolucion = solucion.FechaSolucion?.ToString("dd/MM/yyyy HH:mm")
+                fechaSolucion = solucion.FechaSolucion?.ToString("dd/MM/yyyy HH:mm"),
+                adjuntos = solucion.Adjuntos.Select(a => new
+                {
+                    id = a.Id,
+                    nombre = a.NombreArchivo,
+                    pesoKB = a.PesoKB,
+                    url = Url.Action("DescargarAdjunto", "Tickets", new { id = a.Id })
+                })
             });
         }
 

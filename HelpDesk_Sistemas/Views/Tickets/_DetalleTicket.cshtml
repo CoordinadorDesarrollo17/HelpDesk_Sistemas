@@ -29,6 +29,11 @@
         .Where(h => h.EstadoAnterior == "Pruebas" && h.EstadoNuevo == "Desarrollo" && !string.IsNullOrWhiteSpace(h.Comentario))
         .OrderByDescending(h => h.FechaCambio)
         .FirstOrDefault();
+
+    // Los archivos que subió el solicitante al crear el ticket van aparte de los que Soporte
+    // adjuntó al registrar la solución (se distinguen por Ticket_Adjuntos.Origen).
+    var adjuntosSolicitud = Model.Adjuntos.Where(a => a.Origen != "Solucion").ToList();
+    var adjuntosSolucion = Model.Adjuntos.Where(a => a.Origen == "Solucion").ToList();
 }
 
 <div class="mb-3">
@@ -141,19 +146,38 @@
 
     <h6 class="fw-bold">Solución registrada por Soporte</h6>
     <div class="border rounded p-3 bg-light text-dark" style="white-space: pre-wrap;">@Model.Solucion</div>
+
+    @if (adjuntosSolucion.Count > 0)
+    {
+        <div class="mt-2">
+            <small class="text-muted d-block mb-1">Archivos de la solución</small>
+            <ul class="list-group">
+                @foreach (var adj in adjuntosSolucion)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="@Url.Action("DescargarAdjunto", "Tickets", new { id = adj.Id })" target="_blank" rel="noopener">@adj.NombreArchivo</a>
+                        @if (adj.PesoKB.HasValue)
+                        {
+                            <small class="text-muted">@adj.PesoKB KB</small>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    }
 }
 
 <hr />
 
 <h6 class="fw-bold">Archivos adjuntos</h6>
-@if (Model.Adjuntos.Count == 0)
+@if (adjuntosSolicitud.Count == 0)
 {
     <p class="text-muted">Este ticket no tiene archivos adjuntos.</p>
 }
 else
 {
     <ul class="list-group">
-        @foreach (var adj in Model.Adjuntos)
+        @foreach (var adj in adjuntosSolicitud)
         {
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 <a href="@Url.Action("DescargarAdjunto", "Tickets", new { id = adj.Id })" target="_blank" rel="noopener">@adj.NombreArchivo</a>

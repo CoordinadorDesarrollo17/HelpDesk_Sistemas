@@ -64,7 +64,7 @@ namespace HelpDesk_Sistemas.Interfaces
         Task<bool> PausarTicket(int idTicket, int idUsuarioAccion, string tipoMotivo, int? idTicketRelacionado);
         Task<bool> ReanudarTicket(int idTicket, int idUsuarioAccion, string comentario = "Ticket reanudado");
         Task<List<PausaVencidaModel>> ObtenerPausasRefrigerioVencidas();
-        Task<bool> ValidarTicket(int idTicket, int idUsuarioAccion, string solucion);
+        Task<(bool Exito, string? Mensaje)> ValidarTicket(int idTicket, int idUsuarioAccion, string solucion, List<IFormFile>? archivos = null);
         Task<bool> ConfirmarSolucion(int idTicket, int idUsuarioAccion);
         Task<bool> DevolverTicket(int idTicket, int idUsuarioAccion, string motivo);
         Task<bool> AnularTicket(int idTicket, int idUsuarioAccion, string motivo, int idAreaUsuarioActual);

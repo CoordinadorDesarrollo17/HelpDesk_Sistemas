@@ -246,7 +246,7 @@ namespace HelpDesk_Sistemas.Controllers
                 return BadRequest(new { mensaje = "El ticket no cuenta con una solución." });
             }
 
-            var exito = await ticketsService.ValidarTicket(id, SesionTemporal.UsuarioActualTemporal, request.Solucion);
+            var (exito, _) = await ticketsService.ValidarTicket(id, SesionTemporal.UsuarioActualTemporal, request.Solucion);
 
             if (!exito)
             {

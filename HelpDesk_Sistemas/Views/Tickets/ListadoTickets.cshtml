@@ -250,10 +250,16 @@
 						<label class="form-label">Solución / explicación</label>
 						<textarea id="solucionTicket" class="form-control" rows="4"></textarea>
 						<span id="errorValidarTicket" class="text-danger small"></span>
+
+						<label class="form-label mt-3">Archivos adjuntos <span class="text-muted fw-normal">(opcional)</span></label>
+						<input type="file" id="archivosSolucion" class="form-control" multiple accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx,.ppt,.pptx,.mp4" />
+						<div id="listaArchivosSolucion" class="d-flex flex-wrap gap-2 mt-2"></div>
+						<span id="errorArchivosSolucion" class="text-danger small d-block"></span>
+						<small class="text-muted">Imágenes, videos u otros archivos que muestren la solución. Máximo 10 MB por archivo. Formatos permitidos: jpg, png, pdf, xlsx, docx, ppt, pptx, mp4. También puedes pegar una captura con Ctrl+V.</small>
 					</div>
 					<div class="modal-footer">
 						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-						<button type="button" class="btn btn-primary" onclick="confirmarValidarTicket()">Enviar a validación</button>
+						<button type="button" class="btn btn-primary" id="btnEnviarValidacion" onclick="confirmarValidarTicket()">Enviar a validación</button>
 					</div>
 				</div>
 			</div>
@@ -278,6 +284,11 @@
 
 						<div class="border rounded p-3 bg-light text-dark mb-3" style="white-space: pre-wrap; max-height: 320px; overflow-y: auto;"
 							 id="textoSolucion"></div>
+
+						<div id="archivosSolucionVista" class="mb-3 d-none">
+							<div class="small text-muted mb-2">Archivos de la solución</div>
+							<div id="listaArchivosSolucionVista" class="d-flex flex-column gap-2"></div>
+						</div>
 
 						<p class="mb-0 fw-semibold">¿Esta solución resolvió tu requerimiento?</p>
 					</div>
@@ -873,14 +884,13 @@
 			actualizar();
 		}
 
-		function inicializarValidacionArchivos() {
-			const inputArchivos = document.querySelector('input[name="Archivos"]');
+		// Gestor de archivos adjuntos (selección múltiple + pegar con Ctrl+V + lista con
+		// vista previa y botón para quitar). Lo usan el formulario de crear ticket y el modal
+		// de registrar solución, así ambos aceptan exactamente los mismos archivos.
+		// Devuelve { limpiar() } para vaciar la lista (ej. al reabrir el modal).
+		function crearGestorArchivos({ input: inputArchivos, lista: listaArchivos, mensaje: spanError, contenedor: contenedorPaste, botonSubmit: btnSubmit }) {
 			const extensionesPermitidas = ['.jpg', '.jpeg', '.png', '.pdf', '.xlsx', '.docx', '.ppt', '.pptx', '.mp4'];
 			const tamanoMaximoBytes = 10 * 1024 * 1024;
-			const btnSubmit = document.querySelector('#formCrearTicket button[type="submit"]');
-			const spanError = document.querySelector('span[data-valmsg-for="Archivos"]');
-			const formCrearTicket = document.getElementById("formCrearTicket");
-			const listaArchivos = document.getElementById("listaArchivosAdjuntos");
 
 			// El input nativo reemplaza su selección completa cada vez que se abre el
 			// diálogo de archivos (y no tiene forma de "agregar" lo pegado con Ctrl+V),
@@ -962,6 +972,10 @@
 					}
 				}
 
+				// Rojo solo para errores: el aviso de "listo para enviar" no es un error.
+				spanError.classList.toggle("text-danger", errores.length > 0);
+				spanError.classList.toggle("text-success", errores.length === 0);
+
 				if (errores.length > 0) {
 					spanError.textContent = errores.join(" ") + " Vuelve a seleccionar los archivos para continuar.";
 					btnSubmit.disabled = true;
@@ -978,9 +992,9 @@
 				validarYActualizar();
 			});
 
-			// Pegar una captura de pantalla (Ctrl+V) en cualquier parte del formulario
+			// Pegar una captura de pantalla (Ctrl+V) en cualquier parte del contenedor
 			// agrega el archivo a la misma lista, sin reemplazar lo ya seleccionado.
-			formCrearTicket.addEventListener("paste", function (event) {
+			contenedorPaste.addEventListener("paste", function (event) {
 				const items = event.clipboardData?.items;
 				if (!items) return;
 
@@ -1010,6 +1024,26 @@
 					archivosSeleccionados.push(...archivosPegados);
 					validarYActualizar();
 				}
+			});
+
+			return {
+				limpiar() {
+					archivosSeleccionados = [];
+					validarYActualizar();
+				},
+				revalidar() {
+					validarYActualizar();
+				}
+			};
+		}
+
+		function inicializarValidacionArchivos() {
+			crearGestorArchivos({
+				input: document.querySelector('#formCrearTicket input[name="Archivos"]'),
+				lista: document.getElementById("listaArchivosAdjuntos"),
+				mensaje: document.querySelector('#formCrearTicket span[data-valmsg-for="Archivos"]'),
+				contenedor: document.getElementById("formCrearTicket"),
+				botonSubmit: document.querySelector('#formCrearTicket button[type="submit"]')
 			});
 		}
 
@@ -1148,10 +1182,21 @@
 				});
 		}
 
+		// El modal de registrar solución es estático (no se recarga por AJAX como el de crear
+		// ticket), así que su gestor de archivos se crea una sola vez y se vacía al abrirlo.
+		const gestorArchivosSolucion = crearGestorArchivos({
+			input: document.getElementById("archivosSolucion"),
+			lista: document.getElementById("listaArchivosSolucion"),
+			mensaje: document.getElementById("errorArchivosSolucion"),
+			contenedor: document.getElementById("modalValidarTicket"),
+			botonSubmit: document.getElementById("btnEnviarValidacion")
+		});
+
 		function abrirValidarTicket(idTicket) {
 			document.getElementById("idTicketValidar").value = idTicket;
 			document.getElementById("solucionTicket").value = "";
 			document.getElementById("errorValidarTicket").textContent = "";
+			gestorArchivosSolucion.limpiar();
 
 			const modal = new bootstrap.Modal(document.getElementById("modalValidarTicket"));
 			modal.show();
@@ -1166,9 +1211,17 @@
 				return;
 			}
 
-			const params = new URLSearchParams({ id: idTicket, solucion: solucion });
+			// Multipart (no query string): además del texto viajan los archivos adjuntos.
+			const formData = new FormData();
+			formData.append("solucion", solucion);
+			for (const archivo of document.getElementById("archivosSolucion").files) {
+				formData.append("archivos", archivo);
+			}
 
-			fetchConManejo(`@Url.Action("ValidarTicket")?${params.toString()}`, { method: "POST" })
+			const btnEnviar = document.getElementById("btnEnviarValidacion");
+			btnEnviar.disabled = true;
+
+			fetchConManejo(`@Url.Action("ValidarTicket")?id=${encodeURIComponent(idTicket)}`, { method: "POST", body: formData })
 				.then(r => {
 					if (!r) return;
 					return r.json();
@@ -1177,11 +1230,16 @@
 					if (!data) return;
 					if (data.exito) {
 						bootstrap.Modal.getInstance(document.getElementById("modalValidarTicket")).hide();
-						mostrarToast("Solución registrada correctamente", "success");
+						mostrarToast(data.mensaje || "Solución registrada correctamente", data.mensaje ? "warning" : "success");
 						cargarTabla(1);
 					} else {
 						document.getElementById("errorValidarTicket").textContent = data.mensaje;
 					}
+				})
+				.finally(() => {
+					// El gestor de archivos también habilita/deshabilita este botón según
+					// la validez de los archivos: se vuelve a evaluar en vez de forzar true.
+					gestorArchivosSolucion.revalidar();
 				});
 		}
 
@@ -1192,6 +1250,8 @@
 			document.getElementById("codigoTicketSolucion").textContent = "";
 			document.getElementById("metaSolucion").textContent = "";
 			document.getElementById("textoSolucion").textContent = "Cargando...";
+			document.getElementById("archivosSolucionVista").classList.add("d-none");
+			document.getElementById("listaArchivosSolucionVista").innerHTML = "";
 
 			const modal = new bootstrap.Modal(document.getElementById("modalConfirmarSolucion"));
 			modal.show();
@@ -1220,7 +1280,59 @@
 						data.solucion && data.solucion.trim()
 							? data.solucion
 							: "Soporte no registró un detalle de la solución.";
+
+					mostrarArchivosSolucion(data.adjuntos || []);
 				});
+		}
+
+		// Imágenes y videos se ven directamente en el modal (así el solicitante evalúa la
+		// solución sin descargar nada); el resto de formatos se muestra como enlace.
+		// Todo se arma con textContent/atributos, nunca con innerHTML: el nombre del
+		// archivo lo escribió otro usuario.
+		function mostrarArchivosSolucion(adjuntos) {
+			const contenedor = document.getElementById("listaArchivosSolucionVista");
+			contenedor.innerHTML = "";
+
+			adjuntos.forEach(adj => {
+				const extension = (adj.nombre.split(".").pop() || "").toLowerCase();
+				const item = document.createElement("div");
+
+				if (["jpg", "jpeg", "png"].includes(extension)) {
+					const enlace = document.createElement("a");
+					enlace.href = adj.url;
+					enlace.target = "_blank";
+					enlace.rel = "noopener";
+					enlace.title = adj.nombre;
+
+					const img = document.createElement("img");
+					img.src = adj.url;
+					img.alt = adj.nombre;
+					img.className = "img-fluid rounded border";
+					img.style.maxHeight = "260px";
+					enlace.appendChild(img);
+					item.appendChild(enlace);
+				} else if (extension === "mp4") {
+					const video = document.createElement("video");
+					video.src = adj.url;
+					video.controls = true;
+					video.preload = "metadata";
+					video.className = "w-100 rounded border";
+					video.style.maxHeight = "300px";
+					item.appendChild(video);
+				}
+
+				const enlaceNombre = document.createElement("a");
+				enlaceNombre.href = adj.url;
+				enlaceNombre.target = "_blank";
+				enlaceNombre.rel = "noopener";
+				enlaceNombre.className = "small d-block";
+				enlaceNombre.textContent = adj.nombre + (adj.pesoKB ? ` (${adj.pesoKB} KB)` : "");
+				item.appendChild(enlaceNombre);
+
+				contenedor.appendChild(item);
+			});
+
+			document.getElementById("archivosSolucionVista").classList.toggle("d-none", adjuntos.length === 0);
 		}
 
 		function confirmarSolucion() {

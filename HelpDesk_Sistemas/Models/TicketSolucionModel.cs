@@ -10,5 +10,8 @@ namespace HelpDesk_Sistemas.Models
         public string? Solucion { get; set; }
         public string? ResueltoPor { get; set; }
         public DateTime? FechaSolucion { get; set; }
+
+        /// <summary>Archivos que Soporte adjuntó a la última solución registrada.</summary>
+        public List<TicketAdjuntoModel> Adjuntos { get; set; } = new();
     }
 }

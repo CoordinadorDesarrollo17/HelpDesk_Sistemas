@@ -233,44 +233,10 @@ namespace HelpDesk_Sistemas.Services
         /// </summary>
         public async Task<(int IdTicket, List<string> Errores)> CrearTicket(CrearTicketModel model, int idUsuarioSolicita)
         {
-            var errores = new List<string>();
+            var errores = ValidarArchivos(model.Archivos);
             var hayArchivos = model.Archivos != null && model.Archivos.Any(a => a.Length > 0);
 
-            if (model.Archivos != null)
-            {
-                foreach (var archivo in model.Archivos)
-                {
-                    if (archivo.Length == 0) continue;
-
-                    if (archivo.Length > TamanoMaximoBytes)
-                    {
-                        errores.Add($"El archivo '{archivo.FileName}' supera el tamaño máximo de 10 MB.");
-                    }
-
-                    var extension = Path.GetExtension(archivo.FileName).ToLower();
-                    if (!ExtensionesPermitidas.Contains(extension))
-                    {
-                        errores.Add($"El archivo '{archivo.FileName}' tiene un formato no permitido.");
-                    }
-                }
-            }
-
-            string? carpetaUploads = null;
-
-            if (hayArchivos)
-            {
-                carpetaUploads = ObtenerCarpetaAdjuntos();
-
-                try
-                {
-                    Directory.CreateDirectory(carpetaUploads); // no hace nada si ya existe
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "No se pudo acceder/crear la carpeta de adjuntos '{Carpeta}'.", carpetaUploads);
-                    errores.Add("No se pudo acceder a la carpeta de adjuntos del servidor. Avisa a soporte antes de reintentar (revisa la ruta configurada en Almacenamiento:CarpetaAdjuntos y sus permisos).");
-                }
-            }
+            var carpetaUploads = hayArchivos ? PrepararCarpetaAdjuntos(errores) : null;
 
             if (errores.Count > 0)
             {
@@ -281,41 +247,108 @@ namespace HelpDesk_Sistemas.Services
 
             if (hayArchivos)
             {
-                foreach (var archivo in model.Archivos!)
-                {
-                    if (archivo.Length == 0) continue;
-
-                    var nombreUnico = $"{Guid.NewGuid()}_{archivo.FileName}";
-                    var rutaFisica = Path.Combine(carpetaUploads!, nombreUnico);
-
-                    try
-                    {
-                        using (var stream = new FileStream(rutaFisica, FileMode.Create))
-                        {
-                            await archivo.CopyToAsync(stream);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // El ticket #{idTicket} ya existe en este punto — no se puede deshacer
-                        // sin arriesgar dejar el SLA/historial a medias. Se registra el fallo y
-                        // se sigue con el resto de adjuntos en vez de tirar abajo la respuesta
-                        // completa (eso es justo lo que generaba tickets duplicados al reintentar).
-                        logger.LogError(ex, "No se pudo guardar el adjunto '{Archivo}' del ticket {IdTicket}.", archivo.FileName, idTicket);
-                        continue;
-                    }
-
-                    // Se guarda solo el nombre físico (no una URL): el archivo se sirve por
-                    // TicketsController.DescargarAdjunto, que resuelve la ruta real contra
-                    // ObtenerCarpetaAdjuntos() — así el valor no queda atado a dónde vive el
-                    // disco en cada servidor.
-                    var pesoKB = (int)(archivo.Length / 1024);
-
-                    await ticketsRepository.GuardarAdjunto(idTicket, archivo.FileName, nombreUnico, pesoKB, idUsuarioSolicita);
-                }
+                // El ticket ya existe en este punto: si algún archivo no se puede guardar solo
+                // se registra en el log (ver GuardarArchivos), no se tira abajo la respuesta.
+                await GuardarArchivos(idTicket, model.Archivos!, carpetaUploads!, idUsuarioSolicita, "Solicitud");
             }
 
             return (idTicket, errores);
+        }
+
+        /// <summary>
+        /// Valida tamaño y extensión de cada archivo. Devuelve la lista de errores (vacía
+        /// si todo está bien). Compartido por la creación del ticket y el registro de la
+        /// solución, para que ambos acepten exactamente los mismos archivos.
+        /// </summary>
+        private static List<string> ValidarArchivos(IEnumerable<IFormFile>? archivos)
+        {
+            var errores = new List<string>();
+
+            if (archivos == null) return errores;
+
+            foreach (var archivo in archivos)
+            {
+                if (archivo.Length == 0) continue;
+
+                if (archivo.Length > TamanoMaximoBytes)
+                {
+                    errores.Add($"El archivo '{archivo.FileName}' supera el tamaño máximo de 10 MB.");
+                }
+
+                var extension = Path.GetExtension(archivo.FileName).ToLower();
+                if (!ExtensionesPermitidas.Contains(extension))
+                {
+                    errores.Add($"El archivo '{archivo.FileName}' tiene un formato no permitido.");
+                }
+            }
+
+            return errores;
+        }
+
+        /// <summary>
+        /// Asegura que la carpeta de adjuntos exista y sea accesible ANTES de crear o
+        /// modificar nada. Si no lo es, agrega el error y devuelve la ruta igual (el
+        /// llamador debe revisar errores antes de continuar).
+        /// </summary>
+        private string PrepararCarpetaAdjuntos(List<string> errores)
+        {
+            var carpeta = ObtenerCarpetaAdjuntos();
+
+            try
+            {
+                Directory.CreateDirectory(carpeta); // no hace nada si ya existe
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "No se pudo acceder/crear la carpeta de adjuntos '{Carpeta}'.", carpeta);
+                errores.Add("No se pudo acceder a la carpeta de adjuntos del servidor. Avisa a soporte antes de reintentar (revisa la ruta configurada en Almacenamiento:CarpetaAdjuntos y sus permisos).");
+            }
+
+            return carpeta;
+        }
+
+        /// <summary>
+        /// Guarda cada archivo en disco con un nombre único (evita colisiones entre archivos
+        /// del mismo nombre) y lo registra en Ticket_Adjuntos con su origen. Si uno falla
+        /// se registra en el log y se sigue con el resto — el ticket/solución ya existe y
+        /// no se puede deshacer sin dejar SLA/historial a medias. Devuelve los nombres de
+        /// los archivos que no se pudieron guardar.
+        /// </summary>
+        private async Task<List<string>> GuardarArchivos(int idTicket, IEnumerable<IFormFile> archivos, string carpeta, int idUsuario, string origen)
+        {
+            var fallidos = new List<string>();
+
+            foreach (var archivo in archivos)
+            {
+                if (archivo.Length == 0) continue;
+
+                var nombreUnico = $"{Guid.NewGuid()}_{archivo.FileName}";
+                var rutaFisica = Path.Combine(carpeta, nombreUnico);
+
+                try
+                {
+                    using (var stream = new FileStream(rutaFisica, FileMode.Create))
+                    {
+                        await archivo.CopyToAsync(stream);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "No se pudo guardar el adjunto '{Archivo}' del ticket {IdTicket}.", archivo.FileName, idTicket);
+                    fallidos.Add(archivo.FileName);
+                    continue;
+                }
+
+                // Se guarda solo el nombre físico (no una URL): el archivo se sirve por
+                // TicketsController.DescargarAdjunto, que resuelve la ruta real contra
+                // ObtenerCarpetaAdjuntos() — así el valor no queda atado a dónde vive el
+                // disco en cada servidor.
+                var pesoKB = (int)(archivo.Length / 1024);
+
+                await ticketsRepository.GuardarAdjunto(idTicket, archivo.FileName, nombreUnico, pesoKB, idUsuario, origen);
+            }
+
+            return fallidos;
         }
 
         /// <summary>
@@ -366,9 +399,43 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.ObtenerPausasRefrigerioVencidas();
         }
 
-        public async Task<bool> ValidarTicket(int idTicket, int idUsuarioAccion, string solucion)
+        /// <summary>
+        /// Registra la solución (texto + archivos opcionales) y pasa el ticket a "En
+        /// validación". Igual que en la creación, primero se valida todo —archivos y
+        /// carpeta de adjuntos— y solo si está bien se cambia el estado: no puede quedar
+        /// una solución registrada a medias por un archivo inválido. Devuelve un mensaje
+        /// cuando algo falla o, con Exito = true, cuando algún archivo no se pudo guardar.
+        /// </summary>
+        public async Task<(bool Exito, string? Mensaje)> ValidarTicket(int idTicket, int idUsuarioAccion, string solucion, List<IFormFile>? archivos = null)
         {
-            return await ticketsRepository.ValidarTicket(idTicket, idUsuarioAccion, solucion);
+            var errores = ValidarArchivos(archivos);
+            var hayArchivos = archivos != null && archivos.Any(a => a.Length > 0);
+
+            var carpeta = hayArchivos ? PrepararCarpetaAdjuntos(errores) : null;
+
+            if (errores.Count > 0)
+            {
+                return (false, string.Join(" ", errores));
+            }
+
+            var exito = await ticketsRepository.ValidarTicket(idTicket, idUsuarioAccion, solucion);
+
+            if (!exito)
+            {
+                return (false, "El ticket ya no está disponible para validar.");
+            }
+
+            if (hayArchivos)
+            {
+                var fallidos = await GuardarArchivos(idTicket, archivos!, carpeta!, idUsuarioAccion, "Solucion");
+
+                if (fallidos.Count > 0)
+                {
+                    return (true, $"La solución se registró, pero no se pudieron guardar estos archivos: {string.Join(", ", fallidos)}. Avisa al Área de Sistemas.");
+                }
+            }
+
+            return (true, null);
         }
 
         public async Task<bool> ConfirmarSolucion(int idTicket, int idUsuarioAccion)

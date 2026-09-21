@@ -62,7 +62,7 @@ namespace HelpDesk_Sistemas.Interfaces
         // ============================================================
 
         Task<int> CrearTicket(CrearTicketModel model, int idUsuarioSolicita);
-        Task GuardarAdjunto(int idTicket, string nombreArchivo, string rutaArchivo, int pesoKB, int idUsuarioSube);
+        Task GuardarAdjunto(int idTicket, string nombreArchivo, string rutaArchivo, int pesoKB, int idUsuarioSube, string origen = "Solicitud");
         Task<(string? NombreArchivo, string? RutaArchivo)> ObtenerAdjuntoPorId(int idAdjunto);
 
         // ============================================================

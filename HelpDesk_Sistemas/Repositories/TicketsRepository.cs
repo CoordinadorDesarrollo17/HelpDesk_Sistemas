@@ -553,7 +553,39 @@ namespace HelpDesk_Sistemas.Repositories
                 WHERE t.Id = @IdTicket
             ";
 
-            return await xCon.QueryFirstOrDefaultAsync<TicketSolucionModel>(sql, new { IdTicket = idTicket });
+            var solucion = await xCon.QueryFirstOrDefaultAsync<TicketSolucionModel>(sql, new { IdTicket = idTicket });
+
+            if (solucion is null)
+            {
+                return null;
+            }
+
+            // Solo los archivos de la última solución: si el ticket se devolvió y Soporte
+            // volvió a registrar una, los de la ronda anterior no deben confundir al
+            // solicitante (siguen visibles completos en el detalle del ticket). Los archivos
+            // se guardan justo después de pasar a "En validación", así que sus fechas son
+            // iguales o posteriores a FechaSolucion.
+            var sqlAdjuntos = @"
+                SELECT
+                    Id             AS Id,
+                    Nombre_Archivo AS NombreArchivo,
+                    Ruta_Archivo   AS RutaArchivo,
+                    Peso_KB        AS PesoKB,
+                    Origen         AS Origen
+                FROM Ticket_Adjuntos
+                WHERE Id_Ticket = @IdTicket
+                  AND Origen = 'Solucion'
+                  AND Fecha_Carga >= @FechaSolucion
+                ORDER BY Fecha_Carga ASC, Id ASC
+            ";
+
+            if (solucion.FechaSolucion.HasValue)
+            {
+                var adjuntos = await xCon.QueryAsync<TicketAdjuntoModel>(sqlAdjuntos, new { IdTicket = idTicket, FechaSolucion = solucion.FechaSolucion.Value });
+                solucion.Adjuntos = adjuntos.ToList();
+            }
+
+            return solucion;
         }
 
         public async Task<TicketDetalleModel?> ObtenerDetalleTicket(int idTicket)
@@ -612,7 +644,8 @@ namespace HelpDesk_Sistemas.Repositories
                     Id             AS Id,
                     Nombre_Archivo AS NombreArchivo,
                     Ruta_Archivo   AS RutaArchivo,
-                    Peso_KB        AS PesoKB
+                    Peso_KB        AS PesoKB,
+                    Origen         AS Origen
                 FROM Ticket_Adjuntos
                 WHERE Id_Ticket = @IdTicket
                 ORDER BY Fecha_Carga ASC
@@ -708,16 +741,16 @@ namespace HelpDesk_Sistemas.Repositories
             return idTicket;
         }
 
-        public async Task GuardarAdjunto(int idTicket, string nombreArchivo, string rutaArchivo, int pesoKB, int idUsuarioSube)
+        public async Task GuardarAdjunto(int idTicket, string nombreArchivo, string rutaArchivo, int pesoKB, int idUsuarioSube, string origen = "Solicitud")
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
             var sql = @"
-                INSERT INTO Ticket_Adjuntos (Id_Ticket, Nombre_Archivo, Ruta_Archivo, Peso_KB, Id_Usuario_Sube)
-                VALUES (@IdTicket, @NombreArchivo, @RutaArchivo, @PesoKB, @IdUsuarioSube);
+                INSERT INTO Ticket_Adjuntos (Id_Ticket, Nombre_Archivo, Ruta_Archivo, Peso_KB, Id_Usuario_Sube, Origen)
+                VALUES (@IdTicket, @NombreArchivo, @RutaArchivo, @PesoKB, @IdUsuarioSube, @Origen);
             ";
 
-            await xCon.ExecuteAsync(sql, new { IdTicket = idTicket, NombreArchivo = nombreArchivo, RutaArchivo = rutaArchivo, PesoKB = pesoKB, IdUsuarioSube = idUsuarioSube });
+            await xCon.ExecuteAsync(sql, new { IdTicket = idTicket, NombreArchivo = nombreArchivo, RutaArchivo = rutaArchivo, PesoKB = pesoKB, IdUsuarioSube = idUsuarioSube, Origen = origen });
         }
 
         public async Task<(string? NombreArchivo, string? RutaArchivo)> ObtenerAdjuntoPorId(int idAdjunto)
