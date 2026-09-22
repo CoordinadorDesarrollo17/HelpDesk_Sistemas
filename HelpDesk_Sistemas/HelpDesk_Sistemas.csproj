@@ -17,4 +17,9 @@
     <PackageReference Include="X.PagedList.Mvc.Core" Version="10.5.9" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Database\Anexos\" />
+    <Folder Include="Views\Anexos\" />
+  </ItemGroup>
+
 </Project>

@@ -482,6 +482,11 @@ namespace HelpDesk_Sistemas.Services
             return await ticketsRepository.CorregirAreaSolicitante(idTicket, idAreaSolicitante);
         }
 
+        public async Task<bool> CorregirCategoriaGuia(int idTicket, int idGuiaCategoria)
+        {
+            return await ticketsRepository.CorregirCategoriaGuia(idTicket, idGuiaCategoria);
+        }
+
         public async Task<List<CatalogoModel>> ObtenerMisTicketsPropios(int idUsuario, int idTicketActual)
         {
             return await ticketsRepository.ObtenerMisTicketsPropios(idUsuario, idTicketActual);

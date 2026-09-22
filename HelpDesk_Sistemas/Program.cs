@@ -42,7 +42,8 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddSingleton<DapperContext>();
 
-
+builder.Services.AddScoped<IAnexosService, AnexosService>();
+builder.Services.AddScoped<IAnexosRepository, AnexosRepository>();
 builder.Services.AddScoped<ITicketsService, TicketsService>();
 builder.Services.AddScoped<ITicketsRepository, TicketsRepository>();
 builder.Services.AddScoped<ISlaService, SlaService>();

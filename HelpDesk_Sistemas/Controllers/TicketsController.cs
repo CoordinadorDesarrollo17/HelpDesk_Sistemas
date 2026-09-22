@@ -14,11 +14,13 @@ namespace HelpDesk_Sistemas.Controllers
         private static readonly string[] RolesPermitidosImplementacionMejora = { "Supervisor", "Administrador", "Soporte" };
 
         private readonly ITicketsService ticketsService;
+        private readonly IAnexosService anexosService;
         private readonly ILogger<TicketsController> logger;
 
-        public TicketsController(ITicketsService ticketsService, ILogger<TicketsController> logger)
+        public TicketsController(ITicketsService ticketsService, IAnexosService anexosService, ILogger<TicketsController> logger)
         {
             this.ticketsService = ticketsService;
+            this.anexosService = anexosService;
             this.logger = logger;
         }
 
@@ -446,6 +448,45 @@ namespace HelpDesk_Sistemas.Controllers
             }
 
             var exito = await ticketsService.CorregirAreaSolicitante(id, idAreaSolicitante);
+            return Json(new { exito });
+        }
+
+        // ============================================================
+        // MÓDULO DE ANEXOS — vincular una guía a la solución de un ticket
+        // ============================================================
+
+        /// <summary>Vincula una guía del módulo de Anexos a la solución del ticket. Misma
+        /// regla que el resto de acciones "de cola": solo Soporte/Administrador.</summary>
+        [HttpPost]
+        public async Task<IActionResult> VincularGuia(int id, int idGuia)
+        {
+            var puedeVincular = SesionTemporal.RolActual == "Administrador" || SesionTemporal.RolActual == "Soporte";
+
+            if (!puedeVincular)
+            {
+                return Json(new { exito = false, mensaje = "Solo Soporte o un administrador puede vincular una guía." });
+            }
+
+            await anexosService.VincularGuiaATicket(id, idGuia, SesionTemporal.UsuarioActualTemporal);
+            return Json(new { exito = true });
+        }
+
+        /// <summary>
+        /// Recategoriza el ticket según la categoría de la guía usada para resolverlo,
+        /// para que las estadísticas reflejen el problema real (ver Fase 9 del módulo de
+        /// Anexos: recategorización obligatoria antes de vincular).
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CorregirCategoriaGuia(int id, int idGuiaCategoria)
+        {
+            var puedeCorregir = SesionTemporal.RolActual == "Administrador" || SesionTemporal.RolActual == "Soporte";
+
+            if (!puedeCorregir)
+            {
+                return Json(new { exito = false, mensaje = "Solo Soporte o un administrador puede recategorizar el ticket." });
+            }
+
+            var exito = await ticketsService.CorregirCategoriaGuia(id, idGuiaCategoria);
             return Json(new { exito });
         }
 

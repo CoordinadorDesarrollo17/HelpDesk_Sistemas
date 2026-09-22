@@ -261,7 +261,7 @@
 
                         @if (u.Estado == "En atención" && puedeOperar)
                         {
-                            <button type="button" class="btn btn-sm btn-outline-primary" title="Validar / registrar solución" onclick="abrirValidarTicket(@u.IdTicket)">
+                            <button type="button" class="btn btn-sm btn-outline-primary" title="Validar / registrar solución" onclick="abrirValidarTicket(@u.IdTicket, @(u.IdGuiaCategoria?.ToString() ?? "null"))">
                                 <i class="bi bi-check2-square"></i>
                             </button>
                         }

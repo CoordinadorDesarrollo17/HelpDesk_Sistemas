@@ -1,0 +1,108 @@
+﻿@using HelpDesk_Sistemas.Models
+@model List<GuiaModel>
+
+@{
+    ViewData["Title"] = "Guías y Anexos";
+    var categorias = (List<GuiaCategoriaModel>)ViewBag.Categorias;
+    var puedeAdministrar = (bool)ViewBag.PuedeAdministrar;
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">Guías y Anexos</h5>
+        @if (puedeAdministrar)
+        {
+            <button type="button" class="btn btn-primary btn-sm" onclick="abrirCrearGuia()">
+                <i class="bi bi-file-earmark-plus"></i> Nueva guía
+            </button>
+        }
+    </div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <input type="text" id="txtBuscarGuia" class="form-control form-control-sm w-auto"
+                   style="min-width:240px" placeholder="Buscar por título o descripción..." />
+            <select id="filtroGuiaCategoria" class="form-select form-select-sm w-auto">
+                <option value="">Todas las categorías</option>
+                @foreach (var c in categorias)
+                {
+                    <option value="@c.Id">@c.Nombre</option>
+                }
+            </select>
+            <select id="filtroGuiaSubcategoria" class="form-select form-select-sm w-auto" disabled>
+                <option value="">Todas las subcategorías</option>
+            </select>
+        </div>
+
+        <div id="listaGuias" class="row g-3">
+            @await Html.PartialAsync("_ListaGuias", Model)
+        </div>
+    </div>
+</div>
+
+<div id="contenedorModalGuia"></div>
+
+@section Scripts {
+    <script>
+        const filtroBuscar = document.getElementById("txtBuscarGuia");
+        const filtroCat = document.getElementById("filtroGuiaCategoria");
+        const filtroSub = document.getElementById("filtroGuiaSubcategoria");
+
+        // Categoría → Subcategoría: mismo patrón que ya usas en el formulario de
+        // crear ticket (área → tipo de atención).
+        filtroCat.addEventListener("change", function () {
+            filtroSub.innerHTML = '<option value="">Todas las subcategorías</option>';
+            if (!this.value) { filtroSub.disabled = true; buscarGuias(); return; }
+
+            fetch(`@Url.Action("SubcategoriasPorCategoria")?idCategoria=${this.value}`)
+                .then(r => r.json())
+                .then(subs => {
+                    subs.forEach(s => filtroSub.insertAdjacentHTML("beforeend", `<option value="${s.id}">${s.nombre}</option>`));
+                    filtroSub.disabled = subs.length === 0;
+                });
+            buscarGuias();
+        });
+        filtroSub.addEventListener("change", buscarGuias);
+
+        let temporizadorBusqueda;
+        filtroBuscar.addEventListener("input", function () {
+            clearTimeout(temporizadorBusqueda);
+            temporizadorBusqueda = setTimeout(buscarGuias, 300);
+        });
+
+        function buscarGuias() {
+            const params = new URLSearchParams({
+                buscar: filtroBuscar.value,
+                idCategoria: filtroCat.value,
+                idSubcategoria: filtroSub.value
+            });
+            fetch(`@Url.Action("Index")?${params.toString()}`, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+                .then(r => r.text())
+                .then(html => {
+                    document.getElementById("listaGuias").innerHTML = html;
+                });
+        }
+
+        function abrirCrearGuia() {
+            fetch(`@Url.Action("CrearGuia")`)
+                .then(r => r.text())
+                .then(html => {
+                    document.getElementById("contenedorModalGuia").innerHTML = html;
+                    new bootstrap.Modal(document.getElementById("modalCrearGuia")).show();
+                });
+        }
+
+        function eliminarGuia(id) {
+            if (!confirm("¿Eliminar esta guía? Ya no se va a mostrar en el listado.")) return;
+
+            fetch(`@Url.Action("EliminarGuia")?id=${id}`, { method: "POST" })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.exito) {
+                        buscarGuias();
+                    } else {
+                        alert(data.mensaje || "No se pudo eliminar la guía.");
+                    }
+                });
+        }
+    </script>
+}

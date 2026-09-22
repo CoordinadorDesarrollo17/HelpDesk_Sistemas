@@ -33,6 +33,12 @@
         public DateTime FechaCreacion { get; set; }
         public int CantidadMismaAsignadoPrioridad { get; set; }
         public int IdArea { get; set; }
+
+        // Categoría del módulo de Anexos vinculada al ticket (distinta de Categoria/
+        // IdCategoria, que es la de triage elegida al crear el ticket). Se usa para
+        // precargar el filtro de guías sugeridas al registrar la solución.
+        public int? IdGuiaCategoria { get; set; }
+
         public string? Sociedad { get; set; }
         public TicketSlaModel? SlaRespuesta { get; set; }
         public TicketSlaModel? SlaResolucion { get; set; }

@@ -63,6 +63,9 @@
                 <a class="sidebar-link @(controladorActual == "Tickets" ? "active" : "")" asp-area="" asp-controller="Tickets" asp-action="ListadoTickets">
                     <i class="bi bi-ticket-perforated"></i> <span>Tickets</span>
                 </a>
+                <a class="sidebar-link @(controladorActual == "Anexos" ? "active" : "")" asp-area="" asp-controller="Anexos" asp-action="Index">
+                    <i class="bi bi-journal-text"></i> <span>Guías</span>
+                </a>
 
                 @if (esAdministrador)
                 {

@@ -256,6 +256,13 @@
 						<div id="listaArchivosSolucion" class="d-flex flex-wrap gap-2 mt-2"></div>
 						<span id="errorArchivosSolucion" class="text-danger small d-block"></span>
 						<small class="text-muted">Imágenes, videos u otros archivos que muestren la solución. Máximo 10 MB por archivo. Formatos permitidos: jpg, png, pdf, xlsx, docx, ppt, pptx, mp4. También puedes pegar una captura con Ctrl+V.</small>
+
+						<label class="form-label mt-3">Vincular guía usada <span class="text-muted fw-normal">(opcional)</span></label>
+						<input type="text" id="buscarGuiaSolucion" class="form-control form-control-sm mb-1" placeholder="Buscar por título (categoría del ticket precargada)..." />
+						<div id="resultadosGuiaSolucion" class="list-group" style="max-height:160px; overflow-y:auto;"></div>
+						<input type="hidden" id="idGuiaSeleccionada" />
+						<input type="hidden" id="idCategoriaTicketActual" />
+						<div id="guiaSeleccionadaTexto" class="small text-success mt-1"></div>
 					</div>
 					<div class="modal-footer">
 						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -1192,10 +1199,19 @@
 			botonSubmit: document.getElementById("btnEnviarValidacion")
 		});
 
-		function abrirValidarTicket(idTicket) {
+		function abrirValidarTicket(idTicket, idCategoriaGuia) {
 			document.getElementById("idTicketValidar").value = idTicket;
 			document.getElementById("solucionTicket").value = "";
 			document.getElementById("errorValidarTicket").textContent = "";
+			document.getElementById("idGuiaSeleccionada").value = "";
+			document.getElementById("guiaSeleccionadaTexto").textContent = "";
+			// La guarda aquí verificarRecategorizacion() más abajo, para comparar contra
+			// la categoría de la guía que se termine eligiendo.
+			document.getElementById("idCategoriaTicketActual").value = idCategoriaGuia || "";
+
+			// Regla 1: sugerencia, no restricción — se precarga con la categoría del
+			// ticket, pero el campo de texto queda libre para buscar cualquier cosa.
+			cargarSugerenciasGuia(idCategoriaGuia);
 			gestorArchivosSolucion.limpiar();
 
 			const modal = new bootstrap.Modal(document.getElementById("modalValidarTicket"));
@@ -1217,6 +1233,7 @@
 			for (const archivo of document.getElementById("archivosSolucion").files) {
 				formData.append("archivos", archivo);
 			}
+			const idGuia = document.getElementById("idGuiaSeleccionada").value;
 
 			const btnEnviar = document.getElementById("btnEnviarValidacion");
 			btnEnviar.disabled = true;
@@ -1229,6 +1246,11 @@
 				.then(data => {
 					if (!data) return;
 					if (data.exito) {
+						// La guía se vincula solo si la solución quedó registrada — si ValidarTicket
+						// falla, no debe quedar una guía vinculada a un ticket que sigue "En atención".
+						if (idGuia) {
+							fetch(`@Url.Action("VincularGuia", "Tickets")?id=${idTicket}&idGuia=${idGuia}`, { method: "POST" });
+						}
 						bootstrap.Modal.getInstance(document.getElementById("modalValidarTicket")).hide();
 						mostrarToast(data.mensaje || "Solución registrada correctamente", data.mensaje ? "warning" : "success");
 						cargarTabla(1);
@@ -1734,6 +1756,63 @@
 						document.getElementById("errorReasignarTicket").textContent = data.mensaje;
 					}
 				});
+		}
+				// "Última petición gana": tanto abrir el modal (sugerencia por categoría)
+		// como escribir en el buscador disparan un fetch, y no hay garantía de que
+		// respondan en el mismo orden en que se dispararon — sin esto, una sugerencia
+		// por categoría que tarda más podía llegar después y pisar el resultado de
+		// una búsqueda de texto ya escrita, dejando en pantalla algo que el usuario
+		// no pidió.
+		let tokenBusquedaGuia = 0;
+
+		function cargarSugerenciasGuia(idCategoriaTicket) {
+			const params = new URLSearchParams({ idCategoria: idCategoriaTicket || "", buscar: "" });
+			const token = ++tokenBusquedaGuia;
+			fetch(`@Url.Action("BuscarGuias", "Anexos")?${params.toString()}`)
+				.then(r => r.json())
+				.then(guias => { if (token === tokenBusquedaGuia) mostrarResultadosGuia(guias); });
+		}
+
+		document.getElementById("buscarGuiaSolucion").addEventListener("input", function () {
+			// Al escribir, YA NO se manda idCategoria — es la búsqueda libre que pidió
+			// el usuario ("sin importar cómo esté clasificado el ticket").
+			const params = new URLSearchParams({ buscar: this.value });
+			const token = ++tokenBusquedaGuia;
+			fetch(`@Url.Action("BuscarGuias", "Anexos")?${params.toString()}`)
+				.then(r => r.json())
+				.then(guias => { if (token === tokenBusquedaGuia) mostrarResultadosGuia(guias); });
+		});
+
+		function mostrarResultadosGuia(guias) {
+			const cont = document.getElementById("resultadosGuiaSolucion");
+			cont.innerHTML = "";
+			guias.forEach(g => {
+				const item = document.createElement("button");
+				item.type = "button";
+				item.className = "list-group-item list-group-item-action py-1";
+				item.textContent = `${g.titulo} (${g.categoria || "sin categoría"})`;
+				item.onclick = () => seleccionarGuia(g);
+				cont.appendChild(item);
+			});
+		}
+
+		function seleccionarGuia(guia) {
+			document.getElementById("idGuiaSeleccionada").value = guia.id;
+			document.getElementById("guiaSeleccionadaTexto").textContent = `Guía seleccionada: ${guia.titulo}`;
+			document.getElementById("resultadosGuiaSolucion").innerHTML = "";
+			document.getElementById("buscarGuiaSolucion").value = "";
+
+			// Regla 2: recategorización obligatoria — si la categoría de la guía no
+			// coincide con la del ticket, se pregunta antes de continuar.
+			verificarRecategorizacion(guia.idGuiaCategoria);
+		}
+				function verificarRecategorizacion(idCategoriaGuia) {
+			const idCategoriaTicketActual = document.getElementById("idCategoriaTicketActual").value; // guárdalo al abrir el modal
+			if (!idCategoriaGuia || idCategoriaGuia == idCategoriaTicketActual) return;
+
+			if (confirm("La guía que elegiste es de otra categoría. ¿Actualizar la categoría del ticket para que coincida? (recomendado, para que los reportes reflejen el problema real)")) {
+				fetch(`@Url.Action("CorregirCategoriaGuia", "Tickets")?id=${document.getElementById("idTicketValidar").value}&idGuiaCategoria=${idCategoriaGuia}`, { method: "POST" });
+			}
 		}
 	</script>
 }

@@ -186,6 +186,7 @@ namespace HelpDesk_Sistemas.Repositories
                     t.Fecha_Creacion                      AS FechaCreacion,
                     t.Orden_Atencion                      AS OrdenAtencion,
                     t.Id_Area                             AS IdArea,
+                    t.Id_Guia_Categoria                   AS IdGuiaCategoria,
                     soc.Nombre                            AS Sociedad,
                     (
                         CASE WHEN t.Id_Usuario_Asignado IS NULL THEN 0
@@ -1247,6 +1248,24 @@ namespace HelpDesk_Sistemas.Repositories
 
             var sql = "UPDATE Tickets SET Id_Area_Solicitante = @IdAreaSolicitante WHERE Id = @IdTicket";
             var filasAfectadas = await xCon.ExecuteAsync(sql, new { IdTicket = idTicket, IdAreaSolicitante = idAreaSolicitante });
+
+            return filasAfectadas > 0;
+        }
+
+        /// <summary>
+        /// Corrige la categoría del módulo de Anexos asociada al ticket (distinta de
+        /// Id_Categoria, la de triage). Se usa cuando el agente vincula una guía de una
+        /// categoría distinta a la que tenía el ticket, para que las estadísticas reflejen
+        /// el problema real resuelto y no la categorización original, potencialmente
+        /// equivocada. Igual que CorregirAreaSolicitante: es un dato informativo, no cambia
+        /// estado ni SLA, así que no exige ningún estado en particular.
+        /// </summary>
+        public async Task<bool> CorregirCategoriaGuia(int idTicket, int idGuiaCategoria)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sql = "UPDATE Tickets SET Id_Guia_Categoria = @IdGuiaCategoria WHERE Id = @IdTicket";
+            var filasAfectadas = await xCon.ExecuteAsync(sql, new { IdTicket = idTicket, IdGuiaCategoria = idGuiaCategoria });
 
             return filasAfectadas > 0;
         }

@@ -79,6 +79,9 @@ namespace HelpDesk_Sistemas.Interfaces
 
         /// <summary>Corrige el área solicitante de un ticket ya creado (uso temporal en pruebas, ver CrearTicket).</summary>
         Task<bool> CorregirAreaSolicitante(int idTicket, int? idAreaSolicitante);
+
+        /// <summary>Corrige la categoría del módulo de Anexos asociada al ticket (ver AnexosController/VincularGuia).</summary>
+        Task<bool> CorregirCategoriaGuia(int idTicket, int idGuiaCategoria);
         Task<List<CatalogoModel>> ObtenerMisTicketsPropios(int idUsuario, int idTicketActual);
 
         // ============================================================
