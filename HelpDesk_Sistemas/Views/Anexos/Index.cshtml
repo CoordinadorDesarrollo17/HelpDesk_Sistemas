@@ -85,10 +85,77 @@
         function abrirCrearGuia() {
             fetch(`@Url.Action("CrearGuia")`)
                 .then(r => r.text())
-                .then(html => {
-                    document.getElementById("contenedorModalGuia").innerHTML = html;
-                    new bootstrap.Modal(document.getElementById("modalCrearGuia")).show();
-                });
+                .then(mostrarModalGuia);
+        }
+
+        // Monta el HTML del modal y lo abre con Bootstrap. Se usa tanto al abrirlo como
+        // cuando el servidor lo reenvía por un error de validación: en ese caso el
+        // elemento del modal es NUEVO, así que se descarta la instancia y el fondo
+        // oscuro del anterior (si no, Bootstrap seguiría apuntando al elemento viejo y
+        // después no podría cerrar el nuevo).
+        function mostrarModalGuia(html) {
+            const anterior = document.getElementById("modalCrearGuia");
+            if (anterior) {
+                bootstrap.Modal.getInstance(anterior)?.dispose();
+                document.querySelectorAll(".modal-backdrop").forEach(b => b.remove());
+                document.body.classList.remove("modal-open");
+                document.body.style.removeProperty("overflow");
+                document.body.style.removeProperty("padding-right");
+            }
+
+            document.getElementById("contenedorModalGuia").innerHTML = html;
+            new bootstrap.Modal(document.getElementById("modalCrearGuia")).show();
+            inicializarFormularioGuia();
+        }
+
+        // _CrearGuia.cshtml se inserta con innerHTML, y un <script> insertado así
+        // nunca lo ejecuta el navegador — por eso los listeners viven acá, y hay que
+        // volver a llamarlos cada vez que ese HTML se vuelve a insertar: al abrir el
+        // modal (arriba) y también si el servidor lo reenvía por un error de
+        // validación (abajo) — si no, un segundo intento de "Guardar" ya no tendría
+        // el manejador de submit y el formulario se enviaría de la forma nativa del
+        // navegador (recargando la página en crudo) en vez de mostrar el error.
+        function inicializarFormularioGuia() {
+            const cboCategoria = document.getElementById("cboGuiaCategoria");
+            const cboSubcategoria = document.getElementById("cboGuiaSubcategoria");
+            const form = document.getElementById("formCrearGuia");
+
+            function cargarSubcategorias(idSeleccionada) {
+                cboSubcategoria.innerHTML = '<option value="">Selecciona...</option>';
+                cboSubcategoria.disabled = !cboCategoria.value;
+                if (!cboCategoria.value) return;
+
+                fetch(`@Url.Action("SubcategoriasPorCategoria")?idCategoria=${cboCategoria.value}`)
+                    .then(r => r.json())
+                    .then(subs => {
+                        subs.forEach(s => cboSubcategoria.insertAdjacentHTML("beforeend", `<option value="${s.id}">${s.nombre}</option>`));
+                        cboSubcategoria.disabled = subs.length === 0;
+                        if (idSeleccionada) cboSubcategoria.value = idSeleccionada;
+                    });
+            }
+
+            cboCategoria.addEventListener("change", () => cargarSubcategorias());
+
+            // Si el servidor reenvió el formulario por un error de validación, la categoría
+            // (y la subcategoría) ya vienen elegidas: se recargan las subcategorías para
+            // no perder lo que el usuario había escogido.
+            if (cboCategoria.value) {
+                cargarSubcategorias(cboSubcategoria.dataset.subcategoriaSeleccionada);
+            }
+
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                fetch(this.action, { method: "POST", body: new FormData(this) })
+                    .then(r => {
+                        if (r.ok) {
+                            bootstrap.Modal.getInstance(document.getElementById("modalCrearGuia"))?.hide();
+                            buscarGuias();
+                        } else {
+                            r.text().then(mostrarModalGuia);
+                        }
+                    });
+            });
         }
 
         function eliminarGuia(id) {

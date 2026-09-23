@@ -5,7 +5,7 @@
     var categorias = (List<GuiaCategoriaModel>)ViewBag.Categorias;
 }
 
-<div class="modal fade show" id="modalCrearGuia" tabindex="-1" style="display:block">
+<div class="modal fade" id="modalCrearGuia" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <form id="formCrearGuia" asp-controller="Anexos" asp-action="CrearGuia" method="post" enctype="multipart/form-data">
@@ -16,12 +16,12 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Título <span class="text-danger">*</span></label>
-                        <input type="text" name="Titulo" class="form-control" />
+                        <input type="text" name="Titulo" class="form-control" value="@Model?.Titulo" />
                         <span asp-validation-for="Titulo" class="text-danger small"></span>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Descripción</label>
-                        <textarea name="Descripcion" class="form-control" rows="2"></textarea>
+                        <textarea name="Descripcion" class="form-control" rows="2">@Model?.Descripcion</textarea>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-sm-6">
@@ -30,13 +30,15 @@
                                 <option value="">Selecciona...</option>
                                 @foreach (var c in categorias)
                                 {
-                                    <option value="@c.Id">@c.Nombre</option>
+                                    <option value="@c.Id" selected="@(Model?.IdGuiaCategoria == c.Id)">@c.Nombre</option>
                                 }
                             </select>
+                            <span asp-validation-for="IdGuiaCategoria" class="text-danger small"></span>
                         </div>
                         <div class="col-sm-6">
                             <label class="form-label">Subcategoría</label>
-                            <select id="cboGuiaSubcategoria" name="IdSubcategoria" class="form-select" disabled>
+                            <select id="cboGuiaSubcategoria" name="IdSubcategoria" class="form-select" disabled
+                                    data-subcategoria-seleccionada="@Model?.IdSubcategoria">
                                 <option value="">Selecciona una categoría primero...</option>
                             </select>
                         </div>
@@ -56,21 +58,12 @@
     </div>
 </div>
 
-<script>
-    document.getElementById("cboGuiaCategoria").addEventListener("change", function () {
-        const cboSub = document.getElementById("cboGuiaSubcategoria");
-        cboSub.innerHTML = '<option value="">Selecciona...</option>';
-        cboSub.disabled = !this.value;
-        if (!this.value) return;
-
-        fetch(`/Anexos/SubcategoriasPorCategoria?idCategoria=${this.value}`)
-            .then(r => r.json())
-            .then(subs => subs.forEach(s => cboSub.insertAdjacentHTML("beforeend", `<option value="${s.id}">${s.nombre}</option>`)));
-    });
-
-    document.getElementById("formCrearGuia").addEventListener("submit", function (e) {
-        e.preventDefault();
-        fetch(this.action, { method: "POST", body: new FormData(this) })
-            .then(r => r.ok ? location.reload() : r.text().then(html => document.getElementById("contenedorModalGuia").innerHTML = html));
-    });
-</script>
+@* Sin <script> aquí: este parcial se inserta con innerHTML (ver abrirCrearGuia en
+   Index.cshtml), y un <script> insertado así nunca se ejecuta — es una regla del
+   propio navegador, no un descuido. La inicialización (los mismos dos listeners
+   que antes estaban acá) vive en Index.cshtml, en inicializarFormularioGuia(),
+   y se llama a mano cada vez que este HTML se inserta: al abrir el modal por
+   primera vez, y de nuevo si el servidor lo vuelve a enviar por un error de
+   validación (si no, el segundo intento de "Guardar" ya no tendría el manejador
+   de submit y el formulario se enviaría de la forma nativa del navegador —
+   recargando la página en crudo en vez de mostrar el error). *@
