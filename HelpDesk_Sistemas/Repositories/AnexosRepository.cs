@@ -30,7 +30,7 @@ namespace HelpDesk_Sistemas.Repositories
             return result.ToList();
         }
 
-        public async Task<List<GuiaModel>> ObtenerGuias(int? idCategoria, int? idSubcategoria, string? buscar)
+        public async Task<List<GuiaModel>> ObtenerGuias(int? idCategoria, int? idSubcategoria, string? buscar, bool priorizarSubcategoria = false)
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);
 
@@ -46,10 +46,17 @@ namespace HelpDesk_Sistemas.Repositories
             else
             {
                 if (idCategoria.HasValue) condiciones.Add("g.Id_Guia_Categoria = @IdCategoria");
-                if (idSubcategoria.HasValue) condiciones.Add("g.Id_Subcategoria = @IdSubcategoria");
+
+                // Filtro estricto en el listado de Anexos; como sugerencia (priorizar) la
+                // subcategoría no excluye nada, solo pasa primero — ver ORDER BY más abajo.
+                if (idSubcategoria.HasValue && !priorizarSubcategoria) condiciones.Add("g.Id_Subcategoria = @IdSubcategoria");
             }
 
             var where = string.Join(" AND ", condiciones);
+
+            var orden = priorizarSubcategoria && idSubcategoria.HasValue && string.IsNullOrWhiteSpace(buscar)
+                ? "CASE WHEN g.Id_Subcategoria = @IdSubcategoria THEN 0 ELSE 1 END, g.Fecha_Creacion DESC"
+                : "g.Fecha_Creacion DESC";
 
             var sql = $@"
                 SELECT
@@ -63,7 +70,7 @@ namespace HelpDesk_Sistemas.Repositories
                 LEFT JOIN Guia_Subcategoria s ON s.Id = g.Id_Subcategoria
                 LEFT JOIN Usuarios u ON u.Id = g.Id_Usuario_Sube
                 WHERE {where}
-                ORDER BY g.Fecha_Creacion DESC
+                ORDER BY {orden}
             ";
 
             var result = await xCon.QueryAsync<GuiaModel>(sql, new

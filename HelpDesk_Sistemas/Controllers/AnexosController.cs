@@ -107,9 +107,9 @@ namespace HelpDesk_Sistemas.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> BuscarGuias(string buscar, int? idCategoria, int? idSubcategoria)
+        public async Task<IActionResult> BuscarGuias(string buscar, int? idCategoria, int? idSubcategoria, bool priorizarSubcategoria = false)
         {
-            var guias = await anexosService.ObtenerGuias(idCategoria, idSubcategoria, buscar);
+            var guias = await anexosService.ObtenerGuias(idCategoria, idSubcategoria, buscar, priorizarSubcategoria);
             return Json(guias);
         }
     }

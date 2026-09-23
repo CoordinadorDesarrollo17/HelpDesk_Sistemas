@@ -34,10 +34,13 @@
         public int CantidadMismaAsignadoPrioridad { get; set; }
         public int IdArea { get; set; }
 
-        // Categoría del módulo de Anexos vinculada al ticket (distinta de Categoria/
-        // IdCategoria, que es la de triage elegida al crear el ticket). Se usa para
-        // precargar el filtro de guías sugeridas al registrar la solución.
+        // Categoría/subcategoría del módulo de Anexos sugeridas para este ticket, para
+        // precargar las guías al registrar la solución. Salen del tipo de atención y la
+        // categoría del ticket, salvo que el agente lo haya recategorizado (en ese caso
+        // manda Tickets.Id_Guia_Categoria). Pueden ser null si el catálogo de guías no
+        // tiene una coincidencia.
         public int? IdGuiaCategoria { get; set; }
+        public int? IdGuiaSubcategoria { get; set; }
 
         public string? Sociedad { get; set; }
         public TicketSlaModel? SlaRespuesta { get; set; }

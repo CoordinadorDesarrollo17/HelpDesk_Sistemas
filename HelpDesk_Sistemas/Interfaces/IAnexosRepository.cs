@@ -8,7 +8,7 @@ namespace HelpDesk_Sistemas.Interfaces
 
         /// <summary>Buscador global: si "buscar" tiene texto, ignora los filtros de
         /// categoría/subcategoría — es justo la regla de "sugerencia, no restricción".</summary>
-        Task<List<GuiaModel>> ObtenerGuias(int? idCategoria, int? idSubcategoria, string? buscar);
+        Task<List<GuiaModel>> ObtenerGuias(int? idCategoria, int? idSubcategoria, string? buscar, bool priorizarSubcategoria = false);
         
         Task<GuiaModel?> ObtenerGuiaPorId(int id);
         Task<int> CrearGuia(CrearGuiaModel model, string nombreArchivo, string rutaArchivo, int pesoKB, int idUsuarioSube);

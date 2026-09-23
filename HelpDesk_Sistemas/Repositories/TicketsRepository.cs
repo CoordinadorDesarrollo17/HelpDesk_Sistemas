@@ -186,7 +186,27 @@ namespace HelpDesk_Sistemas.Repositories
                     t.Fecha_Creacion                      AS FechaCreacion,
                     t.Orden_Atencion                      AS OrdenAtencion,
                     t.Id_Area                             AS IdArea,
-                    t.Id_Guia_Categoria                   AS IdGuiaCategoria,
+                    -- Categoría de guía sugerida para este ticket: la que el agente haya puesto
+                    -- al recategorizar (Tickets.Id_Guia_Categoria) o, si nadie lo hizo, la que
+                    -- coincide con su tipo de atención (en Anexos, categoría = tipo de atención
+                    -- y subcategoría = categoría del ticket; ver Database/Anexos/03). Consulta/
+                    -- Consultas Asesoria son el mismo tipo con dos nombres y se unen igual que
+                    -- en ese script.
+                    COALESCE(
+                        t.Id_Guia_Categoria,
+                        (SELECT TOP 1 gc.Id FROM Guia_Categoria gc
+                         WHERE gc.Activo = 1
+                           AND gc.Nombre = CASE WHEN tr.Nombre IN ('Consulta/Asesoria', 'Consultas/Asesorias') THEN 'Consultas/Asesorias' ELSE tr.Nombre END)
+                    )                                     AS IdGuiaCategoria,
+                    (SELECT TOP 1 gs.Id FROM Guia_Subcategoria gs
+                     WHERE gs.Activo = 1
+                       AND gs.Nombre = c.Nombre
+                       AND gs.Id_Guia_Categoria = COALESCE(
+                            t.Id_Guia_Categoria,
+                            (SELECT TOP 1 gc2.Id FROM Guia_Categoria gc2
+                             WHERE gc2.Activo = 1
+                               AND gc2.Nombre = CASE WHEN tr.Nombre IN ('Consulta/Asesoria', 'Consultas/Asesorias') THEN 'Consultas/Asesorias' ELSE tr.Nombre END))
+                    )                                     AS IdGuiaSubcategoria,
                     soc.Nombre                            AS Sociedad,
                     (
                         CASE WHEN t.Id_Usuario_Asignado IS NULL THEN 0

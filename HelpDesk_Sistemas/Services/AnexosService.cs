@@ -28,7 +28,7 @@ namespace HelpDesk_Sistemas.Services
 
         public Task<List<GuiaCategoriaModel>> ObtenerCategorias() => anexosRepository.ObtenerCategorias();
         public Task<List<GuiaSubcategoriaModel>> ObtenerSubcategorias(int idCategoria) => anexosRepository.ObtenerSubcategorias(idCategoria);
-        public Task<List<GuiaModel>> ObtenerGuias(int? idCategoria, int? idSubcategoria, string? buscar) => anexosRepository.ObtenerGuias(idCategoria, idSubcategoria, buscar);
+        public Task<List<GuiaModel>> ObtenerGuias(int? idCategoria, int? idSubcategoria, string? buscar, bool priorizarSubcategoria = false) => anexosRepository.ObtenerGuias(idCategoria, idSubcategoria, buscar, priorizarSubcategoria);
         public Task<GuiaModel?> ObtenerGuiaPorId(int id) => anexosRepository.ObtenerGuiaPorId(id);
         public Task VincularGuiaATicket(int idTicket, int idGuia, int idUsuarioAccion) => anexosRepository.VincularGuiaATicket(idTicket, idGuia, idUsuarioAccion);
         public Task<List<GuiaModel>> ObtenerGuiasVinculadas(int idTicket) => anexosRepository.ObtenerGuiasVinculadas(idTicket);

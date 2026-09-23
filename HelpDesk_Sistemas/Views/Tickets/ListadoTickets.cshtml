@@ -1199,7 +1199,7 @@
 			botonSubmit: document.getElementById("btnEnviarValidacion")
 		});
 
-		function abrirValidarTicket(idTicket, idCategoriaGuia) {
+		function abrirValidarTicket(idTicket, idCategoriaGuia, idSubcategoriaGuia) {
 			document.getElementById("idTicketValidar").value = idTicket;
 			document.getElementById("solucionTicket").value = "";
 			document.getElementById("errorValidarTicket").textContent = "";
@@ -1211,7 +1211,7 @@
 
 			// Regla 1: sugerencia, no restricción — se precarga con la categoría del
 			// ticket, pero el campo de texto queda libre para buscar cualquier cosa.
-			cargarSugerenciasGuia(idCategoriaGuia);
+			cargarSugerenciasGuia(idCategoriaGuia, idSubcategoriaGuia);
 			gestorArchivosSolucion.limpiar();
 
 			const modal = new bootstrap.Modal(document.getElementById("modalValidarTicket"));
@@ -1765,8 +1765,15 @@
 		// no pidió.
 		let tokenBusquedaGuia = 0;
 
-		function cargarSugerenciasGuia(idCategoriaTicket) {
+		// Sugerencia por defecto: guías de la categoría del ticket (su tipo de atención, o la que
+		// el agente le haya puesto al recategorizar), con las de su subcategoría primero. La
+		// subcategoría solo ordena, no oculta las demás de la categoría.
+		function cargarSugerenciasGuia(idCategoriaTicket, idSubcategoriaTicket) {
 			const params = new URLSearchParams({ idCategoria: idCategoriaTicket || "", buscar: "" });
+			if (idSubcategoriaTicket) {
+				params.append("idSubcategoria", idSubcategoriaTicket);
+				params.append("priorizarSubcategoria", "true");
+			}
 			const token = ++tokenBusquedaGuia;
 			fetch(`@Url.Action("BuscarGuias", "Anexos")?${params.toString()}`)
 				.then(r => r.json())

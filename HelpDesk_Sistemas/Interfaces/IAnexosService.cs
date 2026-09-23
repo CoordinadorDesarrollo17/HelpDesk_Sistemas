@@ -6,7 +6,7 @@ namespace HelpDesk_Sistemas.Interfaces
     {
         Task<List<GuiaCategoriaModel>> ObtenerCategorias();
         Task<List<GuiaSubcategoriaModel>> ObtenerSubcategorias(int idCategoria);
-        Task<List<GuiaModel>> ObtenerGuias(int? idCategoria, int? idSubcategoria, string? buscar);
+        Task<List<GuiaModel>> ObtenerGuias(int? idCategoria, int? idSubcategoria, string? buscar, bool priorizarSubcategoria = false);
         Task<GuiaModel?> ObtenerGuiaPorId(int id);
 
         Task<(bool Exito, string? Mensaje)> CrearGuia(CrearGuiaModel model, int idUsuarioSube);
