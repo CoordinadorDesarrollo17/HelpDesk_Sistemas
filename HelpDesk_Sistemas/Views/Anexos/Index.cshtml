@@ -20,7 +20,7 @@
     <div class="card-body">
         <div class="d-flex flex-wrap gap-2 mb-3">
             <input type="text" id="txtBuscarGuia" class="form-control form-control-sm w-auto"
-                   style="min-width:240px" placeholder="Buscar por título o descripción..." />
+                   style="min-width:240px" placeholder="Buscar por título o descripción..." value="@(ViewBag.BuscarInicial as string)" />
             <select id="filtroGuiaCategoria" class="form-select form-select-sm w-auto">
                 <option value="">Todas las categorías</option>
                 @foreach (var c in categorias)
@@ -64,6 +64,9 @@
             buscarGuias();
         });
         filtroSub.addEventListener("change", buscarGuias);
+
+        // Llegó desde "Ir a la guía": deja a la vista la tarjeta marcada.
+        document.querySelector(".guia-resaltada")?.scrollIntoView({ block: "center" });
 
         let temporizadorBusqueda;
         filtroBuscar.addEventListener("input", function () {

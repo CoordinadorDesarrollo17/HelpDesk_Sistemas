@@ -10,7 +10,8 @@ else
     @foreach (var g in Model)
     {
         <div class="col-md-4">
-            <div class="card h-100">
+            @{ var resaltada = ViewBag.IdGuiaResaltada is int idResaltada && idResaltada == g.Id; }
+            <div class="card h-100 @(resaltada ? "guia-resaltada border-primary border-2 shadow" : "")">
                 <div class="card-body">
                     <h6 class="card-title">@g.Titulo</h6>
                     <p class="text-muted small mb-1">@g.Categoria @(g.Subcategoria != null ? " · " + g.Subcategoria : "")</p>

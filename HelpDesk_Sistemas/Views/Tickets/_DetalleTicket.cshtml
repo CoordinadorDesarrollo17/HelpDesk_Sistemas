@@ -183,6 +183,10 @@
                             <a class="btn btn-sm btn-outline-primary" href="@Url.Action("DescargarGuia", "Anexos", new { id = g.Id })" target="_blank">
                                 <i class="bi bi-download"></i> Descargar
                             </a>
+                            <a class="btn btn-sm btn-outline-success" href="@Url.Action("Index", "Anexos", new { buscar = g.Titulo, resaltar = g.Id })" target="_blank" rel="noopener"
+                               title="Abrir en el módulo de Guías (nueva pestaña)">
+                                <i class="bi bi-box-arrow-up-right"></i> Ir a la guía
+                            </a>
                         </span>
                     </li>
                 }

@@ -1344,7 +1344,7 @@
 
 			guias.forEach(g => {
 				const fila = document.createElement("div");
-				fila.className = "d-flex justify-content-between align-items-center gap-2 border rounded p-2";
+				fila.className = "d-flex flex-wrap justify-content-between align-items-center gap-2 border rounded p-2";
 
 				const titulo = document.createElement("span");
 				titulo.className = "small";
@@ -1371,8 +1371,17 @@
 				descargar.target = "_blank";
 				descargar.innerHTML = '<i class="bi bi-download"></i> Descargar';
 
+				const ir = document.createElement("a");
+				ir.className = "btn btn-sm btn-outline-success";
+				ir.href = `@Url.Action("Index", "Anexos")?buscar=${encodeURIComponent(g.titulo)}&resaltar=${g.id}`;
+				ir.target = "_blank";
+				ir.rel = "noopener";
+				ir.title = "Abrir en el módulo de Guías (nueva pestaña)";
+				ir.innerHTML = '<i class="bi bi-box-arrow-up-right"></i> Ir a la guía';
+
 				acciones.appendChild(ver);
 				acciones.appendChild(descargar);
+				acciones.appendChild(ir);
 				fila.appendChild(titulo);
 				fila.appendChild(acciones);
 				contenedor.appendChild(fila);

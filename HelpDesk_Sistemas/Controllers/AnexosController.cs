@@ -16,8 +16,12 @@ namespace HelpDesk_Sistemas.Controllers
         }
 
         // Todos los roles autenticados pueden ver el listado — no hay chequeo de rol aquí.
-        public async Task<IActionResult> Index(int? idCategoria, int? idSubcategoria, string? buscar)
+        public async Task<IActionResult> Index(int? idCategoria, int? idSubcategoria, string? buscar, int? resaltar)
         {
+            // Viene del botón "Ir a la guía" (validación / detalle del ticket): se busca por el
+            // título y se marca la tarjeta exacta, porque varios títulos pueden parecerse.
+            ViewBag.IdGuiaResaltada = resaltar;
+            ViewBag.BuscarInicial = buscar;
             ViewBag.Categorias = await anexosService.ObtenerCategorias();
             ViewBag.PuedeAdministrar = SesionTemporal.RolActual == "Administrador" || SesionTemporal.RolActual == "Soporte";
             var guias = await anexosService.ObtenerGuias(idCategoria, idSubcategoria, buscar);
