@@ -23,6 +23,9 @@
         public bool? AfectaFuncionamiento { get; set; }
         public List<TicketAdjuntoModel> Adjuntos { get; set; } = new();
         public List<TicketHistorialModel> Historial { get; set; } = new();
+
+        /// <summary>Guías de apoyo que Soporte vinculó al registrar la solución.</summary>
+        public List<GuiaModel> GuiasVinculadas { get; set; } = new();
         public string? Sociedad { get; set; }
         public TicketSlaModel? SlaRespuesta { get; set; }
         public TicketSlaModel? SlaResolucion { get; set; }

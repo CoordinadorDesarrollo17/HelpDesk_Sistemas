@@ -82,6 +82,8 @@ namespace HelpDesk_Sistemas.Controllers
                 return NotFound();
             }
 
+            detalle.GuiasVinculadas = await anexosService.ObtenerGuiasVinculadas(id);
+
             return PartialView("_DetalleTicket", detalle);
         }
 
@@ -321,6 +323,8 @@ namespace HelpDesk_Sistemas.Controllers
                 return NotFound();
             }
 
+            var guias = await anexosService.ObtenerGuiasVinculadas(id);
+
             return Json(new
             {
                 codigoTicket = solucion.CodigoTicket,
@@ -333,7 +337,9 @@ namespace HelpDesk_Sistemas.Controllers
                     nombre = a.NombreArchivo,
                     pesoKB = a.PesoKB,
                     url = Url.Action("DescargarAdjunto", "Tickets", new { id = a.Id })
-                })
+                }),
+                // Guía de apoyo que Soporte vinculó al registrar la solución (puede no haber ninguna).
+                guias = guias.Select(g => new { id = g.Id, titulo = g.Titulo, nombre = g.NombreArchivo })
             });
         }
 

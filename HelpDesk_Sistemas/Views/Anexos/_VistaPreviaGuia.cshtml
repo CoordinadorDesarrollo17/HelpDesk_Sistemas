@@ -1,0 +1,73 @@
+﻿@* Vista previa: ver la guía dentro del sistema, sin descargarla. *@
+<div class="modal fade" id="modalVistaPrevia" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloVistaPrevia"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center" id="cuerpoVistaPrevia"></div>
+            <div class="modal-footer">
+                <a id="btnDescargarVistaPrevia" class="btn btn-outline-primary" target="_blank">
+                    <i class="bi bi-download"></i> Descargar
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Imágenes, PDF y videos se ven dentro del modal; Word/Excel/PowerPoint el navegador
+    // no los sabe mostrar, así que se avisa y queda la opción de descargar. Todo se arma
+    // con propiedades del DOM (nunca innerHTML con datos): el nombre lo puso un usuario.
+    function verGuia(btn) {
+        const id = btn.dataset.id;
+        const nombre = btn.dataset.nombre || "";
+        const extension = (nombre.split(".").pop() || "").toLowerCase();
+        const urlVer = `@Url.Action("VerGuia", "Anexos")?id=${id}`;
+
+        document.getElementById("tituloVistaPrevia").textContent = btn.dataset.titulo || nombre;
+        document.getElementById("btnDescargarVistaPrevia").href = `@Url.Action("DescargarGuia", "Anexos")?id=${id}`;
+
+        const cuerpo = document.getElementById("cuerpoVistaPrevia");
+        cuerpo.innerHTML = "";
+
+        if (["jpg", "jpeg", "png"].includes(extension)) {
+            const img = document.createElement("img");
+            img.src = urlVer;
+            img.alt = nombre;
+            img.className = "img-fluid rounded";
+            img.style.maxHeight = "70vh";
+            cuerpo.appendChild(img);
+        } else if (extension === "pdf") {
+            const marco = document.createElement("iframe");
+            marco.src = urlVer;
+            marco.title = nombre;
+            marco.style.cssText = "width:100%;height:70vh;border:0;";
+            cuerpo.appendChild(marco);
+        } else if (extension === "mp4") {
+            const video = document.createElement("video");
+            video.src = urlVer;
+            video.controls = true;
+            video.className = "w-100 rounded";
+            video.style.maxHeight = "70vh";
+            cuerpo.appendChild(video);
+        } else {
+            const aviso = document.createElement("p");
+            aviso.className = "text-muted my-5";
+            aviso.textContent = `Este formato (.${extension}) no se puede mostrar en el navegador. Descárgalo para abrirlo.`;
+            cuerpo.appendChild(aviso);
+        }
+
+        const modalEl = document.getElementById("modalVistaPrevia");
+        // Al cerrar se vacía el contenido: si no, un video seguiría sonando por detrás. Y si la
+        // vista previa se abrió encima de otro modal (p. ej. el de la solución), Bootstrap le quita
+        // a <body> el bloqueo de scroll al cerrarse: se devuelve mientras el otro siga abierto.
+        modalEl.addEventListener("hidden.bs.modal", () => {
+            cuerpo.innerHTML = "";
+            if (document.querySelector(".modal.show")) document.body.classList.add("modal-open");
+        }, { once: true });
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+</script>

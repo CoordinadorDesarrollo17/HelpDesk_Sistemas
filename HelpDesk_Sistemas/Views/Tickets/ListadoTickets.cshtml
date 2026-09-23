@@ -310,6 +310,11 @@
 							<div id="listaArchivosSolucionVista" class="d-flex flex-column gap-2"></div>
 						</div>
 
+						<div id="guiasSolucionVista" class="mb-3 d-none">
+							<div class="small text-muted mb-2">Guía de apoyo</div>
+							<div id="listaGuiasSolucionVista" class="d-flex flex-column gap-2"></div>
+						</div>
+
 						<p class="mb-0 fw-semibold">¿Esta solución resolvió tu requerimiento?</p>
 					</div>
 					<div class="modal-footer">
@@ -325,6 +330,8 @@
 		</div>
 
 		<!--MODAL DEVOLVER TICKET -->
+		<partial name="~/Views/Anexos/_VistaPreviaGuia.cshtml" />
+
 		<div class="modal fade" id="modalDevolverTicket" tabindex="-1">
 			<div class="modal-dialog">
 				<div class="modal-content">
@@ -1293,6 +1300,8 @@
 			document.getElementById("textoSolucion").textContent = "Cargando...";
 			document.getElementById("archivosSolucionVista").classList.add("d-none");
 			document.getElementById("listaArchivosSolucionVista").innerHTML = "";
+			document.getElementById("guiasSolucionVista").classList.add("d-none");
+			document.getElementById("listaGuiasSolucionVista").innerHTML = "";
 
 			const modal = new bootstrap.Modal(document.getElementById("modalConfirmarSolucion"));
 			modal.show();
@@ -1323,7 +1332,53 @@
 							: "Soporte no registró un detalle de la solución.";
 
 					mostrarArchivosSolucion(data.adjuntos || []);
+					mostrarGuiasSolucion(data.guias || []);
 				});
+		}
+
+		// Guía de apoyo vinculada por Soporte: se puede ver aquí mismo o descargar.
+		// Todo con textContent/dataset (nunca innerHTML con datos): el título lo escribió otro usuario.
+		function mostrarGuiasSolucion(guias) {
+			const contenedor = document.getElementById("listaGuiasSolucionVista");
+			contenedor.innerHTML = "";
+
+			guias.forEach(g => {
+				const fila = document.createElement("div");
+				fila.className = "d-flex justify-content-between align-items-center gap-2 border rounded p-2";
+
+				const titulo = document.createElement("span");
+				titulo.className = "small";
+				const icono = document.createElement("i");
+				icono.className = "bi bi-book me-1";
+				titulo.appendChild(icono);
+				titulo.appendChild(document.createTextNode(g.titulo));
+
+				const acciones = document.createElement("span");
+				acciones.className = "d-flex gap-1 flex-shrink-0";
+
+				const ver = document.createElement("button");
+				ver.type = "button";
+				ver.className = "btn btn-sm btn-outline-secondary";
+				ver.dataset.id = g.id;
+				ver.dataset.titulo = g.titulo;
+				ver.dataset.nombre = g.nombre;
+				ver.innerHTML = '<i class="bi bi-eye"></i> Ver';
+				ver.onclick = () => verGuia(ver);
+
+				const descargar = document.createElement("a");
+				descargar.className = "btn btn-sm btn-outline-primary";
+				descargar.href = `@Url.Action("DescargarGuia", "Anexos")?id=${g.id}`;
+				descargar.target = "_blank";
+				descargar.innerHTML = '<i class="bi bi-download"></i> Descargar';
+
+				acciones.appendChild(ver);
+				acciones.appendChild(descargar);
+				fila.appendChild(titulo);
+				fila.appendChild(acciones);
+				contenedor.appendChild(fila);
+			});
+
+			document.getElementById("guiasSolucionVista").classList.toggle("d-none", guias.length === 0);
 		}
 
 		// Imágenes y videos se ven directamente en el modal (así el solicitante evalúa la
