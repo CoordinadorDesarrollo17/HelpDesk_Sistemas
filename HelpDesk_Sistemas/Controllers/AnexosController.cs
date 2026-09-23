@@ -97,13 +97,34 @@ namespace HelpDesk_Sistemas.Controllers
             var archivo = await anexosService.ObtenerArchivoParaDescarga(id);
             if (archivo is null) return NotFound();
 
-            var proveedor = new FileExtensionContentTypeProvider();
-            if (!proveedor.TryGetContentType(archivo.Value.NombreArchivo, out var tipoContenido))
-            {
-                tipoContenido = "application/octet-stream";
-            }
+            return PhysicalFile(archivo.Value.RutaFisica, ObtenerTipoContenido(archivo.Value.NombreArchivo), archivo.Value.NombreArchivo, enableRangeProcessing: true);
+        }
 
-            return PhysicalFile(archivo.Value.RutaFisica, tipoContenido, archivo.Value.NombreArchivo, enableRangeProcessing: true);
+        /// <summary>
+        /// Sirve el archivo "en línea" (sin Content-Disposition: attachment), para verlo dentro
+        /// del propio sistema —imagen, PDF o video— sin obligar a descargarlo. Solo se usa
+        /// desde la vista previa; el resto de formatos (Word, Excel, PowerPoint) el navegador
+        /// no los sabe mostrar y se ofrecen solo para descargar.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> VerGuia(int id)
+        {
+            var archivo = await anexosService.ObtenerArchivoParaDescarga(id);
+            if (archivo is null) return NotFound();
+
+            // nosniff: el navegador debe respetar el tipo declarado y no adivinar otro a
+            // partir del contenido de un archivo subido por un usuario.
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+
+            return PhysicalFile(archivo.Value.RutaFisica, ObtenerTipoContenido(archivo.Value.NombreArchivo), enableRangeProcessing: true);
+        }
+
+        private static string ObtenerTipoContenido(string nombreArchivo)
+        {
+            var proveedor = new FileExtensionContentTypeProvider();
+            return proveedor.TryGetContentType(nombreArchivo, out var tipoContenido)
+                ? tipoContenido
+                : "application/octet-stream";
         }
 
         [HttpGet]

@@ -262,7 +262,20 @@
 						<div id="resultadosGuiaSolucion" class="list-group" style="max-height:160px; overflow-y:auto;"></div>
 						<input type="hidden" id="idGuiaSeleccionada" />
 						<input type="hidden" id="idCategoriaTicketActual" />
-						<div id="guiaSeleccionadaTexto" class="small text-success mt-1"></div>
+						<div id="guiaSeleccionadaCaja" class="d-none mt-2">
+							<div class="alert alert-success py-2 px-3 mb-0 d-flex justify-content-between align-items-center gap-2">
+								<span id="guiaSeleccionadaTexto" class="small"></span>
+								<button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" onclick="quitarGuiaSeleccionada()"><i class="bi bi-x-lg"></i> Quitar</button>
+							</div>
+						</div>
+						<div id="avisoRecategorizar" class="alert alert-warning mt-2 mb-0 d-none">
+							<div id="textoRecategorizar" class="small mb-2"></div>
+							<div id="botonesRecategorizar" class="d-flex flex-wrap gap-2">
+								<button type="button" class="btn btn-sm btn-warning" onclick="decidirRecategorizacion(true)">Sí, actualizar la categoría</button>
+								<button type="button" class="btn btn-sm btn-outline-secondary" onclick="decidirRecategorizacion(false)">No, dejarla como está</button>
+							</div>
+							<div id="resultadoRecategorizar" class="small fw-semibold"></div>
+						</div>
 					</div>
 					<div class="modal-footer">
 						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -1204,10 +1217,11 @@
 			document.getElementById("solucionTicket").value = "";
 			document.getElementById("errorValidarTicket").textContent = "";
 			document.getElementById("idGuiaSeleccionada").value = "";
-			document.getElementById("guiaSeleccionadaTexto").textContent = "";
-			// La guarda aquí verificarRecategorizacion() más abajo, para comparar contra
-			// la categoría de la guía que se termine eligiendo.
+			reiniciarSeleccionGuia();
+			// Categoría/subcategoría de guía del ticket: se guardan para comparar contra la guía
+			// que se elija (recategorización) y para volver a las sugerencias al quitarla.
 			document.getElementById("idCategoriaTicketActual").value = idCategoriaGuia || "";
+			contextoGuia = { idCategoria: idCategoriaGuia, idSubcategoria: idSubcategoriaGuia };
 
 			// Regla 1: sugerencia, no restricción — se precarga con la categoría del
 			// ticket, pero el campo de texto queda libre para buscar cualquier cosa.
@@ -1235,6 +1249,13 @@
 			}
 			const idGuia = document.getElementById("idGuiaSeleccionada").value;
 
+			// Si la guía elegida es de otra categoría, hay que responder primero qué hacer con la
+			// categoría del ticket (actualizarla o dejarla): así no se decide por omisión.
+			if (idGuia && recategorizacion.pendiente) {
+				document.getElementById("errorValidarTicket").textContent = "Indica si quieres actualizar la categoría del ticket (Sí / No) o quita la guía.";
+				return;
+			}
+
 			const btnEnviar = document.getElementById("btnEnviarValidacion");
 			btnEnviar.disabled = true;
 
@@ -1248,12 +1269,10 @@
 					if (data.exito) {
 						// La guía se vincula solo si la solución quedó registrada — si ValidarTicket
 						// falla, no debe quedar una guía vinculada a un ticket que sigue "En atención".
-						if (idGuia) {
-							fetch(`@Url.Action("VincularGuia", "Tickets")?id=${idTicket}&idGuia=${idGuia}`, { method: "POST" });
-						}
+						const guardarGuia = idGuia ? vincularGuiaYRecategorizar(idTicket, idGuia) : Promise.resolve();
 						bootstrap.Modal.getInstance(document.getElementById("modalValidarTicket")).hide();
 						mostrarToast(data.mensaje || "Solución registrada correctamente", data.mensaje ? "warning" : "success");
-						cargarTabla(1);
+						guardarGuia.finally(() => cargarTabla(1));
 					} else {
 						document.getElementById("errorValidarTicket").textContent = data.mensaje;
 					}
@@ -1803,23 +1822,75 @@
 			});
 		}
 
-		function seleccionarGuia(guia) {
-			document.getElementById("idGuiaSeleccionada").value = guia.id;
-			document.getElementById("guiaSeleccionadaTexto").textContent = `Guía seleccionada: ${guia.titulo}`;
+		// Contexto del ticket que se está resolviendo: para volver a las sugerencias cuando se quita la guía.
+		let contextoGuia = { idCategoria: null, idSubcategoria: null };
+
+		// Decisión sobre recategorizar. Elegir una guía NO toca el ticket: la decisión se guarda acá y
+		// se aplica recién cuando la solución se registra con éxito, así quitar la guía, cancelar el
+		// modal o responder "No" dejan el ticket exactamente como estaba.
+		let recategorizacion = { pendiente: false, aceptada: false, idGuiaCategoria: null };
+
+		function reiniciarSeleccionGuia() {
+			document.getElementById("idGuiaSeleccionada").value = "";
+			document.getElementById("guiaSeleccionadaTexto").textContent = "";
+			document.getElementById("guiaSeleccionadaCaja").classList.add("d-none");
+			document.getElementById("avisoRecategorizar").classList.add("d-none");
+			document.getElementById("botonesRecategorizar").classList.remove("d-none");
+			document.getElementById("textoRecategorizar").textContent = "";
+			document.getElementById("resultadoRecategorizar").textContent = "";
 			document.getElementById("resultadosGuiaSolucion").innerHTML = "";
 			document.getElementById("buscarGuiaSolucion").value = "";
-
-			// Regla 2: recategorización obligatoria — si la categoría de la guía no
-			// coincide con la del ticket, se pregunta antes de continuar.
-			verificarRecategorizacion(guia.idGuiaCategoria);
+			recategorizacion = { pendiente: false, aceptada: false, idGuiaCategoria: null };
 		}
-				function verificarRecategorizacion(idCategoriaGuia) {
-			const idCategoriaTicketActual = document.getElementById("idCategoriaTicketActual").value; // guárdalo al abrir el modal
-			if (!idCategoriaGuia || idCategoriaGuia == idCategoriaTicketActual) return;
 
-			if (confirm("La guía que elegiste es de otra categoría. ¿Actualizar la categoría del ticket para que coincida? (recomendado, para que los reportes reflejen el problema real)")) {
-				fetch(`@Url.Action("CorregirCategoriaGuia", "Tickets")?id=${document.getElementById("idTicketValidar").value}&idGuiaCategoria=${idCategoriaGuia}`, { method: "POST" });
+		function quitarGuiaSeleccionada() {
+			reiniciarSeleccionGuia();
+			document.getElementById("errorValidarTicket").textContent = "";
+			cargarSugerenciasGuia(contextoGuia.idCategoria, contextoGuia.idSubcategoria);
+		}
+
+		function seleccionarGuia(guia) {
+			reiniciarSeleccionGuia();
+			document.getElementById("idGuiaSeleccionada").value = guia.id;
+			document.getElementById("guiaSeleccionadaTexto").textContent = `Guía seleccionada: ${guia.titulo}`;
+			document.getElementById("guiaSeleccionadaCaja").classList.remove("d-none");
+			document.getElementById("errorValidarTicket").textContent = "";
+
+			verificarRecategorizacion(guia);
+		}
+
+		// Regla 2: si la guía es de otra categoría que la del ticket, se le pregunta al agente
+		// (dentro del propio modal) si quiere actualizar la categoría del ticket.
+		function verificarRecategorizacion(guia) {
+			const categoriaTicket = document.getElementById("idCategoriaTicketActual").value;
+			if (!guia.idGuiaCategoria || String(guia.idGuiaCategoria) === String(categoriaTicket)) return;
+
+			recategorizacion = { pendiente: true, aceptada: false, idGuiaCategoria: guia.idGuiaCategoria };
+			document.getElementById("textoRecategorizar").textContent =
+				`Esta guía es de la categoría "${guia.categoria || "sin categoría"}", distinta a la del ticket. ` +
+				`¿Quieres actualizar la categoría del ticket para que los reportes reflejen el problema que realmente resolviste?`;
+			document.getElementById("avisoRecategorizar").classList.remove("d-none");
+		}
+
+		function decidirRecategorizacion(acepta) {
+			recategorizacion.pendiente = false;
+			recategorizacion.aceptada = acepta;
+			document.getElementById("botonesRecategorizar").classList.add("d-none");
+			document.getElementById("resultadoRecategorizar").textContent = acepta
+				? "La categoría del ticket se actualizará al registrar la solución."
+				: "La categoría del ticket se mantendrá como está.";
+			document.getElementById("errorValidarTicket").textContent = "";
+		}
+
+		// Se llama recién cuando la solución ya quedó registrada.
+		function vincularGuiaYRecategorizar(idTicket, idGuia) {
+			const peticiones = [fetch(`@Url.Action("VincularGuia", "Tickets")?id=${idTicket}&idGuia=${idGuia}`, { method: "POST" })];
+
+			if (recategorizacion.aceptada && recategorizacion.idGuiaCategoria) {
+				peticiones.push(fetch(`@Url.Action("CorregirCategoriaGuia", "Tickets")?id=${idTicket}&idGuiaCategoria=${recategorizacion.idGuiaCategoria}`, { method: "POST" }));
 			}
+
+			return Promise.allSettled(peticiones);
 		}
 	</script>
 }

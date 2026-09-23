@@ -17,9 +17,15 @@ else
                     <p class="card-text small">@g.Descripcion</p>
                 </div>
                 <div class="card-footer d-flex justify-content-between align-items-center">
-                    <a class="btn btn-sm btn-outline-primary" href="@Url.Action("DescargarGuia", new { id = g.Id })" target="_blank">
-                        <i class="bi bi-download"></i> Descargar
-                    </a>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" title="Ver aquí mismo, sin descargar"
+                                data-id="@g.Id" data-titulo="@g.Titulo" data-nombre="@g.NombreArchivo" onclick="verGuia(this)">
+                            <i class="bi bi-eye"></i> Ver
+                        </button>
+                        <a class="btn btn-sm btn-outline-primary" href="@Url.Action("DescargarGuia", new { id = g.Id })" target="_blank">
+                            <i class="bi bi-download"></i> Descargar
+                        </a>
+                    </div>
                     @if ((bool)ViewBag.PuedeAdministrar)
                     {
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarGuia(@g.Id)">
