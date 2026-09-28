@@ -36,6 +36,30 @@ namespace HelpDesk_Sistemas.Repositories
             return await xCon.QueryFirstOrDefaultAsync<UsuarioAutenticacionModel>(sql, new { Usuario = usuario });
         }
 
+        // Login vía la intranet: ya se validó la contraseña allá (DocEntry = identidad
+        // confirmada), acá solo se busca a quién está enlazado ese DocEntry — sin
+        // comparar contraseña local. Si nadie lo enlazó todavía, no aparece nada.
+        public async Task<UsuarioAutenticacionModel?> ObtenerParaLoginPorIdIntranet(int idIntranet)
+        {
+            using var xCon = new SqlConnection(dapperContext.connectionString);
+
+            var sql = @"
+                SELECT
+                    u.Id,
+                    u.Usuario,
+                    CONCAT(u.Nombre, ' ', u.Apellido) AS NombreCompleto,
+                    r.Nombre AS Rol,
+                    u.Id_Area AS IdArea,
+                    u.Es_Coordinador AS EsCoordinador,
+                    u.Activo
+                FROM Usuarios u
+                INNER JOIN Rol r ON r.Id = u.IdRol
+                WHERE u.Id_Intranet = @IdIntranet
+            ";
+
+            return await xCon.QueryFirstOrDefaultAsync<UsuarioAutenticacionModel>(sql, new { IdIntranet = idIntranet });
+        }
+
         public async Task<List<UsuarioModel>> ObtenerUsuarios()
         {
             using var xCon = new SqlConnection(dapperContext.connectionString);

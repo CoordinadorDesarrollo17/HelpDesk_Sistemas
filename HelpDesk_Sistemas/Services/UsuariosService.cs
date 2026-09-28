@@ -12,15 +12,37 @@ namespace HelpDesk_Sistemas.Services
         private static readonly string[] RolesSoloAreasSistemas = { "Administrador", "Soporte" };
 
         private readonly IUsuariosRepository usuariosRepository;
+        private readonly IIntranetAuthClient intranetAuthClient;
 
-        public UsuariosService(IUsuariosRepository usuariosRepository)
+        public UsuariosService(IUsuariosRepository usuariosRepository, IIntranetAuthClient intranetAuthClient)
         {
             this.usuariosRepository = usuariosRepository;
+            this.intranetAuthClient = intranetAuthClient;
         }
 
+        // Migración en curso al login por la intranet: se intenta primero contra la
+        // intranet (fuente de verdad). Si no responde o dice que esas credenciales no
+        // le pertenecen, se cae al login local — así un usuario sin migrar (Id_Intranet
+        // nulo) sigue entrando con su Usuario/Password de siempre, y nadie queda
+        // bloqueado si la intranet está caída. Cuando todos estén migrados, se puede
+        // quitar la parte local (dejando alguna cuenta de respaldo).
         public async Task<UsuarioAutenticacionModel?> ValidarCredenciales(string usuario, string password)
         {
-            var candidato = await usuariosRepository.ObtenerParaLogin(usuario.Trim().ToLowerInvariant());
+            usuario = usuario.Trim();
+
+            var resultadoIntranet = await intranetAuthClient.Validar(usuario, password);
+
+            if (resultadoIntranet is not null && resultadoIntranet.Success)
+            {
+                var candidatoIntranet = await usuariosRepository.ObtenerParaLoginPorIdIntranet(resultadoIntranet.DocEntry);
+
+                // Autenticó en la intranet pero todavía nadie lo enlazó en el HelpDesk
+                // (Id_Intranet nulo en Usuarios): se rechaza en vez de crear la cuenta
+                // sola — un administrador la enlaza primero, con su rol y área.
+                return candidatoIntranet is not null && candidatoIntranet.Activo ? candidatoIntranet : null;
+            }
+
+            var candidato = await usuariosRepository.ObtenerParaLogin(usuario.ToLowerInvariant());
 
             if (candidato is null || !candidato.Activo) return null;
 

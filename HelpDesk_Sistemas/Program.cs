@@ -52,6 +52,28 @@ builder.Services.AddScoped<IReportesService, ReportesService>();
 builder.Services.AddScoped<IReportesRepository, ReportesRepository>();
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
 builder.Services.AddScoped<IUsuariosRepository, UsuariosRepository>();
+
+// Login contra la API de autenticación de la intranet (ver UsuariosService.ValidarCredenciales).
+// IntranetAuth:Endpoint es la URL completa (ej. http://192.168.1.52:100/api/auth/validate),
+// no solo el host — el cliente hace POST directo a esa dirección.
+builder.Services.AddHttpClient<IIntranetAuthClient, IntranetAuthClient>(client =>
+{
+    var endpoint = builder.Configuration["IntranetAuth:Endpoint"];
+    if (!string.IsNullOrWhiteSpace(endpoint))
+    {
+        client.BaseAddress = new Uri(endpoint);
+    }
+
+    var apiKey = builder.Configuration["IntranetAuth:ApiKey"];
+    if (!string.IsNullOrWhiteSpace(apiKey))
+    {
+        client.DefaultRequestHeaders.Add("X-API-Key", apiKey);
+    }
+
+    // Corto a propósito: si la intranet no responde rápido, el login cae al modo local
+    // en vez de dejar a la persona esperando (ver UsuariosService.ValidarCredenciales).
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
 builder.Services.AddScoped<IPowerBiService, PowerBiService>();
 builder.Services.AddScoped<IPowerBiRepository, PowerBiRepository>();
 builder.Services.AddHostedService<SlaEngineBackgroundService>();

@@ -5,6 +5,7 @@ namespace HelpDesk_Sistemas.Interfaces
     public interface IUsuariosRepository
     {
         Task<UsuarioAutenticacionModel?> ObtenerParaLogin(string usuario);
+        Task<UsuarioAutenticacionModel?> ObtenerParaLoginPorIdIntranet(int idIntranet);
         Task<List<UsuarioModel>> ObtenerUsuarios();
 
         /// <summary>Área con su Prefijo (para generar el Usuario al crear una cuenta).</summary>
